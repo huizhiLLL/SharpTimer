@@ -212,7 +212,9 @@
                         Visibility="Collapsed"
                         IsHitTestVisible="False">
                         <Canvas.RenderTransform>
-                            <TranslateTransform Y="24" />
+                            <TranslateTransform
+                                x:Name="SmartCubePreviewOffset"
+                                Y="100" />
                         </Canvas.RenderTransform>
                     </Canvas>
                 </Grid>

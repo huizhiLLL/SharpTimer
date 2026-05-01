@@ -25,9 +25,26 @@ public static class WindowsBleSmartCubeConnector
             throw new InvalidOperationException("无法打开蓝牙设备。");
         }
 
-        var connection = new Moyu32SmartCubeConnection(bluetoothDevice, device);
-        await connection.InitializeAsync(cancellationToken);
-        return connection;
+        Moyu32SmartCubeConnection? connection = null;
+        try
+        {
+            connection = new Moyu32SmartCubeConnection(bluetoothDevice, device);
+            await connection.InitializeAsync(cancellationToken);
+            return connection;
+        }
+        catch
+        {
+            if (connection is not null)
+            {
+                await connection.DisposeAsync();
+            }
+            else
+            {
+                bluetoothDevice.Dispose();
+            }
+
+            throw;
+        }
     }
 
     private sealed class Moyu32SmartCubeConnection : ISmartCubeConnection
@@ -37,15 +54,18 @@ public static class WindowsBleSmartCubeConnector
 
         private readonly BluetoothLEDevice _device;
         private readonly IReadOnlyList<byte[]> _macCandidates;
+        private readonly object _lifetimeLock = new();
         private readonly byte[] _key;
         private readonly byte[] _iv;
         private string _deviceMac;
+        private GattDeviceService? _service;
         private GattCharacteristic? _readCharacteristic;
         private GattCharacteristic? _writeCharacteristic;
         private TaskCompletionSource<bool>? _strongPacketProbe;
         private int _moveCount = -1;
         private int _previousMoveCount = -1;
         private bool _hasStrongPacket;
+        private bool _isDisconnecting;
         private bool _isDisposed;
 
         public Moyu32SmartCubeConnection(BluetoothLEDevice device, SmartCubeDeviceInfo advertisedDevice)
@@ -89,8 +109,8 @@ public static class WindowsBleSmartCubeConnector
                 throw new InvalidOperationException("找不到 MoYu32 GATT 服务。");
             }
 
-            var service = servicesResult.Services[0];
-            var characteristicsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached)
+            _service = servicesResult.Services[0];
+            var characteristicsResult = await _service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached)
                 .AsTask(cancellationToken);
             if (characteristicsResult.Status != GattCommunicationStatus.Success)
             {
@@ -118,6 +138,11 @@ public static class WindowsBleSmartCubeConnector
 
         public Task SendCommandAsync(SmartCubeCommand command, CancellationToken cancellationToken = default)
         {
+            if (IsConnectionClosing())
+            {
+                return Task.CompletedTask;
+            }
+
             return command switch
             {
                 SmartCubeCommand.RequestHardware => SendSimpleRequestAsync(161, cancellationToken),
@@ -129,19 +154,45 @@ public static class WindowsBleSmartCubeConnector
 
         public async Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
-            if (_readCharacteristic is not null)
+            GattCharacteristic? readCharacteristic;
+            GattDeviceService? service;
+            lock (_lifetimeLock)
             {
-                _readCharacteristic.ValueChanged -= ReadCharacteristic_ValueChanged;
-                await _readCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-                        GattClientCharacteristicConfigurationDescriptorValue.None)
-                    .AsTask(cancellationToken);
+                if (_isDisconnecting || _isDisposed)
+                {
+                    return;
+                }
+
+                _isDisconnecting = true;
+                readCharacteristic = _readCharacteristic;
+                service = _service;
                 _readCharacteristic = null;
+                _writeCharacteristic = null;
+                _service = null;
+                _strongPacketProbe?.TrySetResult(false);
+                _strongPacketProbe = null;
             }
 
-            _writeCharacteristic = null;
-            if (_device.ConnectionStatus == BluetoothConnectionStatus.Connected)
+            if (readCharacteristic is not null)
             {
-                _device.Dispose();
+                readCharacteristic.ValueChanged -= ReadCharacteristic_ValueChanged;
+                try
+                {
+                    await readCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
+                            GattClientCharacteristicConfigurationDescriptorValue.None)
+                        .AsTask(cancellationToken);
+                }
+                catch
+                {
+                }
+            }
+
+            service?.Dispose();
+            _device.Dispose();
+
+            lock (_lifetimeLock)
+            {
+                _isDisposed = true;
             }
 
             EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
@@ -149,14 +200,7 @@ public static class WindowsBleSmartCubeConnector
 
         public async ValueTask DisposeAsync()
         {
-            if (_isDisposed)
-            {
-                return;
-            }
-
             await DisconnectAsync();
-            _device.Dispose();
-            _isDisposed = true;
         }
 
         private async Task SendSimpleRequestAsync(byte opcode, CancellationToken cancellationToken)
@@ -168,14 +212,15 @@ public static class WindowsBleSmartCubeConnector
 
         private async Task SendRequestAsync(byte[] payload, CancellationToken cancellationToken)
         {
-            if (_writeCharacteristic is null)
+            var writeCharacteristic = _writeCharacteristic;
+            if (IsConnectionClosing() || writeCharacteristic is null)
             {
                 return;
             }
 
             var encrypted = Transform(payload, encrypt: true);
             var buffer = CryptographicBuffer.CreateFromByteArray(encrypted);
-            await _writeCharacteristic.WriteValueAsync(buffer)
+            await writeCharacteristic.WriteValueAsync(buffer)
                 .AsTask(cancellationToken);
         }
 
@@ -183,6 +228,11 @@ public static class WindowsBleSmartCubeConnector
         {
             foreach (var candidate in _macCandidates)
             {
+                if (IsConnectionClosing())
+                {
+                    return;
+                }
+
                 SetActiveMac(candidate);
                 _strongPacketProbe = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -217,6 +267,11 @@ public static class WindowsBleSmartCubeConnector
 
         private void ReadCharacteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
         {
+            if (IsConnectionClosing())
+            {
+                return;
+            }
+
             var timestamp = DateTimeOffset.UtcNow;
             try
             {
@@ -343,7 +398,20 @@ public static class WindowsBleSmartCubeConnector
 
         private void EmitSmartCubeEvent(SmartCubeEvent smartCubeEvent)
         {
+            if (IsConnectionClosing())
+            {
+                return;
+            }
+
             EventReceived?.Invoke(this, smartCubeEvent);
+        }
+
+        private bool IsConnectionClosing()
+        {
+            lock (_lifetimeLock)
+            {
+                return _isDisconnecting || _isDisposed;
+            }
         }
 
         private bool TryParseFacelets(byte[] decoded, out string facelets)

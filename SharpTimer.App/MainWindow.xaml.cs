@@ -50,6 +50,8 @@ namespace SharpTimer.App
         private const int InitialWindowWidth = 2000;
         private const int InitialWindowHeight = 1200;
         private const int InitialWindowTopOffset = 10;
+        private const double NormalSmartCubePreviewOffsetY = 100;
+        private const double ImmersiveSmartCubePreviewOffsetY = 0;
 
         private enum ScrambleRunRole
         {
@@ -534,6 +536,9 @@ namespace SharpTimer.App
             ScrambleText.Visibility = contextVisibility;
             InspectionText.Visibility = contextVisibility;
             StatsPanel.Visibility = contextVisibility;
+            SmartCubePreviewOffset.Y = isImmersive
+                ? ImmersiveSmartCubePreviewOffsetY
+                : NormalSmartCubePreviewOffsetY;
         }
 
         private void AnimateTimerScale(double targetScale)
@@ -743,7 +748,18 @@ namespace SharpTimer.App
 
         private void SmartCubeConnection_EventReceived(object? sender, SmartCubeEvent e)
         {
-            DispatcherQueue.TryEnqueue(async () => await RenderSmartCubeEventAsync(e));
+            if (!ReferenceEquals(sender, _smartCubeConnection))
+            {
+                return;
+            }
+
+            DispatcherQueue.TryEnqueue(async () =>
+            {
+                if (ReferenceEquals(sender, _smartCubeConnection))
+                {
+                    await RenderSmartCubeEventAsync(e);
+                }
+            });
         }
 
         private async System.Threading.Tasks.Task RenderSmartCubeEventAsync(SmartCubeEvent e)
@@ -844,14 +860,15 @@ namespace SharpTimer.App
 
         private async System.Threading.Tasks.Task RequestSmartCubeFaceletsAsync()
         {
-            if (_smartCubeConnection is null)
+            var connection = _smartCubeConnection;
+            if (connection is null)
             {
                 return;
             }
 
             try
             {
-                await _smartCubeConnection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
+                await connection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
             }
             catch
             {
@@ -888,14 +905,15 @@ namespace SharpTimer.App
 
         private async System.Threading.Tasks.Task DisconnectSmartCubeAsync()
         {
-            if (_smartCubeConnection is null)
+            var connection = _smartCubeConnection;
+            if (connection is null)
             {
                 return;
             }
 
-            _smartCubeConnection.EventReceived -= SmartCubeConnection_EventReceived;
-            await _smartCubeConnection.DisposeAsync();
+            StopBluetoothScan();
             _smartCubeConnection = null;
+            connection.EventReceived -= SmartCubeConnection_EventReceived;
             _smartCubeSolveHasMove = false;
             _smartCubeReadyToStart = false;
             _smartCubeHasLocalMoveState = false;
@@ -906,6 +924,7 @@ namespace SharpTimer.App
             SmartCubePreviewCanvas.Visibility = Visibility.Collapsed;
             BluetoothDevicesList.Visibility = Visibility.Visible;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothDisconnectedMessage;
+            await connection.DisposeAsync();
         }
 
         private void ResetSmartCubeLocalState()
