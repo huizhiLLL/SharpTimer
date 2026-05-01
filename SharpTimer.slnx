@@ -10,6 +10,7 @@
     <Platform Solution="*|x86" Project="x86" />
     <Deploy />
   </Project>
+  <Project Path="SharpTimer.Bluetooth/SharpTimer.Bluetooth.csproj" />
   <Project Path="SharpTimer.Core/SharpTimer.Core.csproj" />
   <Project Path="SharpTimer.Storage/SharpTimer.Storage.csproj" />
   <Project Path="SharpTimer.Tests/SharpTimer.Tests.csproj" />

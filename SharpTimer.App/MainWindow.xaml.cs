@@ -3,6 +3,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Shapes;
+using SharpTimer.Bluetooth;
 using SharpTimer.App.Services;
 using SharpTimer.App.ViewModels;
 using SharpTimer.Core.Models;
@@ -19,9 +21,13 @@ namespace SharpTimer.App
     {
         private readonly ObservableCollection<SolveListItem> _solveItems = new();
         private readonly ObservableCollection<SessionListItem> _sessionItems = new();
+        private readonly ObservableCollection<BluetoothDeviceListItem> _bluetoothDeviceItems = new();
+        private readonly SmartCubeProtocolRegistry _bluetoothProtocolRegistry = SmartCubeKnownProtocols.CreateDefaultRegistry();
         private readonly DispatcherTimer _uiTimer = new();
         private readonly AppSettingsService _settingsService = new();
         private TimerAppService? _appService;
+        private WindowsBleSmartCubeScanner? _bluetoothScanner;
+        private ISmartCubeConnection? _smartCubeConnection;
         private TimerAppSnapshot? _lastSnapshot;
         private AppSettings _settings = new();
         private LocalizedStrings _strings = LocalizedStrings.For(AppLanguagePreference.Chinese);
@@ -29,6 +35,7 @@ namespace SharpTimer.App
         private bool _isApplyingSettings;
         private bool _isSpaceDown;
         private bool _isReadyToStart;
+        private bool _smartCubeSolveHasMove;
         private double _currentTimerScale = 1;
 
         public MainWindow()
@@ -37,10 +44,22 @@ namespace SharpTimer.App
 
             SolvesList.ItemsSource = _solveItems;
             SessionComboBox.ItemsSource = _sessionItems;
+            BluetoothDevicesList.ItemsSource = _bluetoothDeviceItems;
             RootGrid.Loaded += RootGrid_Loaded;
+            Closed += MainWindow_Closed;
 
             _uiTimer.Interval = TimeSpan.FromMilliseconds(33);
             _uiTimer.Tick += UiTimer_Tick;
+        }
+
+        private async void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            _bluetoothScanner?.Dispose();
+            _bluetoothScanner = null;
+            if (_smartCubeConnection is not null)
+            {
+                await _smartCubeConnection.DisposeAsync();
+            }
         }
 
         private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
@@ -263,6 +282,61 @@ namespace SharpTimer.App
         private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ApplySettingsFromControls();
+        }
+
+        private void BluetoothButton_Click(object sender, RoutedEventArgs e)
+        {
+            RootGrid.Focus(FocusState.Programmatic);
+        }
+
+        private void BluetoothFlyout_Opened(object sender, object e)
+        {
+            if (_smartCubeConnection is not null)
+            {
+                RenderSmartCubeConnection();
+                return;
+            }
+
+            _bluetoothDeviceItems.Clear();
+            StartSmartCubeScan();
+        }
+
+        private void BluetoothFlyout_Closed(object sender, object e)
+        {
+            if (_smartCubeConnection is null)
+            {
+                StopBluetoothScan();
+            }
+        }
+
+        private async void BluetoothDevicesList_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (e.ClickedItem is not BluetoothDeviceListItem item)
+            {
+                return;
+            }
+
+            StopBluetoothScan();
+            BluetoothFlyoutStatusText.Text = _strings.BluetoothConnectingMessage;
+            BluetoothScanProgress.IsIndeterminate = true;
+            try
+            {
+                _smartCubeConnection = await WindowsBleSmartCubeConnector.ConnectAsync(item.Device);
+                _smartCubeConnection.EventReceived += SmartCubeConnection_EventReceived;
+                RenderSmartCubeConnection();
+                await _smartCubeConnection.SendCommandAsync(SmartCubeCommand.RequestBattery);
+                await _smartCubeConnection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
+            }
+            catch (Exception ex)
+            {
+                BluetoothFlyoutStatusText.Text = string.Format(_strings.BluetoothConnectFailedFormat, ex.Message);
+                BluetoothScanProgress.IsIndeterminate = false;
+            }
+        }
+
+        private async void DisconnectCubeButton_Click(object sender, RoutedEventArgs e)
+        {
+            await DisconnectSmartCubeAsync();
         }
 
         private async System.Threading.Tasks.Task RunPrimaryTimerActionAsync()
@@ -514,6 +588,351 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
+        private WindowsBleSmartCubeScanner CreateBluetoothScanner()
+        {
+            var scanner = new WindowsBleSmartCubeScanner();
+            scanner.DeviceDiscovered += BluetoothScanner_DeviceDiscovered;
+            return scanner;
+        }
+
+        private void BluetoothScanner_DeviceDiscovered(object? sender, SmartCubeDeviceInfo device)
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (IsSmartCubeNameMatch(device))
+                {
+                    UpsertBluetoothDevice(device);
+                }
+            });
+        }
+
+        private void StartSmartCubeScan()
+        {
+            try
+            {
+                _bluetoothScanner ??= CreateBluetoothScanner();
+                _bluetoothScanner.Start();
+                BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
+                BluetoothScanProgress.IsIndeterminate = true;
+                BluetoothDevicesList.Visibility = Visibility.Visible;
+                ConnectedCubePanel.Visibility = Visibility.Collapsed;
+            }
+            catch (Exception ex)
+            {
+                BluetoothFlyoutStatusText.Text = ex.Message;
+                BluetoothScanProgress.IsIndeterminate = false;
+            }
+        }
+
+        private void StopBluetoothScan()
+        {
+            try
+            {
+                _bluetoothScanner?.Stop();
+            }
+            finally
+            {
+                BluetoothScanProgress.IsIndeterminate = false;
+            }
+        }
+
+        private void UpsertBluetoothDevice(SmartCubeDeviceInfo device)
+        {
+            var item = CreateBluetoothDeviceListItem(device);
+            var existing = _bluetoothDeviceItems
+                .Select((value, index) => new { value, index })
+                .FirstOrDefault(entry => entry.value.Address == item.Address);
+
+            if (existing is null)
+            {
+                _bluetoothDeviceItems.Add(item);
+            }
+            else
+            {
+                _bluetoothDeviceItems[existing.index] = item;
+            }
+        }
+
+        private BluetoothDeviceListItem CreateBluetoothDeviceListItem(SmartCubeDeviceInfo device)
+        {
+            var protocol = _bluetoothProtocolRegistry.ResolveByGatt(device);
+            var services = device.ServiceUuids.Count == 0
+                ? _strings.BluetoothNoServices
+                : string.Join(", ", device.ServiceUuids.Take(3).Select(FormatUuid));
+            if (device.ServiceUuids.Count > 3)
+            {
+                services = string.Format(_strings.BluetoothServicesSummaryFormat, device.ServiceUuids.Count);
+            }
+
+            return new BluetoothDeviceListItem
+            {
+                Device = device,
+                Address = FormatBluetoothAddress(device.BluetoothAddress),
+                Name = string.IsNullOrWhiteSpace(device.Name) ? _strings.BluetoothUnknownDevice : device.Name,
+                Signal = string.Format(_strings.BluetoothSignalFormat, device.RawSignalStrengthInDBm),
+                Protocol = protocol?.Info.Name ?? _strings.BluetoothUnknownProtocol,
+                Services = services,
+                LastSeen = device.SeenAt.ToLocalTime().ToString("HH:mm:ss")
+            };
+        }
+
+        private bool IsSmartCubeNameMatch(SmartCubeDeviceInfo device)
+        {
+            return _bluetoothProtocolRegistry.Protocols
+                .Any(protocol => protocol.NameFilters.Any(filter => filter.Matches(device.Name)));
+        }
+
+        private static string FormatBluetoothAddress(ulong address)
+        {
+            var text = address.ToString("X12");
+            return string.Join(":", Enumerable.Range(0, 6).Select(index => text.Substring(index * 2, 2)));
+        }
+
+        private static string FormatUuid(Guid uuid)
+        {
+            return uuid.ToString("D");
+        }
+
+        private void SmartCubeConnection_EventReceived(object? sender, SmartCubeEvent e)
+        {
+            DispatcherQueue.TryEnqueue(async () => await RenderSmartCubeEventAsync(e));
+        }
+
+        private async System.Threading.Tasks.Task RenderSmartCubeEventAsync(SmartCubeEvent e)
+        {
+            switch (e)
+            {
+                case SmartCubeBatteryEvent battery:
+                    ConnectedCubeBatteryText.Text = string.Format(_strings.BluetoothBatteryFormat, battery.BatteryLevel);
+                    break;
+                case SmartCubeFaceletsEvent facelets:
+                    await HandleSmartCubeFaceletsEventAsync(facelets);
+                    break;
+                case SmartCubeMoveEvent move:
+                    await HandleSmartCubeMoveEventAsync(move);
+                    break;
+                case SmartCubeGyroEvent:
+                    break;
+                case SmartCubeDisconnectEvent:
+                    _smartCubeConnection = null;
+                    _smartCubeSolveHasMove = false;
+                    SmartCubeStatusPanel.Visibility = Visibility.Collapsed;
+                    ConnectedCubePanel.Visibility = Visibility.Collapsed;
+                    BluetoothFlyoutStatusText.Text = _strings.BluetoothDisconnectedMessage;
+                    break;
+            }
+        }
+
+        private async System.Threading.Tasks.Task HandleSmartCubeMoveEventAsync(SmartCubeMoveEvent move)
+        {
+            var lastMoveText = string.Format(_strings.BluetoothLastMoveFormat, move.Move);
+            _smartCubeSolveHasMove = true;
+            BluetoothFlyoutStatusText.Text = lastMoveText;
+            ConnectedCubeStateText.Text = lastMoveText;
+            SmartCubeFaceletsText.Text = lastMoveText;
+
+            if (_appService is not null)
+            {
+                Render(await _appService.HandleSmartCubeMoveAsync());
+            }
+
+            await RequestSmartCubeFaceletsAsync();
+        }
+
+        private async System.Threading.Tasks.Task HandleSmartCubeFaceletsEventAsync(SmartCubeFaceletsEvent facelets)
+        {
+            SmartCubeStatusPanel.Visibility = Visibility.Visible;
+            RenderSmartCubePreview(facelets.Facelets);
+
+            var solved = IsSolvedFacelets(facelets.Facelets);
+            var stateText = solved ? _strings.BluetoothSolvedState : _strings.BluetoothStateSynced;
+            SmartCubeFaceletsText.Text = stateText;
+            ConnectedCubeStateText.Text = stateText;
+
+            if (solved && _smartCubeSolveHasMove && _lastSnapshot?.Timer.Phase == TimerPhase.Running && _appService is not null)
+            {
+                _smartCubeSolveHasMove = false;
+                Render(await _appService.StopSmartCubeSolveAsync());
+                SmartCubeFaceletsText.Text = _strings.BluetoothSolvedState;
+                ConnectedCubeStateText.Text = _strings.BluetoothSolvedState;
+            }
+        }
+
+        private async System.Threading.Tasks.Task RequestSmartCubeFaceletsAsync()
+        {
+            if (_smartCubeConnection is null)
+            {
+                return;
+            }
+
+            try
+            {
+                await _smartCubeConnection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
+            }
+            catch
+            {
+            }
+        }
+
+        private void RenderSmartCubeConnection()
+        {
+            if (_smartCubeConnection is null)
+            {
+                ConnectedCubePanel.Visibility = Visibility.Collapsed;
+                BluetoothDevicesList.Visibility = Visibility.Visible;
+                BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
+                return;
+            }
+
+            BluetoothDevicesList.Visibility = Visibility.Collapsed;
+            BluetoothScanProgress.IsIndeterminate = false;
+            ConnectedCubePanel.Visibility = Visibility.Visible;
+            SmartCubeStatusPanel.Visibility = Visibility.Visible;
+            ConnectedCubeNameText.Text = _smartCubeConnection.DeviceName;
+            ConnectedCubeBatteryText.Text = _strings.BluetoothBatteryUnknown;
+            ConnectedCubeStateText.Text = _strings.BluetoothWaitingState;
+            SmartCubeModeText.Text = string.Format(_strings.BluetoothSmartModeFormat, _smartCubeConnection.DeviceName);
+            SmartCubeFaceletsText.Text = _strings.BluetoothWaitingState;
+            RenderSmartCubePreview(null);
+            BluetoothFlyoutStatusText.Text = _strings.BluetoothConnectedMessage;
+        }
+
+        private async System.Threading.Tasks.Task DisconnectSmartCubeAsync()
+        {
+            if (_smartCubeConnection is null)
+            {
+                return;
+            }
+
+            _smartCubeConnection.EventReceived -= SmartCubeConnection_EventReceived;
+            await _smartCubeConnection.DisposeAsync();
+            _smartCubeConnection = null;
+            _smartCubeSolveHasMove = false;
+            ConnectedCubePanel.Visibility = Visibility.Collapsed;
+            SmartCubeStatusPanel.Visibility = Visibility.Collapsed;
+            BluetoothDevicesList.Visibility = Visibility.Visible;
+            BluetoothFlyoutStatusText.Text = _strings.BluetoothDisconnectedMessage;
+        }
+
+        private void RenderSmartCubePreview(string? facelets)
+        {
+            DrawSmartCubePreview(SmartCubePreviewCanvas, facelets);
+            DrawSmartCubePreview(ConnectedCubePreviewCanvas, facelets);
+        }
+
+        private void DrawSmartCubePreview(Canvas canvas, string? facelets)
+        {
+            canvas.Children.Clear();
+            if (string.IsNullOrWhiteSpace(facelets) || facelets.Length != 54)
+            {
+                DrawEmptySmartCubePreview(canvas);
+                return;
+            }
+
+            var origin = new Windows.Foundation.Point(52, 48);
+            var frontX = new Windows.Foundation.Point(14, 8);
+            var frontY = new Windows.Foundation.Point(0, 16);
+            var depth = new Windows.Foundation.Point(10, -6);
+
+            DrawCubeFace(canvas, facelets, faceStart: 0, Add(origin, Multiply(depth, 3)), frontX, Multiply(depth, -1));
+            DrawCubeFace(canvas, facelets, faceStart: 9, Add(origin, Multiply(frontX, 3)), depth, frontY);
+            DrawCubeFace(canvas, facelets, faceStart: 18, origin, frontX, frontY);
+        }
+
+        private void DrawEmptySmartCubePreview(Canvas canvas)
+        {
+            var origin = new Windows.Foundation.Point(52, 48);
+            var frontX = new Windows.Foundation.Point(14, 8);
+            var frontY = new Windows.Foundation.Point(0, 16);
+            var depth = new Windows.Foundation.Point(10, -6);
+
+            DrawCubeFace(canvas, null, faceStart: 0, Add(origin, Multiply(depth, 3)), frontX, Multiply(depth, -1));
+            DrawCubeFace(canvas, null, faceStart: 9, Add(origin, Multiply(frontX, 3)), depth, frontY);
+            DrawCubeFace(canvas, null, faceStart: 18, origin, frontX, frontY);
+        }
+
+        private void DrawCubeFace(
+            Canvas canvas,
+            string? facelets,
+            int faceStart,
+            Windows.Foundation.Point origin,
+            Windows.Foundation.Point xVector,
+            Windows.Foundation.Point yVector)
+        {
+            for (var row = 0; row < 3; row++)
+            {
+                for (var column = 0; column < 3; column++)
+                {
+                    var stickerOrigin = Add(Add(origin, Multiply(xVector, column)), Multiply(yVector, row));
+                    var color = facelets is null
+                        ? new SolidColorBrush(Microsoft.UI.Colors.Transparent)
+                        : GetStickerBrush(facelets[faceStart + row * 3 + column]);
+
+                    var polygon = new Polygon
+                    {
+                        Points =
+                        {
+                            stickerOrigin,
+                            Add(stickerOrigin, xVector),
+                            Add(Add(stickerOrigin, xVector), yVector),
+                            Add(stickerOrigin, yVector)
+                        },
+                        Fill = color,
+                        Stroke = Application.Current.Resources["TextFillColorTertiaryBrush"] as Brush,
+                        StrokeThickness = 1
+                    };
+                    canvas.Children.Add(polygon);
+                }
+            }
+        }
+
+        private static Windows.Foundation.Point Multiply(Windows.Foundation.Point point, double factor)
+        {
+            return new Windows.Foundation.Point(point.X * factor, point.Y * factor);
+        }
+
+        private static Windows.Foundation.Point Add(Windows.Foundation.Point left, Windows.Foundation.Point right)
+        {
+            return new Windows.Foundation.Point(left.X + right.X, left.Y + right.Y);
+        }
+
+        private static SolidColorBrush GetStickerBrush(char facelet)
+        {
+            return facelet switch
+            {
+                'U' => new SolidColorBrush(Microsoft.UI.Colors.White),
+                'R' => new SolidColorBrush(Microsoft.UI.Colors.Red),
+                'F' => new SolidColorBrush(Microsoft.UI.Colors.LimeGreen),
+                'D' => new SolidColorBrush(Microsoft.UI.Colors.Gold),
+                'L' => new SolidColorBrush(Microsoft.UI.Colors.Orange),
+                'B' => new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue),
+                _ => new SolidColorBrush(Microsoft.UI.Colors.Gray)
+            };
+        }
+
+        private static bool IsSolvedFacelets(string facelets)
+        {
+            if (facelets.Length != 54)
+            {
+                return false;
+            }
+
+            for (var face = 0; face < 6; face++)
+            {
+                var start = face * 9;
+                var center = facelets[start + 4];
+                for (var index = 0; index < 9; index++)
+                {
+                    if (facelets[start + index] != center)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
         private static string FormatSolveTime(Solve solve, int decimalPlaces)
         {
             return solve.Penalty == Penalty.Dnf
@@ -580,6 +999,9 @@ namespace SharpTimer.App
             PenaltyColumnText.Text = _strings.PenaltyColumn;
             ClearPenaltyButton.Content = _strings.ClearPenalty;
             DeleteButton.Content = _strings.Delete;
+            BluetoothFlyoutTitleText.Text = _strings.BluetoothTitle;
+            BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
+            DisconnectCubeButton.Content = _strings.BluetoothDisconnect;
             SettingsTitleText.Text = _strings.SettingsTitle;
             InspectionSwitch.Header = _strings.InspectionHeader;
             PrecisionComboBox.Header = _strings.PrecisionHeader;

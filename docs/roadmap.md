@@ -14,7 +14,7 @@
 - 建立 `SharpTimer.Tests`，覆盖状态机、成绩罚时和统计规则。
 - 建立 `SharpTimer.Storage`，固定 SQLite v1 schema、迁移入口和 session/solve 仓储。
 - 建立 `SharpTimer.App.Services`，串联状态机、SQLite 仓储、默认 session 和统计快照。
-- WinUI 3 主界面使用官方 `NavigationView` 侧边栏结构，拆分主计时、成绩列表和设置。
+- WinUI 3 主界面使用官方 `NavigationView` 侧边栏结构，拆分主计时、成绩列表和设置；智能魔方入口放在主计时页。
 - UI 控件和页面模式对照 `ref/WinUI-Gallery`，避免自制伪 Fluent 控件。
 - 页面切换使用轻量进入动画；严格 DrillIn 过渡留到页面拆分后接入。
 - WinUI 3 主界面支持按下空格进入 Ready、松开空格开始观察/复原、运行中按下空格停止计时。
@@ -39,10 +39,13 @@
 
 目标：在本地计时稳定后接入智能魔方。
 
-- 添加 `SharpTimer.Bluetooth`。
+- 添加 `SharpTimer.Bluetooth`。（已建立第一段骨架）
 - 参考 `ref/smartcube-web-bluetooth` 迁移 GAN、Giiker、GoCube、MoYu、QiYi 等协议。
-- 设计 `ISmartCubeProtocol`、`SmartCubeEvent`、`SmartCubeConnection`。
-- 先做设备扫描和连接诊断界面，再做转动事件与计时器联动；诊断界面优先参考 `ref/WinUI-Gallery` 中列表、状态提示、进度和设置类控件示例。
+- 设计 `ISmartCubeProtocol`、`SmartCubeEvent`、`SmartCubeConnection`。（已建立事件、命令、协议注册、默认服务 UUID 和 MoYu32 连接入口）
+- 主计时页右上角提供蓝牙按钮，自动扫描并只显示名称匹配的智能魔方设备；点击设备后进入智能魔方模式。
+- 主计时页蓝牙弹出层在连接后展示当前魔方的名称、电量和状态预览，不再展示临时通知计数、opcode 或原始包调试信息。
+- MoYu32 转动事件已接入自动计时：首个有效转动启动复原计时，状态回到复原态后自动停止并保存成绩。
+- 后续优先实机验证状态同步延迟与成绩保存体验，再扩展其他厂商协议，避免一次性混入过多 BLE 兼容性问题。
 
 ## 第四阶段：统计增强
 

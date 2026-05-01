@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SharpTimer.Core\SharpTimer.Core.csproj" />
+    <ProjectReference Include="..\SharpTimer.Bluetooth\SharpTimer.Bluetooth.csproj" />
     <ProjectReference Include="..\SharpTimer.Storage\SharpTimer.Storage.csproj" />
   </ItemGroup>
 

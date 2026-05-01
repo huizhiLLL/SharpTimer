@@ -101,6 +101,73 @@ public sealed class TimerAppService
         }
     }
 
+    public async Task<TimerAppSnapshot> HandleSmartCubeMoveAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureInitialized();
+
+            switch (_timer.Phase)
+            {
+                case TimerPhase.Idle:
+                    _timer.BeginInspection();
+                    if (_timer.Phase == TimerPhase.Inspecting)
+                    {
+                        _timer.StartSolve();
+                    }
+
+                    break;
+                case TimerPhase.Inspecting:
+                    _timer.StartSolve();
+                    break;
+                case TimerPhase.Stopped:
+                    _timer.Reset();
+                    _timer.BeginInspection();
+                    if (_timer.Phase == TimerPhase.Inspecting)
+                    {
+                        _timer.StartSolve();
+                    }
+
+                    break;
+                case TimerPhase.Running:
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported timer phase: {_timer.Phase}.");
+            }
+
+            return CreateSnapshot();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<TimerAppSnapshot> StopSmartCubeSolveAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureInitialized();
+            if (_timer.Phase != TimerPhase.Running)
+            {
+                return CreateSnapshot();
+            }
+
+            var solve = _timer.StopSolve(_currentSession!.Id, GetCurrentScramble());
+            await _solveRepository.SaveAsync(solve, cancellationToken);
+            _solves = await _solveRepository.ListBySessionAsync(_currentSession.Id, cancellationToken);
+            MoveToNextScramble();
+
+            return CreateSnapshot();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public TimerAppSnapshot MoveToPreviousScramble()
     {
         EnsureInitialized();

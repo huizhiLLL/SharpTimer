@@ -29,12 +29,12 @@
         <NavigationView.MenuItems>
             <NavigationViewItem
                 x:Name="TimerNavItem"
-                Content="主计时"
+                Content="计时"
                 Icon="Play"
                 Tag="timer" />
             <NavigationViewItem
                 x:Name="SolvesNavItem"
-                Content="成绩列表"
+                Content="成绩"
                 Icon="List"
                 Tag="solves" />
         </NavigationView.MenuItems>
@@ -49,16 +49,141 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock
-                    x:Name="ScrambleText"
-                    MaxWidth="900"
-                    Margin="0,24,0,0"
-                    HorizontalAlignment="Center"
-                    TextAlignment="Center"
-                    TextWrapping="Wrap"
-                    FontFamily="Consolas"
-                    FontSize="22"
-                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                <Grid>
+                    <TextBlock
+                        x:Name="ScrambleText"
+                        MaxWidth="900"
+                        Margin="0,24,72,0"
+                        HorizontalAlignment="Center"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap"
+                        FontFamily="Consolas"
+                        FontSize="22"
+                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+                    <Button
+                        x:Name="BluetoothButton"
+                        Width="44"
+                        Height="44"
+                        Padding="0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        CornerRadius="22"
+                        AutomationProperties.Name="智能魔方蓝牙"
+                        Click="BluetoothButton_Click">
+                        <FontIcon Glyph="&#xE702;" FontSize="18" />
+                        <Button.Flyout>
+                            <Flyout
+                                x:Name="BluetoothFlyout"
+                                Opened="BluetoothFlyout_Opened"
+                                Closed="BluetoothFlyout_Closed">
+                                <Grid
+                                    Width="360"
+                                    RowSpacing="12">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Spacing="2">
+                                        <TextBlock
+                                            x:Name="BluetoothFlyoutTitleText"
+                                            Text="智能魔方"
+                                            FontWeight="SemiBold"
+                                            FontSize="18" />
+                                        <TextBlock
+                                            x:Name="BluetoothFlyoutStatusText"
+                                            Text="正在扫描附近魔方..."
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+
+                                    <ProgressBar
+                                        x:Name="BluetoothScanProgress"
+                                        Grid.Row="1"
+                                        IsIndeterminate="True" />
+
+                                    <ListView
+                                        x:Name="BluetoothDevicesList"
+                                        Grid.Row="2"
+                                        MaxHeight="260"
+                                        SelectionMode="None"
+                                        IsItemClickEnabled="True"
+                                        ItemClick="BluetoothDevicesList_ItemClick"
+                                        AutomationProperties.Name="智能魔方设备">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Padding="2,8" ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock
+                                                            Text="{Binding Name}"
+                                                            FontWeight="SemiBold"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock
+                                                            Text="{Binding Address}"
+                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                            FontFamily="Consolas"
+                                                            FontSize="12"
+                                                            TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <StackPanel
+                                                        Grid.Column="1"
+                                                        HorizontalAlignment="Right"
+                                                        Spacing="2">
+                                                        <TextBlock
+                                                            Text="{Binding Protocol}"
+                                                            HorizontalAlignment="Right"
+                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock
+                                                            Text="{Binding Signal}"
+                                                            HorizontalAlignment="Right"
+                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+
+                                    <Border
+                                        x:Name="ConnectedCubePanel"
+                                        Grid.Row="3"
+                                        Padding="12"
+                                        CornerRadius="8"
+                                        Visibility="Collapsed"
+                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock
+                                                x:Name="ConnectedCubeNameText"
+                                                FontWeight="SemiBold" />
+                                            <TextBlock
+                                                x:Name="ConnectedCubeBatteryText"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <Canvas
+                                                x:Name="ConnectedCubePreviewCanvas"
+                                                Width="168"
+                                                Height="126"
+                                                HorizontalAlignment="Left" />
+                                            <TextBlock
+                                                x:Name="ConnectedCubeStateText"
+                                                TextWrapping="Wrap"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            <Button
+                                                x:Name="DisconnectCubeButton"
+                                                Content="断开连接"
+                                                HorizontalAlignment="Right"
+                                                Click="DisconnectCubeButton_Click" />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                </Grid>
 
                 <StackPanel
                     Grid.Row="1"
@@ -84,6 +209,28 @@
                         HorizontalAlignment="Center"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         FontSize="18" />
+                    <Border
+                        x:Name="SmartCubeStatusPanel"
+                        Padding="12"
+                        CornerRadius="8"
+                        Visibility="Collapsed"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <StackPanel Spacing="4">
+                            <TextBlock
+                                x:Name="SmartCubeModeText"
+                                FontWeight="SemiBold" />
+                            <Canvas
+                                x:Name="SmartCubePreviewCanvas"
+                                Width="168"
+                                Height="126"
+                                HorizontalAlignment="Center" />
+                            <TextBlock
+                                x:Name="SmartCubeFaceletsText"
+                                TextWrapping="Wrap"
+                                TextAlignment="Center"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <Grid
