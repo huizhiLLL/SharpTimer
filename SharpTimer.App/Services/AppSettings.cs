@@ -6,5 +6,7 @@ public sealed record AppSettings
 
     public int DecimalPlaces { get; init; } = 2;
 
-    public AppThemePreference Theme { get; init; } = AppThemePreference.System;
+    public AppThemePreference Theme { get; init; } = AppThemePreference.Light;
+
+    public AppLanguagePreference Language { get; init; } = AppLanguagePreference.English;
 }

@@ -1,9 +1,12 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using SharpTimer.App.Services;
 using SharpTimer.App.ViewModels;
 using SharpTimer.Core.Models;
+using SharpTimer.Core.Statistics;
 using SharpTimer.Core.Timer;
 using System;
 using System.Collections.ObjectModel;
@@ -19,8 +22,14 @@ namespace SharpTimer.App
         private readonly DispatcherTimer _uiTimer = new();
         private readonly AppSettingsService _settingsService = new();
         private TimerAppService? _appService;
+        private TimerAppSnapshot? _lastSnapshot;
         private AppSettings _settings = new();
+        private LocalizedStrings _strings = LocalizedStrings.For(AppLanguagePreference.Chinese);
         private bool _isRendering;
+        private bool _isApplyingSettings;
+        private bool _isSpaceDown;
+        private bool _isReadyToStart;
+        private double _currentTimerScale = 1;
 
         public MainWindow()
         {
@@ -42,11 +51,16 @@ namespace SharpTimer.App
                 ApplicationData.Current.LocalFolder.Path,
                 "sharptimer.db");
             _settings = _settingsService.Load();
+            _strings = LocalizedStrings.For(_settings.Language);
+            ApplyLanguage();
             ApplyTheme(_settings.Theme);
             _appService = new TimerAppService(databasePath, _settings);
 
             var snapshot = await _appService.InitializeAsync();
+            RootGrid.SelectedItem = TimerNavItem;
+            ShowPage(TimerPage);
             Render(snapshot);
+            RenderSettings();
             _uiTimer.Start();
         }
 
@@ -62,48 +76,75 @@ namespace SharpTimer.App
 
         private async void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
         {
+            if (e.Key is Windows.System.VirtualKey.Left or Windows.System.VirtualKey.Right)
+            {
+                e.Handled = true;
+                SwitchScramble(e.Key);
+                return;
+            }
+
             if (e.Key != Windows.System.VirtualKey.Space)
             {
                 return;
             }
 
             e.Handled = true;
+            if (_appService is null || _lastSnapshot is null || _isSpaceDown)
+            {
+                return;
+            }
+
+            _isSpaceDown = true;
+            if (StartsOnKeyUp(_lastSnapshot.Timer.Phase))
+            {
+                _isReadyToStart = true;
+                Render(_lastSnapshot, refreshList: false);
+                return;
+            }
+
             await RunPrimaryTimerActionAsync();
         }
 
-        private async void PrimaryActionButton_Click(object sender, RoutedEventArgs e)
+        private async void RootGrid_KeyUp(object sender, KeyRoutedEventArgs e)
         {
+            if (e.Key != Windows.System.VirtualKey.Space)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            if (!_isSpaceDown)
+            {
+                return;
+            }
+
+            _isSpaceDown = false;
+            if (!_isReadyToStart)
+            {
+                return;
+            }
+
+            _isReadyToStart = false;
             await RunPrimaryTimerActionAsync();
         }
 
-        private void ResetButton_Click(object sender, RoutedEventArgs e)
+        private void AppNavigationView_SelectionChanged(
+            NavigationView sender,
+            NavigationViewSelectionChangedEventArgs args)
         {
-            if (_appService is null)
+            if (ReferenceEquals(args.SelectedItem, TimerNavItem))
             {
-                return;
+                ShowPage(TimerPage);
+            }
+            else if (ReferenceEquals(args.SelectedItem, SolvesNavItem))
+            {
+                ShowPage(SolvesPage);
+            }
+            else if (args.IsSettingsSelected)
+            {
+                ShowPage(SettingsPage);
             }
 
-            Render(_appService.ResetTimer());
-            RootGrid.Focus(FocusState.Programmatic);
-        }
-
-        private async void SettingsButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_appService is null)
-            {
-                return;
-            }
-
-            var settings = await ShowSettingsDialogAsync(_settings);
-            if (settings is null)
-            {
-                return;
-            }
-
-            _settings = settings;
-            _settingsService.Save(_settings);
-            ApplyTheme(_settings.Theme);
-            Render(_appService.ApplySettings(_settings));
             RootGrid.Focus(FocusState.Programmatic);
         }
 
@@ -125,7 +166,7 @@ namespace SharpTimer.App
                 return;
             }
 
-            var name = await ShowSessionNameDialogAsync("新建 session", "Session name");
+            var name = await ShowSessionNameDialogAsync(_strings.NewSessionDialogTitle, _strings.NewSessionDefaultName);
             if (name is null)
             {
                 return;
@@ -142,7 +183,7 @@ namespace SharpTimer.App
                 return;
             }
 
-            var name = await ShowSessionNameDialogAsync("重命名 session", item.Name);
+            var name = await ShowSessionNameDialogAsync(_strings.RenameSessionDialogTitle, item.Name);
             if (name is null)
             {
                 return;
@@ -162,10 +203,10 @@ namespace SharpTimer.App
             var dialog = new ContentDialog
             {
                 XamlRoot = RootGrid.XamlRoot,
-                Title = "归档当前 session",
-                Content = "归档后不会出现在 session 列表里，成绩仍保存在本地数据库中。",
-                PrimaryButtonText = "归档",
-                CloseButtonText = "取消",
+                Title = _strings.ArchiveSessionDialogTitle,
+                Content = _strings.ArchiveSessionDialogContent,
+                PrimaryButtonText = _strings.Archive,
+                CloseButtonText = _strings.Cancel,
                 DefaultButton = ContentDialogButton.Close
             };
 
@@ -204,6 +245,26 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
+        private void InspectionSwitch_Toggled(object sender, RoutedEventArgs e)
+        {
+            ApplySettingsFromControls();
+        }
+
+        private void PrecisionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySettingsFromControls();
+        }
+
+        private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySettingsFromControls();
+        }
+
+        private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySettingsFromControls();
+        }
+
         private async System.Threading.Tasks.Task RunPrimaryTimerActionAsync()
         {
             if (_appService is null)
@@ -228,18 +289,18 @@ namespace SharpTimer.App
 
         private void Render(TimerAppSnapshot snapshot, bool refreshList = true)
         {
+            _lastSnapshot = snapshot;
             _isRendering = true;
             RenderSessions(snapshot);
-            PhaseText.Text = FormatPhase(snapshot.Timer);
+            ScrambleText.Text = snapshot.CurrentScramble;
             TimerText.Text = FormatTime(snapshot.Timer.Elapsed, _settings.DecimalPlaces);
             InspectionText.Text = FormatInspection(snapshot.Timer);
-            PrimaryActionButton.Content = FormatPrimaryAction(snapshot.Timer.Phase);
+            ApplyTimerVisualState(snapshot.Timer);
+            ApplyImmersiveTimerLayout(snapshot.Timer);
 
-            BestText.Text = FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces);
-            MeanText.Text = FormatNullableTime(snapshot.Statistics.Mean, _settings.DecimalPlaces);
             Ao5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
             Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
-            CountText.Text = $"{snapshot.Statistics.Count} 次";
+            CountText.Text = string.Format(_strings.CountFormat, snapshot.Statistics.Count);
 
             if (refreshList)
             {
@@ -291,14 +352,22 @@ namespace SharpTimer.App
         private void RenderSolves(TimerAppSnapshot snapshot)
         {
             var selectedId = (SolvesList.SelectedItem as SolveListItem)?.Id;
-            var items = snapshot.Solves
+            var orderedSolves = snapshot.Solves
+                .OrderBy(solve => solve.CreatedAt)
+                .ToArray();
+            var items = orderedSolves
                 .Select((solve, index) => new SolveListItem
                 {
                     Id = solve.Id,
                     Number = (index + 1).ToString(),
                     Time = FormatSolveTime(solve, _settings.DecimalPlaces),
                     Penalty = FormatPenalty(solve.Penalty),
-                    CreatedAt = solve.CreatedAt.ToLocalTime().ToString("HH:mm:ss"),
+                    AverageOf5 = FormatNullableTime(
+                        StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 5),
+                        _settings.DecimalPlaces),
+                    AverageOf12 = FormatNullableTime(
+                        StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 12),
+                        _settings.DecimalPlaces),
                     Solve = solve
                 })
                 .Reverse()
@@ -314,45 +383,135 @@ namespace SharpTimer.App
                 ?? _solveItems.FirstOrDefault();
         }
 
-        private static string FormatPhase(TimerAppSnapshot snapshot)
-        {
-            return FormatPhase(snapshot.Timer);
-        }
-
-        private static string FormatPhase(TimerSnapshot snapshot)
-        {
-            return snapshot.Phase switch
-            {
-                TimerPhase.Idle => "就绪",
-                TimerPhase.Inspecting => snapshot.PendingPenalty switch
-                {
-                    Penalty.PlusTwo => "观察超时 +2",
-                    Penalty.Dnf => "观察超时 DNF",
-                    _ => "观察"
-                },
-                TimerPhase.Running => "计时中",
-                TimerPhase.Stopped => "已停止",
-                _ => "未知"
-            };
-        }
-
-        private static string FormatPrimaryAction(TimerPhase phase)
-        {
-            return phase switch
-            {
-                TimerPhase.Idle => "开始",
-                TimerPhase.Inspecting => "开跑",
-                TimerPhase.Running => "停止",
-                TimerPhase.Stopped => "再来",
-                _ => "开始"
-            };
-        }
-
-        private static string FormatInspection(TimerSnapshot snapshot)
+        private string FormatInspection(TimerSnapshot snapshot)
         {
             return snapshot.Phase == TimerPhase.Inspecting
-                ? $"观察剩余 {Math.Ceiling(snapshot.InspectionRemaining.TotalSeconds):0}s"
+                ? string.Format(_strings.InspectionRemainingFormat, Math.Ceiling(snapshot.InspectionRemaining.TotalSeconds))
                 : string.Empty;
+        }
+
+        private void ApplyTimerVisualState(TimerSnapshot snapshot)
+        {
+            var targetScale = _isReadyToStart || snapshot.Phase == TimerPhase.Running ? 1.06 : 1;
+            if (Math.Abs(_currentTimerScale - targetScale) > 0.001)
+            {
+                AnimateTimerScale(targetScale);
+                _currentTimerScale = targetScale;
+            }
+
+            TimerText.Foreground = _isReadyToStart
+                ? new SolidColorBrush(Microsoft.UI.Colors.ForestGreen)
+                : Application.Current.Resources["TextFillColorPrimaryBrush"] as Brush;
+        }
+
+        private void ApplyImmersiveTimerLayout(TimerSnapshot snapshot)
+        {
+            var isImmersive = _isReadyToStart || snapshot.Phase == TimerPhase.Running;
+            var contextVisibility = isImmersive ? Visibility.Collapsed : Visibility.Visible;
+
+            ScrambleText.Visibility = contextVisibility;
+            InspectionText.Visibility = contextVisibility;
+            StatsPanel.Visibility = contextVisibility;
+        }
+
+        private void AnimateTimerScale(double targetScale)
+        {
+            var storyboard = new Storyboard();
+            var duration = new Duration(TimeSpan.FromMilliseconds(140));
+            var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var scaleX = new DoubleAnimation
+            {
+                To = targetScale,
+                Duration = duration,
+                EasingFunction = easing
+            };
+            Storyboard.SetTarget(scaleX, TimerTextScale);
+            Storyboard.SetTargetProperty(scaleX, nameof(ScaleTransform.ScaleX));
+
+            var scaleY = new DoubleAnimation
+            {
+                To = targetScale,
+                Duration = duration,
+                EasingFunction = easing
+            };
+            Storyboard.SetTarget(scaleY, TimerTextScale);
+            Storyboard.SetTargetProperty(scaleY, nameof(ScaleTransform.ScaleY));
+
+            storyboard.Children.Add(scaleX);
+            storyboard.Children.Add(scaleY);
+            storyboard.Begin();
+        }
+
+        private static bool StartsOnKeyUp(TimerPhase phase)
+        {
+            return phase is TimerPhase.Idle or TimerPhase.Inspecting or TimerPhase.Stopped;
+        }
+
+        private void ShowPage(FrameworkElement page)
+        {
+            var wasVisible = page.Visibility == Visibility.Visible;
+            TimerPage.Visibility = ReferenceEquals(page, TimerPage) ? Visibility.Visible : Visibility.Collapsed;
+            SolvesPage.Visibility = ReferenceEquals(page, SolvesPage) ? Visibility.Visible : Visibility.Collapsed;
+            SettingsPage.Visibility = ReferenceEquals(page, SettingsPage) ? Visibility.Visible : Visibility.Collapsed;
+            page.Visibility = Visibility.Visible;
+
+            if (!wasVisible)
+            {
+                AnimatePageEntrance(page);
+            }
+        }
+
+        private static void AnimatePageEntrance(FrameworkElement page)
+        {
+            page.Opacity = 0;
+            page.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+            page.RenderTransform = new ScaleTransform { ScaleX = 0.985, ScaleY = 0.985 };
+
+            var storyboard = new Storyboard();
+            var duration = new Duration(TimeSpan.FromMilliseconds(160));
+            var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+
+            var opacity = new DoubleAnimation
+            {
+                To = 1,
+                Duration = duration,
+                EasingFunction = easing
+            };
+            Storyboard.SetTarget(opacity, page);
+            Storyboard.SetTargetProperty(opacity, nameof(UIElement.Opacity));
+            storyboard.Children.Add(opacity);
+
+            if (page.RenderTransform is ScaleTransform scale)
+            {
+                var scaleX = new DoubleAnimation { To = 1, Duration = duration, EasingFunction = easing };
+                Storyboard.SetTarget(scaleX, scale);
+                Storyboard.SetTargetProperty(scaleX, nameof(ScaleTransform.ScaleX));
+                storyboard.Children.Add(scaleX);
+
+                var scaleY = new DoubleAnimation { To = 1, Duration = duration, EasingFunction = easing };
+                Storyboard.SetTarget(scaleY, scale);
+                Storyboard.SetTargetProperty(scaleY, nameof(ScaleTransform.ScaleY));
+                storyboard.Children.Add(scaleY);
+            }
+
+            storyboard.Begin();
+        }
+
+        private void SwitchScramble(Windows.System.VirtualKey key)
+        {
+            if (_appService is null || _lastSnapshot is null || _lastSnapshot.Timer.Phase == TimerPhase.Running)
+            {
+                return;
+            }
+
+            _isReadyToStart = false;
+            _isSpaceDown = false;
+            var snapshot = key == Windows.System.VirtualKey.Left
+                ? _appService.MoveToPreviousScramble()
+                : _appService.MoveToNextScramble();
+            Render(snapshot, refreshList: false);
+            RootGrid.Focus(FocusState.Programmatic);
         }
 
         private static string FormatSolveTime(Solve solve, int decimalPlaces)
@@ -389,13 +548,97 @@ namespace SharpTimer.App
             };
         }
 
+        private void RenderSettings()
+        {
+            _isApplyingSettings = true;
+            InspectionSwitch.IsOn = _settings.UseInspection;
+            PrecisionComboBox.SelectedIndex = _settings.DecimalPlaces == 3 ? 1 : 0;
+            ThemeComboBox.SelectedIndex = _settings.Theme switch
+            {
+                AppThemePreference.Light => 1,
+                AppThemePreference.Dark => 2,
+                _ => 0
+            };
+            LanguageComboBox.SelectedIndex = _settings.Language == AppLanguagePreference.English ? 1 : 0;
+            _isApplyingSettings = false;
+        }
+
+        private void ApplyLanguage()
+        {
+            TimerNavItem.Content = _strings.TimerNav;
+            SolvesNavItem.Content = _strings.SolvesNav;
+            if (RootGrid.SettingsItem is NavigationViewItem settingsItem)
+            {
+                settingsItem.Content = _strings.SettingsNav;
+            }
+
+            SessionComboBox.Header = _strings.SessionHeader;
+            NewSessionButton.Content = _strings.NewSession;
+            RenameSessionButton.Content = _strings.RenameSession;
+            ArchiveSessionButton.Content = _strings.ArchiveSession;
+            TimeColumnText.Text = _strings.TimeColumn;
+            PenaltyColumnText.Text = _strings.PenaltyColumn;
+            ClearPenaltyButton.Content = _strings.ClearPenalty;
+            DeleteButton.Content = _strings.Delete;
+            SettingsTitleText.Text = _strings.SettingsTitle;
+            InspectionSwitch.Header = _strings.InspectionHeader;
+            PrecisionComboBox.Header = _strings.PrecisionHeader;
+            CentisecondsItem.Content = _strings.Centiseconds;
+            MillisecondsItem.Content = _strings.Milliseconds;
+            ThemeComboBox.Header = _strings.ThemeHeader;
+            SystemThemeItem.Content = _strings.SystemTheme;
+            LightThemeItem.Content = _strings.LightTheme;
+            DarkThemeItem.Content = _strings.DarkTheme;
+            LanguageComboBox.Header = _strings.LanguageHeader;
+            ChineseLanguageItem.Content = _strings.ChineseLanguage;
+            EnglishLanguageItem.Content = _strings.EnglishLanguage;
+
+            if (_lastSnapshot is not null)
+            {
+                Render(_lastSnapshot, refreshList: false);
+            }
+        }
+
+        private void ApplySettingsFromControls()
+        {
+            if (_isApplyingSettings)
+            {
+                return;
+            }
+
+            _settings = new AppSettings
+            {
+                UseInspection = InspectionSwitch.IsOn,
+                DecimalPlaces = PrecisionComboBox.SelectedIndex == 1 ? 3 : 2,
+                Theme = ThemeComboBox.SelectedIndex switch
+                {
+                    1 => AppThemePreference.Light,
+                    2 => AppThemePreference.Dark,
+                    _ => AppThemePreference.System
+                },
+                Language = LanguageComboBox.SelectedIndex == 1
+                    ? AppLanguagePreference.English
+                    : AppLanguagePreference.Chinese
+            };
+
+            _settingsService.Save(_settings);
+            _strings = LocalizedStrings.For(_settings.Language);
+            ApplyLanguage();
+            ApplyTheme(_settings.Theme);
+
+            if (_appService is not null)
+            {
+                Render(_appService.ApplySettings(_settings));
+            }
+        }
+
         private async System.Threading.Tasks.Task<string?> ShowSessionNameDialogAsync(string title, string defaultName)
         {
             var textBox = new TextBox
             {
                 Text = defaultName,
                 MinWidth = 320,
-                PlaceholderText = "例如 Main、OH、练习 A"
+                PlaceholderText = _strings.SessionNamePlaceholder
             };
 
             var dialog = new ContentDialog
@@ -403,8 +646,8 @@ namespace SharpTimer.App
                 XamlRoot = RootGrid.XamlRoot,
                 Title = title,
                 Content = textBox,
-                PrimaryButtonText = "保存",
-                CloseButtonText = "取消",
+                PrimaryButtonText = _strings.Save,
+                CloseButtonText = _strings.Cancel,
                 DefaultButton = ContentDialogButton.Primary
             };
 
@@ -416,74 +659,6 @@ namespace SharpTimer.App
 
             var name = textBox.Text.Trim();
             return string.IsNullOrWhiteSpace(name) ? null : name;
-        }
-
-        private async System.Threading.Tasks.Task<AppSettings?> ShowSettingsDialogAsync(AppSettings settings)
-        {
-            var inspectionSwitch = new ToggleSwitch
-            {
-                Header = "15 秒观察",
-                IsOn = settings.UseInspection
-            };
-
-            var precisionBox = new ComboBox
-            {
-                Header = "显示精度",
-                MinWidth = 220
-            };
-            precisionBox.Items.Add("百分秒");
-            precisionBox.Items.Add("毫秒");
-            precisionBox.SelectedIndex = settings.DecimalPlaces == 3 ? 1 : 0;
-
-            var themeBox = new ComboBox
-            {
-                Header = "主题",
-                MinWidth = 220
-            };
-            themeBox.Items.Add("跟随系统");
-            themeBox.Items.Add("亮色");
-            themeBox.Items.Add("暗色");
-            themeBox.SelectedIndex = settings.Theme switch
-            {
-                AppThemePreference.Light => 1,
-                AppThemePreference.Dark => 2,
-                _ => 0
-            };
-
-            var panel = new StackPanel
-            {
-                Spacing = 16
-            };
-            panel.Children.Add(inspectionSwitch);
-            panel.Children.Add(precisionBox);
-            panel.Children.Add(themeBox);
-
-            var dialog = new ContentDialog
-            {
-                XamlRoot = RootGrid.XamlRoot,
-                Title = "设置",
-                Content = panel,
-                PrimaryButtonText = "保存",
-                CloseButtonText = "取消",
-                DefaultButton = ContentDialogButton.Primary
-            };
-
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary)
-            {
-                return null;
-            }
-
-            return new AppSettings
-            {
-                UseInspection = inspectionSwitch.IsOn,
-                DecimalPlaces = precisionBox.SelectedIndex == 1 ? 3 : 2,
-                Theme = themeBox.SelectedIndex switch
-                {
-                    1 => AppThemePreference.Light,
-                    2 => AppThemePreference.Dark,
-                    _ => AppThemePreference.System
-                }
-            };
         }
 
         private void ApplyTheme(AppThemePreference theme)

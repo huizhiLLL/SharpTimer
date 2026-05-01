@@ -9,7 +9,7 @@ SharpTimer 是一个 Windows 原生魔方计时器，目标是先做好本地手
 - 支持 15 秒观察、`+2`、`DNF` 等 WCA 风格计时规则。
 - 提供基础统计模型：best、mean、ao5、ao12。
 - 使用 SQLite 保存 session 和成绩。
-- WinUI 主界面已接入本地手动计时、session 管理、成绩列表和基础统计。
+- WinUI 主界面使用官方 `NavigationView` 侧边栏，包含主计时、成绩列表和设置三个页面。
 - 支持少量本地设置：是否启用观察、显示精度、亮/暗主题。
 - 后续计划接入 GAN、Giiker、GoCube、MoYu、QiYi 等智能魔方 BLE 协议。
 
@@ -52,5 +52,6 @@ dotnet test SharpTimer.slnx
 
 ## 参考资料
 
+- `ref/WinUI-Gallery`：官方 WinUI Gallery 示例源码，作为控件、XAML、样式资源和 Windows App SDK API 的重要前端参考。
 - `ref/smartcube-web-bluetooth`：智能魔方蓝牙协议参考。
 - `ref/cstimer`：计时状态、观察时间、罚时、统计和 session 概念参考。

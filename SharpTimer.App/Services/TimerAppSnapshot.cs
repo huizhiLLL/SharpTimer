@@ -9,5 +9,6 @@ public sealed record TimerAppSnapshot(
     Session CurrentSession,
     IReadOnlyList<Session> Sessions,
     TimerSnapshot Timer,
+    string CurrentScramble,
     IReadOnlyList<Solve> Solves,
     SolveStatistics Statistics);

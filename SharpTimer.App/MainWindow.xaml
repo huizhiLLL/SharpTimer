@@ -12,100 +12,73 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid
+    <NavigationView
         x:Name="RootGrid"
         IsTabStop="True"
         KeyDown="RootGrid_KeyDown"
+        KeyUp="RootGrid_KeyUp"
+        PaneTitle="SharpTimer"
+        PaneDisplayMode="Left"
+        OpenPaneLength="268"
+        CompactPaneLength="56"
+        IsBackButtonVisible="Collapsed"
+        IsSettingsVisible="True"
+        SelectionChanged="AppNavigationView_SelectionChanged"
         Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
 
-        <Border
-            Grid.Row="0"
-            Padding="28,20"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            BorderThickness="0,0,0,1">
-            <Grid ColumnSpacing="18">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+        <NavigationView.MenuItems>
+            <NavigationViewItem
+                x:Name="TimerNavItem"
+                Content="主计时"
+                Icon="Play"
+                Tag="timer" />
+            <NavigationViewItem
+                x:Name="SolvesNavItem"
+                Content="成绩列表"
+                Icon="List"
+                Tag="solves" />
+        </NavigationView.MenuItems>
 
-                <StackPanel Spacing="8">
-                    <TextBlock
-                        Text="SharpTimer"
-                        FontSize="22"
-                        FontWeight="SemiBold" />
-                    <StackPanel
-                        Orientation="Horizontal"
-                        Spacing="8">
-                        <ComboBox
-                            x:Name="SessionComboBox"
-                            MinWidth="220"
-                            DisplayMemberPath="DisplayName"
-                            SelectionChanged="SessionComboBox_SelectionChanged" />
-                        <Button
-                            Content="新建"
-                            Click="NewSessionButton_Click" />
-                        <Button
-                            Content="重命名"
-                            Click="RenameSessionButton_Click" />
-                        <Button
-                            Content="归档"
-                            Click="ArchiveSessionButton_Click" />
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel
-                    Grid.Column="1"
-                    Orientation="Horizontal"
-                    Spacing="8">
-                    <Button
-                        x:Name="PrimaryActionButton"
-                        MinWidth="96"
-                        Click="PrimaryActionButton_Click" />
-                    <Button
-                        Content="重置"
-                        Click="ResetButton_Click" />
-                    <Button
-                        Content="设置"
-                        Click="SettingsButton_Click" />
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <Grid
-            Grid.Row="1"
-            Padding="28"
-            ColumnSpacing="24">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*" />
-                <ColumnDefinition Width="360" />
-            </Grid.ColumnDefinitions>
-
-            <Grid RowSpacing="18">
+        <Grid Padding="32">
+            <Grid
+                x:Name="TimerPage"
+                RowSpacing="22">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
+                <TextBlock
+                    x:Name="ScrambleText"
+                    MaxWidth="900"
+                    Margin="0,24,0,0"
+                    HorizontalAlignment="Center"
+                    TextAlignment="Center"
+                    TextWrapping="Wrap"
+                    FontFamily="Consolas"
+                    FontSize="22"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
                 <StackPanel
+                    Grid.Row="1"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Spacing="12">
                     <TextBlock
-                        x:Name="PhaseText"
-                        HorizontalAlignment="Center"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        FontSize="18" />
-                    <TextBlock
                         x:Name="TimerText"
                         HorizontalAlignment="Center"
                         FontFamily="Consolas"
-                        FontSize="96"
-                        FontWeight="SemiBold" />
+                        FontSize="112"
+                        FontWeight="SemiBold"
+                        RenderTransformOrigin="0.5,0.5">
+                        <TextBlock.RenderTransform>
+                            <ScaleTransform
+                                x:Name="TimerTextScale"
+                                ScaleX="1"
+                                ScaleY="1" />
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
                     <TextBlock
                         x:Name="InspectionText"
                         HorizontalAlignment="Center"
@@ -114,11 +87,10 @@
                 </StackPanel>
 
                 <Grid
-                    Grid.Row="1"
+                    x:Name="StatsPanel"
+                    Grid.Row="2"
                     ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
@@ -128,32 +100,12 @@
                         CornerRadius="8"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="Best" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="BestText" FontSize="24" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
-                    <Border
-                        Grid.Column="1"
-                        Padding="16"
-                        CornerRadius="8"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Mean" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="MeanText" FontSize="24" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
-                    <Border
-                        Grid.Column="2"
-                        Padding="16"
-                        CornerRadius="8"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                        <StackPanel Spacing="4">
                             <TextBlock Text="Ao5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock x:Name="Ao5Text" FontSize="24" FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
                     <Border
-                        Grid.Column="3"
+                        Grid.Column="1"
                         Padding="16"
                         CornerRadius="8"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
@@ -166,8 +118,9 @@
             </Grid>
 
             <Grid
-                Grid.Column="1"
-                RowSpacing="12">
+                x:Name="SolvesPage"
+                Visibility="Collapsed"
+                RowSpacing="16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -179,10 +132,32 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock
-                        Text="成绩"
-                        FontSize="20"
-                        FontWeight="SemiBold" />
+                    <StackPanel
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Bottom">
+                        <ComboBox
+                            x:Name="SessionComboBox"
+                            Header="Session"
+                            Width="260"
+                            DisplayMemberPath="DisplayName"
+                            SelectionChanged="SessionComboBox_SelectionChanged" />
+                        <Button
+                            x:Name="NewSessionButton"
+                            Content="新建"
+                            VerticalAlignment="Bottom"
+                            Click="NewSessionButton_Click" />
+                        <Button
+                            x:Name="RenameSessionButton"
+                            Content="重命名"
+                            VerticalAlignment="Bottom"
+                            Click="RenameSessionButton_Click" />
+                        <Button
+                            x:Name="ArchiveSessionButton"
+                            Content="归档"
+                            VerticalAlignment="Bottom"
+                            Click="ArchiveSessionButton_Click" />
+                    </StackPanel>
                     <TextBlock
                         x:Name="CountText"
                         Grid.Column="1"
@@ -194,6 +169,41 @@
                     x:Name="SolvesList"
                     Grid.Row="1"
                     SelectionMode="Single">
+                    <ListView.Header>
+                        <Grid
+                            Padding="4,0,4,8"
+                            ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="44" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="56" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="90" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="#" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock
+                                x:Name="TimeColumnText"
+                                Grid.Column="1"
+                                Text="时间"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock
+                                x:Name="PenaltyColumnText"
+                                Grid.Column="2"
+                                Text="判罚"
+                                HorizontalAlignment="Right"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock
+                                Grid.Column="3"
+                                Text="ao5"
+                                HorizontalAlignment="Right"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock
+                                Grid.Column="4"
+                                Text="ao12"
+                                HorizontalAlignment="Right"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </Grid>
+                    </ListView.Header>
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <Grid
@@ -203,24 +213,34 @@
                                     <ColumnDefinition Width="44" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="90" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock
                                     Text="{Binding Number}"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                     VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock
-                                        Text="{Binding Time}"
-                                        FontSize="18"
-                                        FontWeight="SemiBold" />
-                                    <TextBlock
-                                        Text="{Binding CreatedAt}"
-                                        FontSize="12"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="{Binding Time}"
+                                    FontSize="18"
+                                    FontWeight="SemiBold"
+                                    VerticalAlignment="Center" />
                                 <TextBlock
                                     Grid.Column="2"
                                     Text="{Binding Penalty}"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="{Binding AverageOf5}"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock
+                                    Grid.Column="4"
+                                    Text="{Binding AverageOf12}"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -241,13 +261,75 @@
                         Content="DNF"
                         Click="DnfButton_Click" />
                     <Button
+                        x:Name="ClearPenaltyButton"
                         Content="清除罚时"
                         Click="ClearPenaltyButton_Click" />
                     <Button
+                        x:Name="DeleteButton"
                         Content="删除"
                         Click="DeleteButton_Click" />
                 </StackPanel>
             </Grid>
+
+            <Grid
+                x:Name="SettingsPage"
+                Visibility="Collapsed"
+                RowSpacing="18">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Name="SettingsTitleText"
+                        Text="设置"
+                        FontSize="28"
+                        FontWeight="SemiBold" />
+                </StackPanel>
+
+                <Border
+                    Grid.Row="1"
+                    Padding="18"
+                    CornerRadius="8"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="18">
+                        <ToggleSwitch
+                            x:Name="InspectionSwitch"
+                            Header="15 秒观察"
+                            Toggled="InspectionSwitch_Toggled" />
+
+                        <ComboBox
+                            x:Name="PrecisionComboBox"
+                            Header="显示精度"
+                            MinWidth="240"
+                            SelectionChanged="PrecisionComboBox_SelectionChanged">
+                            <ComboBoxItem x:Name="CentisecondsItem" Content="百分秒" />
+                            <ComboBoxItem x:Name="MillisecondsItem" Content="毫秒" />
+                        </ComboBox>
+
+                        <ComboBox
+                            x:Name="ThemeComboBox"
+                            Header="主题"
+                            MinWidth="240"
+                            SelectionChanged="ThemeComboBox_SelectionChanged">
+                            <ComboBoxItem x:Name="SystemThemeItem" Content="跟随系统" />
+                            <ComboBoxItem x:Name="LightThemeItem" Content="亮色" />
+                            <ComboBoxItem x:Name="DarkThemeItem" Content="暗色" />
+                        </ComboBox>
+
+                        <ComboBox
+                            x:Name="LanguageComboBox"
+                            Header="语言"
+                            MinWidth="240"
+                            SelectionChanged="LanguageComboBox_SelectionChanged">
+                            <ComboBoxItem x:Name="ChineseLanguageItem" Content="中文" />
+                            <ComboBoxItem x:Name="EnglishLanguageItem" Content="English" />
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
-    </Grid>
+    </NavigationView>
 </Window>

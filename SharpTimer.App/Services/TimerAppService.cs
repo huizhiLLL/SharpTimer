@@ -1,4 +1,5 @@
 using SharpTimer.Core.Models;
+using SharpTimer.Core.Scrambles;
 using SharpTimer.Core.Statistics;
 using SharpTimer.Core.Timer;
 using SharpTimer.Storage;
@@ -16,11 +17,14 @@ public sealed class TimerAppService
     private readonly SharpTimerDatabase _database;
     private readonly SqliteSessionRepository _sessionRepository;
     private readonly SqliteSolveRepository _solveRepository;
+    private readonly ThreeByThreeScrambleGenerator _scrambleGenerator = new();
+    private readonly List<string> _scrambleHistory = new();
     private ManualTimerStateMachine _timer;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private Session? _currentSession;
     private IReadOnlyList<Session> _sessions = Array.Empty<Session>();
     private IReadOnlyList<Solve> _solves = Array.Empty<Solve>();
+    private int _currentScrambleIndex = -1;
 
     public TimerAppService(string databasePath, AppSettings settings)
     {
@@ -42,6 +46,7 @@ public sealed class TimerAppService
             _currentSession = _sessions.FirstOrDefault() ?? await CreateDefaultSessionAsync(cancellationToken);
             _sessions = await _sessionRepository.ListActiveAsync(cancellationToken);
             _solves = await _solveRepository.ListBySessionAsync(_currentSession.Id, cancellationToken);
+            EnsureCurrentScramble();
 
             return CreateSnapshot();
         }
@@ -75,9 +80,10 @@ public sealed class TimerAppService
                     _timer.StartSolve();
                     break;
                 case TimerPhase.Running:
-                    var solve = _timer.StopSolve(_currentSession!.Id);
+                    var solve = _timer.StopSolve(_currentSession!.Id, GetCurrentScramble());
                     await _solveRepository.SaveAsync(solve, cancellationToken);
                     _solves = await _solveRepository.ListBySessionAsync(_currentSession.Id, cancellationToken);
+                    MoveToNextScramble();
                     break;
                 case TimerPhase.Stopped:
                     _timer.Reset();
@@ -95,10 +101,33 @@ public sealed class TimerAppService
         }
     }
 
-    public TimerAppSnapshot ResetTimer()
+    public TimerAppSnapshot MoveToPreviousScramble()
     {
         EnsureInitialized();
-        _timer.Reset();
+        EnsureCurrentScramble();
+
+        if (_currentScrambleIndex > 0)
+        {
+            _currentScrambleIndex--;
+        }
+
+        return CreateSnapshot();
+    }
+
+    public TimerAppSnapshot MoveToNextScramble()
+    {
+        EnsureInitialized();
+        EnsureCurrentScramble();
+
+        if (_currentScrambleIndex < _scrambleHistory.Count - 1)
+        {
+            _currentScrambleIndex++;
+        }
+        else
+        {
+            _scrambleHistory.Add(_scrambleGenerator.Generate());
+            _currentScrambleIndex = _scrambleHistory.Count - 1;
+        }
 
         return CreateSnapshot();
     }
@@ -179,6 +208,7 @@ public sealed class TimerAppService
             _currentSession = session;
             _solves = Array.Empty<Solve>();
             _timer.Reset();
+            ResetScrambleHistory();
 
             return CreateSnapshot();
         }
@@ -202,6 +232,7 @@ public sealed class TimerAppService
             _currentSession = session;
             _solves = await _solveRepository.ListBySessionAsync(session.Id, cancellationToken);
             _timer.Reset();
+            ResetScrambleHistory();
 
             return CreateSnapshot();
         }
@@ -255,6 +286,7 @@ public sealed class TimerAppService
             _sessions = await _sessionRepository.ListActiveAsync(cancellationToken);
             _solves = await _solveRepository.ListBySessionAsync(_currentSession.Id, cancellationToken);
             _timer.Reset();
+            ResetScrambleHistory();
 
             return CreateSnapshot();
         }
@@ -286,8 +318,35 @@ public sealed class TimerAppService
             _currentSession!,
             _sessions,
             _timer.Current,
+            GetCurrentScramble(),
             _solves,
             StatisticsCalculator.Calculate(_solves));
+    }
+
+    private string GetCurrentScramble()
+    {
+        EnsureCurrentScramble();
+
+        return _scrambleHistory[_currentScrambleIndex];
+    }
+
+    private void EnsureCurrentScramble()
+    {
+        if (_currentScrambleIndex >= 0 && _currentScrambleIndex < _scrambleHistory.Count)
+        {
+            return;
+        }
+
+        _scrambleHistory.Clear();
+        _scrambleHistory.Add(_scrambleGenerator.Generate());
+        _currentScrambleIndex = 0;
+    }
+
+    private void ResetScrambleHistory()
+    {
+        _scrambleHistory.Clear();
+        _currentScrambleIndex = -1;
+        EnsureCurrentScramble();
     }
 
     private void EnsureInitialized()

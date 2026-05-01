@@ -8,6 +8,7 @@ public sealed class AppSettingsService
     private const string UseInspectionKey = "UseInspection";
     private const string DecimalPlacesKey = "DecimalPlaces";
     private const string ThemeKey = "Theme";
+    private const string LanguageKey = "Language";
     private readonly ApplicationDataContainer _localSettings = ApplicationData.Current.LocalSettings;
 
     public AppSettings Load()
@@ -16,7 +17,8 @@ public sealed class AppSettingsService
         {
             UseInspection = ReadBoolean(UseInspectionKey, true),
             DecimalPlaces = Math.Clamp(ReadInt32(DecimalPlacesKey, 2), 2, 3),
-            Theme = ReadTheme()
+            Theme = ReadTheme(),
+            Language = ReadLanguage()
         };
     }
 
@@ -25,6 +27,7 @@ public sealed class AppSettingsService
         _localSettings.Values[UseInspectionKey] = settings.UseInspection;
         _localSettings.Values[DecimalPlacesKey] = Math.Clamp(settings.DecimalPlaces, 2, 3);
         _localSettings.Values[ThemeKey] = settings.Theme.ToString();
+        _localSettings.Values[LanguageKey] = settings.Language.ToString();
     }
 
     private bool ReadBoolean(string key, bool fallback)
@@ -45,11 +48,23 @@ public sealed class AppSettingsService
     {
         if (!_localSettings.Values.TryGetValue(ThemeKey, out var value) || value is not string text)
         {
-            return AppThemePreference.System;
+            return AppThemePreference.Light;
         }
 
         return Enum.TryParse<AppThemePreference>(text, out var theme)
             ? theme
-            : AppThemePreference.System;
+            : AppThemePreference.Light;
+    }
+
+    private AppLanguagePreference ReadLanguage()
+    {
+        if (!_localSettings.Values.TryGetValue(LanguageKey, out var value) || value is not string text)
+        {
+            return AppLanguagePreference.English;
+        }
+
+        return Enum.TryParse<AppLanguagePreference>(text, out var language)
+            ? language
+            : AppLanguagePreference.English;
     }
 }
