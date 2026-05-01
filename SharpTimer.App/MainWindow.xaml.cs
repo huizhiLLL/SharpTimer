@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Shapes;
+using Microsoft.UI.Windowing;
 using SharpTimer.Bluetooth;
 using SharpTimer.App.Services;
 using SharpTimer.App.ViewModels;
@@ -16,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Windows.Graphics;
 using Windows.Storage;
 
 namespace SharpTimer.App
@@ -45,6 +47,9 @@ namespace SharpTimer.App
         private string? _smartCubeFacelets;
         private string? _scrambleTextRenderKey;
         private double _currentTimerScale = 1;
+        private const int InitialWindowWidth = 2000;
+        private const int InitialWindowHeight = 1200;
+        private const int InitialWindowTopOffset = 10;
 
         private enum ScrambleRunRole
         {
@@ -58,6 +63,7 @@ namespace SharpTimer.App
         public MainWindow()
         {
             InitializeComponent();
+            ApplyInitialWindowPlacement();
 
             SolvesList.ItemsSource = _solveItems;
             SessionComboBox.ItemsSource = _sessionItems;
@@ -67,6 +73,20 @@ namespace SharpTimer.App
 
             _uiTimer.Interval = TimeSpan.FromMilliseconds(33);
             _uiTimer.Tick += UiTimer_Tick;
+        }
+
+        private void ApplyInitialWindowPlacement()
+        {
+            var initialSize = new SizeInt32(InitialWindowWidth, InitialWindowHeight);
+            AppWindow.Resize(initialSize);
+
+            var displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest);
+            var workArea = displayArea.WorkArea;
+            var centeredX = workArea.X + (workArea.Width - initialSize.Width) / 2;
+            var centeredY = workArea.Y + (workArea.Height - initialSize.Height) / 2;
+            var targetX = Math.Max(workArea.X, centeredX);
+            var targetY = Math.Max(workArea.Y, centeredY - InitialWindowTopOffset);
+            AppWindow.Move(new PointInt32(targetX, targetY));
         }
 
         private async void MainWindow_Closed(object sender, WindowEventArgs args)

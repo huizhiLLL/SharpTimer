@@ -21,6 +21,7 @@
         PaneDisplayMode="Left"
         OpenPaneLength="268"
         CompactPaneLength="56"
+        IsPaneOpen="False"
         IsBackButtonVisible="Collapsed"
         IsSettingsVisible="True"
         SelectionChanged="AppNavigationView_SelectionChanged"
