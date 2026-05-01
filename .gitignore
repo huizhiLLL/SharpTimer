@@ -1,0 +1,59 @@
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM64/
+
+# .NET
+*.nupkg
+*.snupkg
+project.lock.json
+project.assets.json
+artifacts/
+TestResults/
+coverage/
+coverage.*
+*.trx
+
+# WinUI / Windows packaging
+AppPackages/
+BundleArtifacts/
+Package.StoreAssociation.xml
+*.appx
+*.appxbundle
+*.msix
+*.msixbundle
+*.appinstaller
+
+# Local database and logs
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# Node reference folders, if dependencies are restored locally
+node_modules/
+dist/
+.turbo/
+.parcel-cache/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+ref/
