@@ -152,10 +152,6 @@
                                             <TextBlock
                                                 x:Name="ConnectedCubeBatteryText"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <TextBlock
-                                                x:Name="ConnectedCubeStateText"
-                                                TextWrapping="Wrap"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                             <StackPanel
                                                 HorizontalAlignment="Right"
                                                 Orientation="Horizontal"

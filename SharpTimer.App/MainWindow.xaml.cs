@@ -758,10 +758,6 @@ namespace SharpTimer.App
 
         private async System.Threading.Tasks.Task HandleSmartCubeMoveEventAsync(SmartCubeMoveEvent move)
         {
-            var lastMoveText = string.Format(_strings.BluetoothLastMoveFormat, move.Move);
-            BluetoothFlyoutStatusText.Text = lastMoveText;
-            ConnectedCubeStateText.Text = lastMoveText;
-
             if (_lastSnapshot?.Timer.Phase == TimerPhase.Running)
             {
                 _smartCubeSolveHasMove = true;
@@ -806,15 +802,12 @@ namespace SharpTimer.App
             }
 
             var solved = ThreeByThreeFacelets.IsSolvedIgnoringRotation(facelets.Facelets);
-            var stateText = solved ? _strings.BluetoothSolvedState : _strings.BluetoothStateSynced;
-            ConnectedCubeStateText.Text = stateText;
 
             if (solved && _smartCubeSolveHasMove && _lastSnapshot?.Timer.Phase == TimerPhase.Running && _appService is not null)
             {
                 _smartCubeSolveHasMove = false;
                 _smartCubeReadyToStart = false;
                 Render(await _appService.StopSmartCubeSolveAsync());
-                ConnectedCubeStateText.Text = _strings.BluetoothSolvedState;
                 SyncSmartCubeScramble(_lastSnapshot);
                 return;
             }
@@ -861,7 +854,6 @@ namespace SharpTimer.App
             SmartCubePreviewCanvas.Visibility = Visibility.Visible;
             ConnectedCubeNameText.Text = _smartCubeConnection.DeviceName;
             ConnectedCubeBatteryText.Text = _strings.BluetoothBatteryUnknown;
-            ConnectedCubeStateText.Text = _strings.BluetoothWaitingState;
             SyncSmartCubeScramble(_lastSnapshot);
             if (ThreeByThreeFacelets.IsValidState(_smartCubeFacelets ?? string.Empty))
             {
@@ -904,7 +896,6 @@ namespace SharpTimer.App
             _smartCubeHasLocalMoveState = false;
             RenderSmartCubePreview(_smartCubeFacelets);
             SyncSmartCubeScramble(_lastSnapshot);
-            ConnectedCubeStateText.Text = _strings.BluetoothSolvedState;
         }
 
         private void SyncSmartCubeScramble(TimerAppSnapshot? snapshot)
@@ -957,20 +948,6 @@ namespace SharpTimer.App
 
             _smartCubeReadyToStart = snapshot.IsReady;
             RenderSmartCubeScrambleText(snapshot);
-
-            var statusText = snapshot.Status switch
-            {
-                SmartCubeScrambleStatus.Ready => _strings.BluetoothScrambleReady,
-                SmartCubeScrambleStatus.Correction => _strings.BluetoothScrambleCorrection,
-                SmartCubeScrambleStatus.RestoreRequired => _strings.BluetoothScrambleRestoreRequired,
-                SmartCubeScrambleStatus.Scrambling => null,
-                _ => _strings.BluetoothWaitingState
-            };
-
-            if (statusText is not null)
-            {
-                ConnectedCubeStateText.Text = statusText;
-            }
 
             ApplyTimerVisualState(_lastSnapshot?.Timer ?? new TimerSnapshot(TimerPhase.Idle, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, Penalty.None, null, null));
             if (_lastSnapshot is not null)

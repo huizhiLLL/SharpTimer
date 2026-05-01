@@ -50,12 +50,7 @@ public sealed record LocalizedStrings
     public required string BluetoothResetCubeState { get; init; }
     public required string BluetoothBatteryFormat { get; init; }
     public required string BluetoothBatteryUnknown { get; init; }
-    public required string BluetoothWaitingState { get; init; }
-    public required string BluetoothLastMoveFormat { get; init; }
-    public required string BluetoothSolvedState { get; init; }
-    public required string BluetoothStateSynced { get; init; }
     public required string BluetoothScrambleReady { get; init; }
-    public required string BluetoothScrambleCorrection { get; init; }
     public required string BluetoothScrambleRestoreRequired { get; init; }
 
     public static LocalizedStrings For(AppLanguagePreference language)
@@ -107,18 +102,13 @@ public sealed record LocalizedStrings
         BluetoothServicesSummaryFormat = "{0} 个服务",
         BluetoothConnectingMessage = "正在连接魔方...",
         BluetoothConnectFailedFormat = "连接失败：{0}",
-        BluetoothConnectedMessage = "已连接蓝牙魔方",
-        BluetoothDisconnectedMessage = "蓝牙魔方已断开",
+        BluetoothConnectedMessage = "已连接智能魔方",
+        BluetoothDisconnectedMessage = "智能魔方已断开",
         BluetoothDisconnect = "断开连接",
         BluetoothResetCubeState = "重置状态",
         BluetoothBatteryFormat = "电量：{0}%",
         BluetoothBatteryUnknown = "电量：--",
-        BluetoothWaitingState = "等待魔方状态...",
-        BluetoothLastMoveFormat = "最近转动：{0}",
-        BluetoothSolvedState = "已复原",
-        BluetoothStateSynced = "状态已同步",
         BluetoothScrambleReady = "READY",
-        BluetoothScrambleCorrection = "需要纠错",
         BluetoothScrambleRestoreRequired = "请先复原魔方"
     };
 
@@ -166,18 +156,13 @@ public sealed record LocalizedStrings
         BluetoothServicesSummaryFormat = "{0} services",
         BluetoothConnectingMessage = "Connecting cube...",
         BluetoothConnectFailedFormat = "Connection failed: {0}",
-        BluetoothConnectedMessage = "Smart cube mode is active",
+        BluetoothConnectedMessage = "Smart cube connected",
         BluetoothDisconnectedMessage = "Bluetooth cube disconnected",
         BluetoothDisconnect = "Disconnect",
         BluetoothResetCubeState = "Reset state",
         BluetoothBatteryFormat = "Battery: {0}%",
         BluetoothBatteryUnknown = "Battery: --",
-        BluetoothWaitingState = "Waiting for cube state...",
-        BluetoothLastMoveFormat = "Last move: {0}",
-        BluetoothSolvedState = "Solved",
-        BluetoothStateSynced = "State synced",
         BluetoothScrambleReady = "READY",
-        BluetoothScrambleCorrection = "Correction needed",
         BluetoothScrambleRestoreRequired = "Solve the cube first"
     };
 }
