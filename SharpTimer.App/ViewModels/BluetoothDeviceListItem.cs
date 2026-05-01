@@ -11,8 +11,6 @@ public sealed class BluetoothDeviceListItem
 
     public required string Name { get; init; }
 
-    public required string Signal { get; init; }
-
     public required string Protocol { get; init; }
 
     public required string Services { get; init; }

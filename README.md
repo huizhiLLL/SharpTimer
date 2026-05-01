@@ -11,7 +11,7 @@ SharpTimer 是一个 Windows 原生魔方计时器，目标是先做好本地手
 - 使用 SQLite 保存 session 和成绩。
 - WinUI 主界面使用官方 `NavigationView` 侧边栏，包含主计时、成绩列表和设置页面；主计时页提供智能魔方蓝牙入口。
 - 支持少量本地设置：是否启用观察、显示精度、亮/暗主题。
-- 已建立智能魔方 BLE 接入骨架和 MoYu32 连接入口；后续逐步迁移 GAN、Giiker、GoCube、QiYi 等协议。
+- 已建立智能魔方 BLE 接入骨架和 MoYu32 连接入口，支持按当前打乱推进到 READY 后自动起表，并在复原完成后保存成绩。
 
 ## 技术栈
 
@@ -28,7 +28,7 @@ SharpTimer
 ├─ SharpTimer.Core         计时器核心模型、状态机、统计
 ├─ SharpTimer.Storage      SQLite schema、迁移和仓储
 ├─ SharpTimer.Tests        核心逻辑测试
-└─ SharpTimer.Bluetooth    智能魔方 BLE 协议抽象和诊断入口
+└─ SharpTimer.Bluetooth    智能魔方 BLE 协议抽象和 MoYu32 连接入口
 ```
 
 ## 开发环境

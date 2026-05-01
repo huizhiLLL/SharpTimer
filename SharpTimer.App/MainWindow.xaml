@@ -87,17 +87,10 @@
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <StackPanel Spacing="2">
-                                        <TextBlock
-                                            x:Name="BluetoothFlyoutTitleText"
-                                            Text="智能魔方"
-                                            FontWeight="SemiBold"
-                                            FontSize="18" />
-                                        <TextBlock
-                                            x:Name="BluetoothFlyoutStatusText"
-                                            Text="正在扫描附近魔方..."
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    </StackPanel>
+                                    <TextBlock
+                                        x:Name="BluetoothFlyoutStatusText"
+                                        Text="正在扫描附近魔方..."
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
                                     <ProgressBar
                                         x:Name="BluetoothScanProgress"
@@ -139,10 +132,6 @@
                                                             Text="{Binding Protocol}"
                                                             HorizontalAlignment="Right"
                                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        <TextBlock
-                                                            Text="{Binding Signal}"
-                                                            HorizontalAlignment="Right"
-                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                                     </StackPanel>
                                                 </Grid>
                                             </DataTemplate>
@@ -163,20 +152,23 @@
                                             <TextBlock
                                                 x:Name="ConnectedCubeBatteryText"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <Canvas
-                                                x:Name="ConnectedCubePreviewCanvas"
-                                                Width="168"
-                                                Height="126"
-                                                HorizontalAlignment="Left" />
                                             <TextBlock
                                                 x:Name="ConnectedCubeStateText"
                                                 TextWrapping="Wrap"
                                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <Button
-                                                x:Name="DisconnectCubeButton"
-                                                Content="断开连接"
+                                            <StackPanel
                                                 HorizontalAlignment="Right"
-                                                Click="DisconnectCubeButton_Click" />
+                                                Orientation="Horizontal"
+                                                Spacing="8">
+                                                <Button
+                                                    x:Name="ResetCubeStateButton"
+                                                    Content="重置状态"
+                                                    Click="ResetCubeStateButton_Click" />
+                                                <Button
+                                                    x:Name="DisconnectCubeButton"
+                                                    Content="断开连接"
+                                                    Click="DisconnectCubeButton_Click" />
+                                            </StackPanel>
                                         </StackPanel>
                                     </Border>
                                 </Grid>
@@ -185,59 +177,56 @@
                     </Button>
                 </Grid>
 
-                <StackPanel
+                <Grid
                     Grid.Row="1"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Spacing="12">
-                    <TextBlock
-                        x:Name="TimerText"
+                    Margin="0,0,0,8">
+                    <StackPanel
                         HorizontalAlignment="Center"
-                        FontFamily="Consolas"
-                        FontSize="112"
-                        FontWeight="SemiBold"
-                        RenderTransformOrigin="0.5,0.5">
-                        <TextBlock.RenderTransform>
-                            <ScaleTransform
-                                x:Name="TimerTextScale"
-                                ScaleX="1"
-                                ScaleY="1" />
-                        </TextBlock.RenderTransform>
-                    </TextBlock>
-                    <TextBlock
-                        x:Name="InspectionText"
-                        HorizontalAlignment="Center"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        FontSize="18" />
-                    <Border
-                        x:Name="SmartCubeStatusPanel"
-                        Padding="12"
-                        CornerRadius="8"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                        <TextBlock
+                            x:Name="TimerText"
+                            HorizontalAlignment="Center"
+                            FontFamily="Consolas"
+                            FontSize="112"
+                            FontWeight="SemiBold"
+                            RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform>
+                                <ScaleTransform
+                                    x:Name="TimerTextScale"
+                                    ScaleX="1"
+                                    ScaleY="1" />
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                        <TextBlock
+                            x:Name="InspectionText"
+                            HorizontalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            FontSize="18" />
+                    </StackPanel>
+
+                    <Canvas
+                        x:Name="SmartCubePreviewCanvas"
+                        Width="168"
+                        Height="126"
+                        Margin="0,0,16,0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
                         Visibility="Collapsed"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                        <StackPanel Spacing="4">
-                            <TextBlock
-                                x:Name="SmartCubeModeText"
-                                FontWeight="SemiBold" />
-                            <Canvas
-                                x:Name="SmartCubePreviewCanvas"
-                                Width="168"
-                                Height="126"
-                                HorizontalAlignment="Center" />
-                            <TextBlock
-                                x:Name="SmartCubeFaceletsText"
-                                TextWrapping="Wrap"
-                                TextAlignment="Center"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                        IsHitTestVisible="False">
+                        <Canvas.RenderTransform>
+                            <TranslateTransform Y="24" />
+                        </Canvas.RenderTransform>
+                    </Canvas>
+                </Grid>
 
                 <Grid
                     x:Name="StatsPanel"
                     Grid.Row="2"
                     ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>

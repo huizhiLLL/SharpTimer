@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
@@ -9,8 +10,10 @@ using SharpTimer.App.Services;
 using SharpTimer.App.ViewModels;
 using SharpTimer.Core.Models;
 using SharpTimer.Core.Statistics;
+using SharpTimer.Core.SmartCubes;
 using SharpTimer.Core.Timer;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Windows.Storage;
@@ -23,6 +26,7 @@ namespace SharpTimer.App
         private readonly ObservableCollection<SessionListItem> _sessionItems = new();
         private readonly ObservableCollection<BluetoothDeviceListItem> _bluetoothDeviceItems = new();
         private readonly SmartCubeProtocolRegistry _bluetoothProtocolRegistry = SmartCubeKnownProtocols.CreateDefaultRegistry();
+        private readonly SmartCubeScrambleTracker _smartCubeScrambleTracker = new();
         private readonly DispatcherTimer _uiTimer = new();
         private readonly AppSettingsService _settingsService = new();
         private TimerAppService? _appService;
@@ -36,7 +40,20 @@ namespace SharpTimer.App
         private bool _isSpaceDown;
         private bool _isReadyToStart;
         private bool _smartCubeSolveHasMove;
+        private bool _smartCubeReadyToStart;
+        private bool _smartCubeHasLocalMoveState;
+        private string? _smartCubeFacelets;
+        private string? _scrambleTextRenderKey;
         private double _currentTimerScale = 1;
+
+        private enum ScrambleRunRole
+        {
+            Primary,
+            Next,
+            Correction
+        }
+
+        private readonly record struct ScrambleDisplayRun(string Text, ScrambleRunRole Role);
 
         public MainWindow()
         {
@@ -339,6 +356,12 @@ namespace SharpTimer.App
             await DisconnectSmartCubeAsync();
         }
 
+        private void ResetCubeStateButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetSmartCubeLocalState();
+            RootGrid.Focus(FocusState.Programmatic);
+        }
+
         private async System.Threading.Tasks.Task RunPrimaryTimerActionAsync()
         {
             if (_appService is null)
@@ -366,7 +389,12 @@ namespace SharpTimer.App
             _lastSnapshot = snapshot;
             _isRendering = true;
             RenderSessions(snapshot);
-            ScrambleText.Text = snapshot.CurrentScramble;
+            if (_smartCubeConnection is null)
+            {
+                SetScrambleTextPlain(snapshot.CurrentScramble);
+            }
+
+            SyncSmartCubeScramble(snapshot);
             TimerText.Text = FormatTime(snapshot.Timer.Elapsed, _settings.DecimalPlaces);
             InspectionText.Text = FormatInspection(snapshot.Timer);
             ApplyTimerVisualState(snapshot.Timer);
@@ -466,21 +494,21 @@ namespace SharpTimer.App
 
         private void ApplyTimerVisualState(TimerSnapshot snapshot)
         {
-            var targetScale = _isReadyToStart || snapshot.Phase == TimerPhase.Running ? 1.06 : 1;
+            var targetScale = _isReadyToStart || _smartCubeReadyToStart || snapshot.Phase == TimerPhase.Running ? 1.06 : 1;
             if (Math.Abs(_currentTimerScale - targetScale) > 0.001)
             {
                 AnimateTimerScale(targetScale);
                 _currentTimerScale = targetScale;
             }
 
-            TimerText.Foreground = _isReadyToStart
+            TimerText.Foreground = _isReadyToStart || _smartCubeReadyToStart
                 ? new SolidColorBrush(Microsoft.UI.Colors.ForestGreen)
                 : Application.Current.Resources["TextFillColorPrimaryBrush"] as Brush;
         }
 
         private void ApplyImmersiveTimerLayout(TimerSnapshot snapshot)
         {
-            var isImmersive = _isReadyToStart || snapshot.Phase == TimerPhase.Running;
+            var isImmersive = _isReadyToStart || _smartCubeReadyToStart || snapshot.Phase == TimerPhase.Running;
             var contextVisibility = isImmersive ? Visibility.Collapsed : Visibility.Visible;
 
             ScrambleText.Visibility = contextVisibility;
@@ -581,6 +609,7 @@ namespace SharpTimer.App
 
             _isReadyToStart = false;
             _isSpaceDown = false;
+            _smartCubeReadyToStart = false;
             var snapshot = key == Windows.System.VirtualKey.Left
                 ? _appService.MoveToPreviousScramble()
                 : _appService.MoveToNextScramble();
@@ -669,7 +698,6 @@ namespace SharpTimer.App
                 Device = device,
                 Address = FormatBluetoothAddress(device.BluetoothAddress),
                 Name = string.IsNullOrWhiteSpace(device.Name) ? _strings.BluetoothUnknownDevice : device.Name,
-                Signal = string.Format(_strings.BluetoothSignalFormat, device.RawSignalStrengthInDBm),
                 Protocol = protocol?.Info.Name ?? _strings.BluetoothUnknownProtocol,
                 Services = services,
                 LastSeen = device.SeenAt.ToLocalTime().ToString("HH:mm:ss")
@@ -716,7 +744,12 @@ namespace SharpTimer.App
                 case SmartCubeDisconnectEvent:
                     _smartCubeConnection = null;
                     _smartCubeSolveHasMove = false;
-                    SmartCubeStatusPanel.Visibility = Visibility.Collapsed;
+                    _smartCubeReadyToStart = false;
+                    _smartCubeHasLocalMoveState = false;
+                    _smartCubeFacelets = null;
+                    _smartCubeScrambleTracker.Reset();
+                    _scrambleTextRenderKey = null;
+                    SmartCubePreviewCanvas.Visibility = Visibility.Collapsed;
                     ConnectedCubePanel.Visibility = Visibility.Collapsed;
                     BluetoothFlyoutStatusText.Text = _strings.BluetoothDisconnectedMessage;
                     break;
@@ -726,35 +759,73 @@ namespace SharpTimer.App
         private async System.Threading.Tasks.Task HandleSmartCubeMoveEventAsync(SmartCubeMoveEvent move)
         {
             var lastMoveText = string.Format(_strings.BluetoothLastMoveFormat, move.Move);
-            _smartCubeSolveHasMove = true;
             BluetoothFlyoutStatusText.Text = lastMoveText;
             ConnectedCubeStateText.Text = lastMoveText;
-            SmartCubeFaceletsText.Text = lastMoveText;
 
-            if (_appService is not null)
+            if (_lastSnapshot?.Timer.Phase == TimerPhase.Running)
             {
-                Render(await _appService.HandleSmartCubeMoveAsync());
+                _smartCubeSolveHasMove = true;
+                await RequestSmartCubeFaceletsAsync();
+                return;
             }
 
+            if (_smartCubeReadyToStart)
+            {
+                _smartCubeReadyToStart = false;
+                _smartCubeSolveHasMove = true;
+                if (_appService is not null)
+                {
+                    Render(await _appService.HandleSmartCubeMoveAsync());
+                }
+
+                await RequestSmartCubeFaceletsAsync();
+                return;
+            }
+
+            EnsureSmartCubeScramble(_lastSnapshot);
+            var scrambleSnapshot = _smartCubeScrambleTracker.ApplyMove(move.Move);
+            _smartCubeHasLocalMoveState = scrambleSnapshot.CurrentFacelets is not null;
+            if (ThreeByThreeFacelets.IsValidState(scrambleSnapshot.CurrentFacelets ?? string.Empty))
+            {
+                _smartCubeFacelets = scrambleSnapshot.CurrentFacelets;
+                RenderSmartCubePreview(_smartCubeFacelets);
+            }
+
+            ApplySmartCubeScrambleSnapshot(scrambleSnapshot);
             await RequestSmartCubeFaceletsAsync();
         }
 
         private async System.Threading.Tasks.Task HandleSmartCubeFaceletsEventAsync(SmartCubeFaceletsEvent facelets)
         {
-            SmartCubeStatusPanel.Visibility = Visibility.Visible;
-            RenderSmartCubePreview(facelets.Facelets);
+            SmartCubePreviewCanvas.Visibility = Visibility.Visible;
+            var shouldUseFaceletsState = !_smartCubeHasLocalMoveState || _lastSnapshot?.Timer.Phase == TimerPhase.Running;
+            if (shouldUseFaceletsState)
+            {
+                _smartCubeFacelets = facelets.Facelets;
+                RenderSmartCubePreview(facelets.Facelets);
+            }
 
-            var solved = IsSolvedFacelets(facelets.Facelets);
+            var solved = ThreeByThreeFacelets.IsSolvedIgnoringRotation(facelets.Facelets);
             var stateText = solved ? _strings.BluetoothSolvedState : _strings.BluetoothStateSynced;
-            SmartCubeFaceletsText.Text = stateText;
             ConnectedCubeStateText.Text = stateText;
 
             if (solved && _smartCubeSolveHasMove && _lastSnapshot?.Timer.Phase == TimerPhase.Running && _appService is not null)
             {
                 _smartCubeSolveHasMove = false;
+                _smartCubeReadyToStart = false;
                 Render(await _appService.StopSmartCubeSolveAsync());
-                SmartCubeFaceletsText.Text = _strings.BluetoothSolvedState;
                 ConnectedCubeStateText.Text = _strings.BluetoothSolvedState;
+                SyncSmartCubeScramble(_lastSnapshot);
+                return;
+            }
+
+            if (_lastSnapshot?.Timer.Phase != TimerPhase.Running)
+            {
+                EnsureSmartCubeScramble(_lastSnapshot);
+                var scrambleSnapshot = _smartCubeHasLocalMoveState
+                    ? _smartCubeScrambleTracker.Current
+                    : _smartCubeScrambleTracker.UpdateFacelets(facelets.Facelets);
+                ApplySmartCubeScrambleSnapshot(scrambleSnapshot);
             }
         }
 
@@ -787,13 +858,19 @@ namespace SharpTimer.App
             BluetoothDevicesList.Visibility = Visibility.Collapsed;
             BluetoothScanProgress.IsIndeterminate = false;
             ConnectedCubePanel.Visibility = Visibility.Visible;
-            SmartCubeStatusPanel.Visibility = Visibility.Visible;
+            SmartCubePreviewCanvas.Visibility = Visibility.Visible;
             ConnectedCubeNameText.Text = _smartCubeConnection.DeviceName;
             ConnectedCubeBatteryText.Text = _strings.BluetoothBatteryUnknown;
             ConnectedCubeStateText.Text = _strings.BluetoothWaitingState;
-            SmartCubeModeText.Text = string.Format(_strings.BluetoothSmartModeFormat, _smartCubeConnection.DeviceName);
-            SmartCubeFaceletsText.Text = _strings.BluetoothWaitingState;
-            RenderSmartCubePreview(null);
+            SyncSmartCubeScramble(_lastSnapshot);
+            if (ThreeByThreeFacelets.IsValidState(_smartCubeFacelets ?? string.Empty))
+            {
+                RenderSmartCubePreview(_smartCubeFacelets);
+            }
+            else if (SmartCubePreviewCanvas.Children.Count == 0)
+            {
+                RenderSmartCubePreview(null);
+            }
             BluetoothFlyoutStatusText.Text = _strings.BluetoothConnectedMessage;
         }
 
@@ -808,16 +885,282 @@ namespace SharpTimer.App
             await _smartCubeConnection.DisposeAsync();
             _smartCubeConnection = null;
             _smartCubeSolveHasMove = false;
+            _smartCubeReadyToStart = false;
+            _smartCubeHasLocalMoveState = false;
+            _smartCubeFacelets = null;
+            _smartCubeScrambleTracker.Reset();
+            _scrambleTextRenderKey = null;
             ConnectedCubePanel.Visibility = Visibility.Collapsed;
-            SmartCubeStatusPanel.Visibility = Visibility.Collapsed;
+            SmartCubePreviewCanvas.Visibility = Visibility.Collapsed;
             BluetoothDevicesList.Visibility = Visibility.Visible;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothDisconnectedMessage;
+        }
+
+        private void ResetSmartCubeLocalState()
+        {
+            _smartCubeFacelets = ThreeByThreeFacelets.Solved;
+            _smartCubeSolveHasMove = false;
+            _smartCubeReadyToStart = false;
+            _smartCubeHasLocalMoveState = false;
+            RenderSmartCubePreview(_smartCubeFacelets);
+            SyncSmartCubeScramble(_lastSnapshot);
+            ConnectedCubeStateText.Text = _strings.BluetoothSolvedState;
+        }
+
+        private void SyncSmartCubeScramble(TimerAppSnapshot? snapshot)
+        {
+            if (_smartCubeConnection is null || snapshot is null || snapshot.Timer.Phase == TimerPhase.Running)
+            {
+                return;
+            }
+
+            if (_smartCubeScrambleTracker.SetScramble(snapshot.CurrentScramble))
+            {
+                _smartCubeHasLocalMoveState = false;
+                _scrambleTextRenderKey = null;
+            }
+
+            if (_smartCubeHasLocalMoveState)
+            {
+                ApplySmartCubeScrambleSnapshot(_smartCubeScrambleTracker.Current);
+            }
+            else if (ThreeByThreeFacelets.IsValidState(_smartCubeFacelets ?? string.Empty))
+            {
+                ApplySmartCubeScrambleSnapshot(_smartCubeScrambleTracker.UpdateFacelets(_smartCubeFacelets!));
+            }
+            else
+            {
+                ApplySmartCubeScrambleSnapshot(_smartCubeScrambleTracker.Current);
+            }
+        }
+
+        private void EnsureSmartCubeScramble(TimerAppSnapshot? snapshot)
+        {
+            if (_smartCubeConnection is null || snapshot is null || snapshot.Timer.Phase == TimerPhase.Running)
+            {
+                return;
+            }
+
+            if (_smartCubeScrambleTracker.SetScramble(snapshot.CurrentScramble))
+            {
+                _smartCubeHasLocalMoveState = false;
+                _scrambleTextRenderKey = null;
+            }
+        }
+
+        private void ApplySmartCubeScrambleSnapshot(SmartCubeScrambleSnapshot snapshot)
+        {
+            if (_lastSnapshot?.Timer.Phase == TimerPhase.Running)
+            {
+                return;
+            }
+
+            _smartCubeReadyToStart = snapshot.IsReady;
+            RenderSmartCubeScrambleText(snapshot);
+
+            var statusText = snapshot.Status switch
+            {
+                SmartCubeScrambleStatus.Ready => _strings.BluetoothScrambleReady,
+                SmartCubeScrambleStatus.Correction => _strings.BluetoothScrambleCorrection,
+                SmartCubeScrambleStatus.RestoreRequired => _strings.BluetoothScrambleRestoreRequired,
+                SmartCubeScrambleStatus.Scrambling => null,
+                _ => _strings.BluetoothWaitingState
+            };
+
+            if (statusText is not null)
+            {
+                ConnectedCubeStateText.Text = statusText;
+            }
+
+            ApplyTimerVisualState(_lastSnapshot?.Timer ?? new TimerSnapshot(TimerPhase.Idle, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, Penalty.None, null, null));
+            if (_lastSnapshot is not null)
+            {
+                ApplyImmersiveTimerLayout(_lastSnapshot.Timer);
+            }
+        }
+
+        private void RenderSmartCubeScrambleText(SmartCubeScrambleSnapshot snapshot)
+        {
+            var runs = BuildSmartCubeScrambleRuns(snapshot);
+            var renderKey = "smart:" + string.Join("|", runs.Select(run => $"{run.Role}:{run.Text}"));
+            if (_scrambleTextRenderKey == renderKey)
+            {
+                return;
+            }
+
+            _scrambleTextRenderKey = renderKey;
+            ScrambleText.Inlines.Clear();
+
+            foreach (var run in runs)
+            {
+                AddScrambleRun(run.Text, GetScrambleRunBrush(run.Role));
+            }
+        }
+
+        private IReadOnlyList<ScrambleDisplayRun> BuildSmartCubeScrambleRuns(SmartCubeScrambleSnapshot snapshot)
+        {
+            var runs = new List<ScrambleDisplayRun>();
+            switch (snapshot.Status)
+            {
+                case SmartCubeScrambleStatus.Ready:
+                    return runs;
+                case SmartCubeScrambleStatus.RestoreRequired:
+                    runs.Add(new ScrambleDisplayRun(_strings.BluetoothScrambleRestoreRequired, ScrambleRunRole.Correction));
+                    return runs;
+                case SmartCubeScrambleStatus.Correction:
+                    var displayMoves = new List<(string Move, bool IsCorrection)>();
+                    foreach (var move in snapshot.CorrectionMoves)
+                    {
+                        AppendDisplayMove(displayMoves, move, isCorrection: true);
+                    }
+
+                    foreach (var move in snapshot.RemainingMoves)
+                    {
+                        AppendDisplayMove(displayMoves, move, isCorrection: false);
+                    }
+
+                    var highlightedNext = false;
+                    foreach (var move in displayMoves)
+                    {
+                        if (move.IsCorrection)
+                        {
+                            runs.Add(new ScrambleDisplayRun(move.Move, ScrambleRunRole.Correction));
+                        }
+                        else if (!highlightedNext)
+                        {
+                            runs.Add(new ScrambleDisplayRun(move.Move, ScrambleRunRole.Next));
+                            highlightedNext = true;
+                        }
+                        else
+                        {
+                            runs.Add(new ScrambleDisplayRun(move.Move, ScrambleRunRole.Primary));
+                        }
+                    }
+
+                    return runs;
+                case SmartCubeScrambleStatus.Scrambling:
+                    for (var index = 0; index < snapshot.RemainingMoves.Count; index++)
+                    {
+                        runs.Add(new ScrambleDisplayRun(
+                            snapshot.RemainingMoves[index],
+                            index == 0 ? ScrambleRunRole.Next : ScrambleRunRole.Primary));
+                    }
+
+                    return runs;
+                default:
+                    runs.Add(new ScrambleDisplayRun(_lastSnapshot?.CurrentScramble ?? string.Empty, ScrambleRunRole.Primary));
+                    return runs;
+            }
+        }
+
+        private static void AppendDisplayMove(IList<(string Move, bool IsCorrection)> moves, string move, bool isCorrection)
+        {
+            if (string.IsNullOrWhiteSpace(move))
+            {
+                return;
+            }
+
+            var normalized = SmartCubeMoveNotation.Normalize(move);
+            if (moves.Count == 0 || moves[^1].Move[0] != normalized[0])
+            {
+                moves.Add((normalized, isCorrection));
+                return;
+            }
+
+            var last = moves[^1];
+            var mergedPower = (GetMovePower(last.Move) + GetMovePower(normalized)) % 4;
+            var mergedCorrection = last.IsCorrection || isCorrection;
+            moves.RemoveAt(moves.Count - 1);
+            if (mergedPower != 0)
+            {
+                moves.Add((last.Move[0] + GetMoveSuffix(mergedPower), mergedCorrection));
+            }
+        }
+
+        private void AddScrambleRun(string text, Brush brush)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            if (ScrambleText.Inlines.Count > 0)
+            {
+                ScrambleText.Inlines.Add(new Run { Text = " " });
+            }
+
+            ScrambleText.Inlines.Add(new Run
+            {
+                Text = text,
+                Foreground = brush
+            });
+        }
+
+        private void SetScrambleTextPlain(string text)
+        {
+            var renderKey = "plain:" + text;
+            if (_scrambleTextRenderKey == renderKey)
+            {
+                return;
+            }
+
+            _scrambleTextRenderKey = renderKey;
+            ScrambleText.Inlines.Clear();
+            ScrambleText.Inlines.Add(new Run
+            {
+                Text = text,
+                Foreground = GetPrimaryTextBrush()
+            });
+        }
+
+        private Brush GetScrambleRunBrush(ScrambleRunRole role)
+        {
+            return role switch
+            {
+                ScrambleRunRole.Next => GetNextScrambleBrush(),
+                ScrambleRunRole.Correction => GetCorrectionScrambleBrush(),
+                _ => GetPrimaryTextBrush()
+            };
+        }
+
+        private static int GetMovePower(string move)
+        {
+            return move.Length == 1
+                ? 1
+                : move[1] == '2'
+                    ? 2
+                    : 3;
+        }
+
+        private static string GetMoveSuffix(int power)
+        {
+            return power switch
+            {
+                2 => "2",
+                3 => "'",
+                _ => string.Empty
+            };
+        }
+
+        private Brush GetPrimaryTextBrush()
+        {
+            return Application.Current.Resources["TextFillColorPrimaryBrush"] as Brush
+                ?? new SolidColorBrush(Microsoft.UI.Colors.Black);
+        }
+
+        private static Brush GetNextScrambleBrush()
+        {
+            return new SolidColorBrush(Microsoft.UI.Colors.ForestGreen);
+        }
+
+        private static Brush GetCorrectionScrambleBrush()
+        {
+            return new SolidColorBrush(Microsoft.UI.Colors.OrangeRed);
         }
 
         private void RenderSmartCubePreview(string? facelets)
         {
             DrawSmartCubePreview(SmartCubePreviewCanvas, facelets);
-            DrawSmartCubePreview(ConnectedCubePreviewCanvas, facelets);
         }
 
         private void DrawSmartCubePreview(Canvas canvas, string? facelets)
@@ -910,29 +1253,6 @@ namespace SharpTimer.App
             };
         }
 
-        private static bool IsSolvedFacelets(string facelets)
-        {
-            if (facelets.Length != 54)
-            {
-                return false;
-            }
-
-            for (var face = 0; face < 6; face++)
-            {
-                var start = face * 9;
-                var center = facelets[start + 4];
-                for (var index = 0; index < 9; index++)
-                {
-                    if (facelets[start + index] != center)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
         private static string FormatSolveTime(Solve solve, int decimalPlaces)
         {
             return solve.Penalty == Penalty.Dnf
@@ -999,8 +1319,8 @@ namespace SharpTimer.App
             PenaltyColumnText.Text = _strings.PenaltyColumn;
             ClearPenaltyButton.Content = _strings.ClearPenalty;
             DeleteButton.Content = _strings.Delete;
-            BluetoothFlyoutTitleText.Text = _strings.BluetoothTitle;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
+            ResetCubeStateButton.Content = _strings.BluetoothResetCubeState;
             DisconnectCubeButton.Content = _strings.BluetoothDisconnect;
             SettingsTitleText.Text = _strings.SettingsTitle;
             InspectionSwitch.Header = _strings.InspectionHeader;
