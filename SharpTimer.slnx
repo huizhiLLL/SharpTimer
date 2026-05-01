@@ -11,4 +11,6 @@
     <Deploy />
   </Project>
   <Project Path="SharpTimer.Core/SharpTimer.Core.csproj" />
+  <Project Path="SharpTimer.Storage/SharpTimer.Storage.csproj" />
+  <Project Path="SharpTimer.Tests/SharpTimer.Tests.csproj" />
 </Solution>

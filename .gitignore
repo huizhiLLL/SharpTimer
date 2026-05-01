@@ -52,8 +52,10 @@ dist/
 .turbo/
 .parcel-cache/
 
+# Local reference checkouts are kept outside version control.
+ref/
+
 # OS files
 Thumbs.db
 Desktop.ini
 .DS_Store
-ref/

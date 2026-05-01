@@ -10,16 +10,18 @@ SharpTimer 是 Windows 原生魔方计时器。第一阶段先完成本地手动
 SharpTimer
 ├─ SharpTimer.App          WinUI 3 客户端
 ├─ SharpTimer.Core         计时器核心模型、状态机、统计
-├─ SharpTimer.Storage      SQLite 存储，后续添加
-├─ SharpTimer.Bluetooth    Windows BLE 智能魔方接入，后续添加
-└─ SharpTimer.Tests        核心逻辑测试，后续添加
+├─ SharpTimer.Storage      SQLite schema、迁移和仓储
+├─ SharpTimer.Tests        核心逻辑测试
+└─ SharpTimer.Bluetooth    Windows BLE 智能魔方接入，后续添加
 ```
 
 ## 分层原则
 
 - `SharpTimer.App` 只负责界面、输入事件和展示状态，不直接承载计时规则。
+- `SharpTimer.App.Services` 提供很薄的应用服务层，负责串联 `ManualTimerStateMachine`、SQLite 仓储、默认 session、统计快照和本地 UI 设置。
 - `SharpTimer.Core` 保持平台无关，提供计时状态机、`Solve` 成绩模型、`Penalty` 罚时模型和统计计算。
-- `SharpTimer.Storage` 后续封装 SQLite，不让 App 直接拼 SQL。
+- `SharpTimer.Storage` 封装 SQLite schema、迁移和仓储接口，不让 App 直接拼 SQL。
+- `SharpTimer.Tests` 覆盖核心计时规则和统计规则，优先保障平台无关逻辑稳定。
 - `SharpTimer.Bluetooth` 后续把 Web Bluetooth 参考协议迁移为 C# 协议层，避免和本地计时逻辑耦合。
 
 ## 第一版核心模型
@@ -28,6 +30,43 @@ SharpTimer
 - `Penalty`：`None`、`PlusTwo`、`Dnf` 三种罚时状态。
 - `ManualTimerStateMachine`：手动计时状态机，当前支持 `Idle`、`Inspecting`、`Running`、`Stopped`。
 - `StatisticsCalculator`：计算 best、mean、ao5、ao12。
+- `TimerAppService`：应用服务层，初始化本地数据库，确保默认 session，处理 session 创建/切换/重命名/归档、主计时动作、罚时修改、成绩删除和统计快照。
+- `AppSettingsService`：WinUI 本地设置服务，保存是否启用观察、显示精度和主题偏好。该类设置不进入 SQLite schema。
+
+## SQLite v1 schema
+
+当前 schema 由 `SharpTimer.Storage` 的 `SharpTimerDatabase` 初始化，并通过 `schema_migrations` 记录版本。
+
+### sessions
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `TEXT PRIMARY KEY` | session 的 GUID |
+| `name` | `TEXT NOT NULL` | session 名称 |
+| `puzzle` | `TEXT NOT NULL` | 项目代号，第一版默认 `333` |
+| `created_at` | `TEXT NOT NULL` | UTC ISO 8601 创建时间 |
+| `updated_at` | `TEXT NOT NULL` | UTC ISO 8601 更新时间 |
+| `is_archived` | `INTEGER NOT NULL` | 0/1 归档标记 |
+| `sort_order` | `INTEGER NOT NULL` | session 排序 |
+
+### solves
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `TEXT PRIMARY KEY` | solve 的 GUID |
+| `session_id` | `TEXT NOT NULL` | 所属 session，外键级联删除 |
+| `duration_ms` | `INTEGER NOT NULL` | 原始用时，毫秒 |
+| `penalty` | `INTEGER NOT NULL` | 0=None，1=+2，2=DNF |
+| `scramble` | `TEXT NULL` | 打乱文本 |
+| `comment` | `TEXT NULL` | 备注 |
+| `created_at` | `TEXT NOT NULL` | UTC ISO 8601 创建时间 |
+| `updated_at` | `TEXT NOT NULL` | UTC ISO 8601 更新时间 |
+
+索引：
+
+- `idx_sessions_active_sort`：用于 active session 列表。
+- `idx_solves_session_created`：用于按 session 加载成绩列表。
+- `idx_solves_created`：用于后续全局时间线查询。
 
 ## 观察与罚时规则
 

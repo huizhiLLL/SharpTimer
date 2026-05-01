@@ -9,9 +9,13 @@
 目标：不用智能硬件也能完整记录和复盘成绩。
 
 - 建立 `SharpTimer.Core`，实现计时状态机、成绩模型、罚时模型和基础统计。
+- 建立 `SharpTimer.Tests`，覆盖状态机、成绩罚时和统计规则。
+- 建立 `SharpTimer.Storage`，固定 SQLite v1 schema、迁移入口和 session/solve 仓储。
+- 建立 `SharpTimer.App.Services`，串联状态机、SQLite 仓储、默认 session 和统计快照。
 - WinUI 3 主界面支持空格开始观察、空格开始复原、空格停止计时。
 - 支持 15 秒观察、`+2`、`DNF`。
-- 支持 session 创建、切换、重命名。
+- 支持 session 创建、切换、重命名和归档。
+- 支持少量本地设置：是否启用观察、显示精度、亮/暗主题。
 - 使用 SQLite 保存 session 和 solve。
 - 展示成绩列表、best、mean、ao5、ao12。
 
@@ -19,10 +23,10 @@
 
 目标：让本地计时器更接近日常可用。
 
-- 添加 `SharpTimer.Storage`，封装 SQLite schema、迁移和仓储接口。
+- 扩展 `SharpTimer.Storage`，支持更多设置项和导入导出。
 - 添加成绩编辑：修改罚时、删除成绩、备注、打乱文本。
-- 添加基础设置：是否启用观察、默认项目、显示精度。
-- 添加 `SharpTimer.Tests`，覆盖状态机、统计和存储迁移。
+- 添加更多基础设置：默认项目、启动行为、显示偏好。
+- 扩展测试覆盖存储迁移和 UI 输入编排。
 
 ## 第三阶段：智能魔方 BLE
 
