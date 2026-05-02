@@ -8,6 +8,7 @@ public sealed class AppSettingsService
     private const string UseInspectionKey = "UseInspection";
     private const string DecimalPlacesKey = "DecimalPlaces";
     private const string ThemeKey = "Theme";
+    private const string BackdropMaterialKey = "BackdropMaterial";
     private const string LanguageKey = "Language";
     private readonly ApplicationDataContainer _localSettings = ApplicationData.Current.LocalSettings;
 
@@ -18,6 +19,7 @@ public sealed class AppSettingsService
             UseInspection = ReadBoolean(UseInspectionKey, true),
             DecimalPlaces = Math.Clamp(ReadInt32(DecimalPlacesKey, 2), 2, 3),
             Theme = ReadTheme(),
+            BackdropMaterial = ReadBackdropMaterial(),
             Language = ReadLanguage()
         };
     }
@@ -27,6 +29,7 @@ public sealed class AppSettingsService
         _localSettings.Values[UseInspectionKey] = settings.UseInspection;
         _localSettings.Values[DecimalPlacesKey] = Math.Clamp(settings.DecimalPlaces, 2, 3);
         _localSettings.Values[ThemeKey] = settings.Theme.ToString();
+        _localSettings.Values[BackdropMaterialKey] = settings.BackdropMaterial.ToString();
         _localSettings.Values[LanguageKey] = settings.Language.ToString();
     }
 
@@ -66,5 +69,17 @@ public sealed class AppSettingsService
         return Enum.TryParse<AppLanguagePreference>(text, out var language)
             ? language
             : AppLanguagePreference.English;
+    }
+
+    private AppBackdropMaterialPreference ReadBackdropMaterial()
+    {
+        if (!_localSettings.Values.TryGetValue(BackdropMaterialKey, out var value) || value is not string text)
+        {
+            return AppBackdropMaterialPreference.Mica;
+        }
+
+        return Enum.TryParse<AppBackdropMaterialPreference>(text, out var material)
+            ? material
+            : AppBackdropMaterialPreference.Mica;
     }
 }

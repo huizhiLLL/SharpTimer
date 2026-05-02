@@ -23,6 +23,10 @@ public sealed record LocalizedStrings
     public required string SystemTheme { get; init; }
     public required string LightTheme { get; init; }
     public required string DarkTheme { get; init; }
+    public required string BackdropMaterialHeader { get; init; }
+    public required string MicaMaterial { get; init; }
+    public required string MicaAltMaterial { get; init; }
+    public required string AcrylicMaterial { get; init; }
     public required string LanguageHeader { get; init; }
     public required string ChineseLanguage { get; init; }
     public required string EnglishLanguage { get; init; }
@@ -81,6 +85,10 @@ public sealed record LocalizedStrings
         SystemTheme = "跟随系统",
         LightTheme = "亮色",
         DarkTheme = "暗色",
+        BackdropMaterialHeader = "背景材质",
+        MicaMaterial = "Mica",
+        MicaAltMaterial = "Mica Alt",
+        AcrylicMaterial = "Acrylic",
         LanguageHeader = "语言",
         ChineseLanguage = "中文",
         EnglishLanguage = "English",
@@ -135,6 +143,10 @@ public sealed record LocalizedStrings
         SystemTheme = "Use system setting",
         LightTheme = "Light",
         DarkTheme = "Dark",
+        BackdropMaterialHeader = "Background material",
+        MicaMaterial = "Mica",
+        MicaAltMaterial = "Mica Alt",
+        AcrylicMaterial = "Acrylic",
         LanguageHeader = "Language",
         ChineseLanguage = "中文",
         EnglishLanguage = "English",

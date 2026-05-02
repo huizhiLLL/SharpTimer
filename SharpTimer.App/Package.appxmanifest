@@ -16,7 +16,7 @@
   <mp:PhoneIdentity PhoneProductId="129f2b66-262d-404f-9369-3e9e0d1fc0e5" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>SharpTimer.App</DisplayName>
+    <DisplayName>SharpTimer</DisplayName>
     <PublisherDisplayName>31691</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -35,8 +35,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="SharpTimer.App"
-        Description="SharpTimer.App"
+        DisplayName="SharpTimer"
+        Description="SharpTimer"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">

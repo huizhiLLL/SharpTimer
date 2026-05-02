@@ -8,5 +8,7 @@ public sealed record AppSettings
 
     public AppThemePreference Theme { get; init; } = AppThemePreference.Light;
 
+    public AppBackdropMaterialPreference BackdropMaterial { get; init; } = AppBackdropMaterialPreference.Mica;
+
     public AppLanguagePreference Language { get; init; } = AppLanguagePreference.English;
 }

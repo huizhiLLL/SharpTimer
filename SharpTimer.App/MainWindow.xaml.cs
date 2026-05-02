@@ -1,11 +1,13 @@
+using Microsoft.UI.Composition.SystemBackdrops;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Shapes;
-using Microsoft.UI.Windowing;
+using SharpTimer.App.Rendering;
 using SharpTimer.Bluetooth;
 using SharpTimer.App.Services;
 using SharpTimer.App.ViewModels;
@@ -65,6 +67,7 @@ namespace SharpTimer.App
         public MainWindow()
         {
             InitializeComponent();
+            ConfigureTitleBar();
             ApplyInitialWindowPlacement();
 
             SolvesList.ItemsSource = _solveItems;
@@ -91,6 +94,19 @@ namespace SharpTimer.App
             AppWindow.Move(new PointInt32(targetX, targetY));
         }
 
+        private void ConfigureTitleBar()
+        {
+            Title = "SharpTimer";
+            AppWindow.Title = "SharpTimer";
+            ExtendsContentIntoTitleBar = true;
+            SetTitleBar(AppTitleBar);
+
+            AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
+            AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+            AppWindow.TitleBar.ButtonPressedBackgroundColor = Colors.Transparent;
+            AppWindow.TitleBar.ButtonHoverBackgroundColor = Colors.Transparent;
+        }
+
         private async void MainWindow_Closed(object sender, WindowEventArgs args)
         {
             _bluetoothScanner?.Dispose();
@@ -112,6 +128,7 @@ namespace SharpTimer.App
             _strings = LocalizedStrings.For(_settings.Language);
             ApplyLanguage();
             ApplyTheme(_settings.Theme);
+            ApplyBackdropMaterial(_settings.BackdropMaterial);
             _appService = new TimerAppService(databasePath, _settings);
 
             var snapshot = await _appService.InitializeAsync();
@@ -314,6 +331,11 @@ namespace SharpTimer.App
         }
 
         private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ApplySettingsFromControls();
+        }
+
+        private void BackdropMaterialComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ApplySettingsFromControls();
         }
@@ -1176,97 +1198,7 @@ namespace SharpTimer.App
 
         private void RenderSmartCubePreview(string? facelets)
         {
-            DrawSmartCubePreview(SmartCubePreviewCanvas, facelets);
-        }
-
-        private void DrawSmartCubePreview(Canvas canvas, string? facelets)
-        {
-            canvas.Children.Clear();
-            if (string.IsNullOrWhiteSpace(facelets) || facelets.Length != 54)
-            {
-                DrawEmptySmartCubePreview(canvas);
-                return;
-            }
-
-            var origin = new Windows.Foundation.Point(52, 48);
-            var frontX = new Windows.Foundation.Point(14, 8);
-            var frontY = new Windows.Foundation.Point(0, 16);
-            var depth = new Windows.Foundation.Point(10, -6);
-
-            DrawCubeFace(canvas, facelets, faceStart: 0, Add(origin, Multiply(depth, 3)), frontX, Multiply(depth, -1));
-            DrawCubeFace(canvas, facelets, faceStart: 9, Add(origin, Multiply(frontX, 3)), depth, frontY);
-            DrawCubeFace(canvas, facelets, faceStart: 18, origin, frontX, frontY);
-        }
-
-        private void DrawEmptySmartCubePreview(Canvas canvas)
-        {
-            var origin = new Windows.Foundation.Point(52, 48);
-            var frontX = new Windows.Foundation.Point(14, 8);
-            var frontY = new Windows.Foundation.Point(0, 16);
-            var depth = new Windows.Foundation.Point(10, -6);
-
-            DrawCubeFace(canvas, null, faceStart: 0, Add(origin, Multiply(depth, 3)), frontX, Multiply(depth, -1));
-            DrawCubeFace(canvas, null, faceStart: 9, Add(origin, Multiply(frontX, 3)), depth, frontY);
-            DrawCubeFace(canvas, null, faceStart: 18, origin, frontX, frontY);
-        }
-
-        private void DrawCubeFace(
-            Canvas canvas,
-            string? facelets,
-            int faceStart,
-            Windows.Foundation.Point origin,
-            Windows.Foundation.Point xVector,
-            Windows.Foundation.Point yVector)
-        {
-            for (var row = 0; row < 3; row++)
-            {
-                for (var column = 0; column < 3; column++)
-                {
-                    var stickerOrigin = Add(Add(origin, Multiply(xVector, column)), Multiply(yVector, row));
-                    var color = facelets is null
-                        ? new SolidColorBrush(Microsoft.UI.Colors.Transparent)
-                        : GetStickerBrush(facelets[faceStart + row * 3 + column]);
-
-                    var polygon = new Polygon
-                    {
-                        Points =
-                        {
-                            stickerOrigin,
-                            Add(stickerOrigin, xVector),
-                            Add(Add(stickerOrigin, xVector), yVector),
-                            Add(stickerOrigin, yVector)
-                        },
-                        Fill = color,
-                        Stroke = Application.Current.Resources["TextFillColorTertiaryBrush"] as Brush,
-                        StrokeThickness = 1
-                    };
-                    canvas.Children.Add(polygon);
-                }
-            }
-        }
-
-        private static Windows.Foundation.Point Multiply(Windows.Foundation.Point point, double factor)
-        {
-            return new Windows.Foundation.Point(point.X * factor, point.Y * factor);
-        }
-
-        private static Windows.Foundation.Point Add(Windows.Foundation.Point left, Windows.Foundation.Point right)
-        {
-            return new Windows.Foundation.Point(left.X + right.X, left.Y + right.Y);
-        }
-
-        private static SolidColorBrush GetStickerBrush(char facelet)
-        {
-            return facelet switch
-            {
-                'U' => new SolidColorBrush(Microsoft.UI.Colors.White),
-                'R' => new SolidColorBrush(Microsoft.UI.Colors.Red),
-                'F' => new SolidColorBrush(Microsoft.UI.Colors.LimeGreen),
-                'D' => new SolidColorBrush(Microsoft.UI.Colors.Gold),
-                'L' => new SolidColorBrush(Microsoft.UI.Colors.Orange),
-                'B' => new SolidColorBrush(Microsoft.UI.Colors.DodgerBlue),
-                _ => new SolidColorBrush(Microsoft.UI.Colors.Gray)
-            };
+            SmartCubePreviewRenderer.Render(SmartCubePreviewCanvas, facelets);
         }
 
         private static string FormatSolveTime(Solve solve, int decimalPlaces)
@@ -1306,16 +1238,28 @@ namespace SharpTimer.App
         private void RenderSettings()
         {
             _isApplyingSettings = true;
-            InspectionSwitch.IsOn = _settings.UseInspection;
-            PrecisionComboBox.SelectedIndex = _settings.DecimalPlaces == 3 ? 1 : 0;
-            ThemeComboBox.SelectedIndex = _settings.Theme switch
+            try
             {
-                AppThemePreference.Light => 1,
-                AppThemePreference.Dark => 2,
-                _ => 0
-            };
-            LanguageComboBox.SelectedIndex = _settings.Language == AppLanguagePreference.English ? 1 : 0;
-            _isApplyingSettings = false;
+                InspectionSwitch.IsOn = _settings.UseInspection;
+                SetSelectedIndex(PrecisionComboBox, _settings.DecimalPlaces == 3 ? 1 : 0);
+                SetSelectedIndex(ThemeComboBox, _settings.Theme switch
+                {
+                    AppThemePreference.Light => 1,
+                    AppThemePreference.Dark => 2,
+                    _ => 0
+                });
+                SetSelectedIndex(BackdropMaterialComboBox, _settings.BackdropMaterial switch
+                {
+                    AppBackdropMaterialPreference.MicaAlt => 1,
+                    AppBackdropMaterialPreference.Acrylic => 2,
+                    _ => 0
+                });
+                SetSelectedIndex(LanguageComboBox, _settings.Language == AppLanguagePreference.English ? 1 : 0);
+            }
+            finally
+            {
+                _isApplyingSettings = false;
+            }
         }
 
         private void ApplyLanguage()
@@ -1347,6 +1291,10 @@ namespace SharpTimer.App
             SystemThemeItem.Content = _strings.SystemTheme;
             LightThemeItem.Content = _strings.LightTheme;
             DarkThemeItem.Content = _strings.DarkTheme;
+            BackdropMaterialComboBox.Header = _strings.BackdropMaterialHeader;
+            MicaMaterialItem.Content = _strings.MicaMaterial;
+            MicaAltMaterialItem.Content = _strings.MicaAltMaterial;
+            AcrylicMaterialItem.Content = _strings.AcrylicMaterial;
             LanguageComboBox.Header = _strings.LanguageHeader;
             ChineseLanguageItem.Content = _strings.ChineseLanguage;
             EnglishLanguageItem.Content = _strings.EnglishLanguage;
@@ -1364,6 +1312,9 @@ namespace SharpTimer.App
                 return;
             }
 
+            var previousTheme = _settings.Theme;
+            var previousBackdropMaterial = _settings.BackdropMaterial;
+            var previousLanguage = _settings.Language;
             _settings = new AppSettings
             {
                 UseInspection = InspectionSwitch.IsOn,
@@ -1374,15 +1325,34 @@ namespace SharpTimer.App
                     2 => AppThemePreference.Dark,
                     _ => AppThemePreference.System
                 },
+                BackdropMaterial = BackdropMaterialComboBox.SelectedIndex switch
+                {
+                    1 => AppBackdropMaterialPreference.MicaAlt,
+                    2 => AppBackdropMaterialPreference.Acrylic,
+                    _ => AppBackdropMaterialPreference.Mica
+                },
                 Language = LanguageComboBox.SelectedIndex == 1
                     ? AppLanguagePreference.English
                     : AppLanguagePreference.Chinese
             };
 
             _settingsService.Save(_settings);
-            _strings = LocalizedStrings.For(_settings.Language);
-            ApplyLanguage();
-            ApplyTheme(_settings.Theme);
+            if (_settings.Language != previousLanguage)
+            {
+                _strings = LocalizedStrings.For(_settings.Language);
+                ApplyLanguage();
+                RenderSettings();
+            }
+
+            if (_settings.Theme != previousTheme)
+            {
+                ApplyTheme(_settings.Theme);
+            }
+
+            if (_settings.BackdropMaterial != previousBackdropMaterial)
+            {
+                ApplyBackdropMaterial(_settings.BackdropMaterial);
+            }
 
             if (_appService is not null)
             {
@@ -1427,6 +1397,37 @@ namespace SharpTimer.App
                 AppThemePreference.Dark => ElementTheme.Dark,
                 _ => ElementTheme.Default
             };
+        }
+
+        private static void SetSelectedIndex(ComboBox comboBox, int selectedIndex)
+        {
+            if (comboBox.SelectedIndex == selectedIndex)
+            {
+                comboBox.SelectedIndex = -1;
+            }
+
+            comboBox.SelectedIndex = selectedIndex;
+        }
+
+        private void ApplyBackdropMaterial(AppBackdropMaterialPreference material)
+        {
+            try
+            {
+                SystemBackdrop = material switch
+                {
+                    AppBackdropMaterialPreference.MicaAlt when MicaController.IsSupported() =>
+                        new MicaBackdrop { Kind = MicaKind.BaseAlt },
+                    AppBackdropMaterialPreference.Acrylic when DesktopAcrylicController.IsSupported() =>
+                        new DesktopAcrylicBackdrop(),
+                    _ when MicaController.IsSupported() =>
+                        new MicaBackdrop { Kind = MicaKind.Base },
+                    _ => null
+                };
+            }
+            catch
+            {
+                SystemBackdrop = null;
+            }
         }
     }
 }

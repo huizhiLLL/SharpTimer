@@ -12,20 +12,49 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <NavigationView
-        x:Name="RootGrid"
-        IsTabStop="True"
-        KeyDown="RootGrid_KeyDown"
-        KeyUp="RootGrid_KeyUp"
-        PaneTitle="SharpTimer"
-        PaneDisplayMode="Left"
-        OpenPaneLength="268"
-        CompactPaneLength="56"
-        IsPaneOpen="False"
-        IsBackButtonVisible="Collapsed"
-        IsSettingsVisible="True"
-        SelectionChanged="AppNavigationView_SelectionChanged"
-        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Background="Transparent">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid
+            x:Name="AppTitleBar"
+            Height="32"
+            Padding="12,0,138,0"
+            Background="Transparent">
+            <StackPanel
+                Orientation="Horizontal"
+                Spacing="8"
+                VerticalAlignment="Center"
+                IsHitTestVisible="False">
+                <Image
+                    Width="16"
+                    Height="16"
+                    Source="ms-appx:///Assets/Square44x44Logo.png" />
+                <TextBlock
+                    x:Name="WindowTitleText"
+                    Text="SharpTimer"
+                    VerticalAlignment="Center"
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+            </StackPanel>
+        </Grid>
+
+        <NavigationView
+            x:Name="RootGrid"
+            Grid.Row="1"
+            IsTabStop="True"
+            KeyDown="RootGrid_KeyDown"
+            KeyUp="RootGrid_KeyUp"
+            PaneDisplayMode="Left"
+            OpenPaneLength="268"
+            CompactPaneLength="56"
+            IsPaneOpen="False"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="True"
+            SelectionChanged="AppNavigationView_SelectionChanged"
+            Background="Transparent">
 
         <NavigationView.MenuItems>
             <NavigationViewItem
@@ -204,8 +233,8 @@
 
                     <Canvas
                         x:Name="SmartCubePreviewCanvas"
-                        Width="168"
-                        Height="126"
+                        Width="180"
+                        Height="180"
                         Margin="0,0,16,0"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Bottom"
@@ -455,6 +484,16 @@
                         </ComboBox>
 
                         <ComboBox
+                            x:Name="BackdropMaterialComboBox"
+                            Header="背景材质"
+                            MinWidth="240"
+                            SelectionChanged="BackdropMaterialComboBox_SelectionChanged">
+                            <ComboBoxItem x:Name="MicaMaterialItem" Content="Mica" />
+                            <ComboBoxItem x:Name="MicaAltMaterialItem" Content="Mica Alt" />
+                            <ComboBoxItem x:Name="AcrylicMaterialItem" Content="Acrylic" />
+                        </ComboBox>
+
+                        <ComboBox
                             x:Name="LanguageComboBox"
                             Header="语言"
                             MinWidth="240"
@@ -466,5 +505,6 @@
                 </Border>
             </Grid>
         </Grid>
-    </NavigationView>
+        </NavigationView>
+    </Grid>
 </Window>
