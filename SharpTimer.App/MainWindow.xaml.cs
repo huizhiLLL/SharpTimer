@@ -98,13 +98,20 @@ namespace SharpTimer.App
         {
             Title = "SharpTimer";
             AppWindow.Title = "SharpTimer";
+            AppWindow.SetIcon("Assets/SharpTimer.ico");
             ExtendsContentIntoTitleBar = true;
-            SetTitleBar(AppTitleBar);
+            SetTitleBar(TitleBarDragRegion);
 
             AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
             AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             AppWindow.TitleBar.ButtonPressedBackgroundColor = Colors.Transparent;
             AppWindow.TitleBar.ButtonHoverBackgroundColor = Colors.Transparent;
+        }
+
+        private void TitleBarPaneToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            RootGrid.IsPaneOpen = !RootGrid.IsPaneOpen;
+            RootGrid.Focus(FocusState.Programmatic);
         }
 
         private async void MainWindow_Closed(object sender, WindowEventArgs args)

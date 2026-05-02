@@ -18,7 +18,7 @@ SharpTimer
 ## 分层原则
 
 - `SharpTimer.App` 只负责界面、输入事件和展示状态，不直接承载计时规则。
-- `SharpTimer.App` 当前使用 WinUI 官方 `NavigationView` 作为侧边栏容器，将主计时、成绩列表和设置拆成三个视图区域；窗口使用扩展内容标题栏，只保留应用图标、标题和系统最小化/最大化/关闭按钮；智能魔方连接入口放在主计时页右上角蓝牙按钮中。
+- `SharpTimer.App` 当前使用 WinUI 官方 `NavigationView` 作为侧边栏容器，将主计时、成绩列表和设置拆成三个视图区域；窗口使用扩展内容标题栏，左侧提供导航折叠按钮，旁边展示应用图标和标题，右侧保留系统最小化/最大化/关闭按钮；智能魔方连接入口放在主计时页右上角蓝牙按钮中。
 - `SharpTimer.App` 的前端控件、XAML 写法、WinUI API 调用和样式资源优先参考本地官方示例 `ref/WinUI-Gallery`，再结合 SharpTimer 当前结构做最小适配。
 - `SharpTimer.App.Services` 提供很薄的应用服务层，负责串联 `ManualTimerStateMachine`、SQLite 仓储、默认 session、统计快照和本地 UI 设置。
 - `SharpTimer.Core` 保持平台无关，提供计时状态机、`Solve` 成绩模型、`Penalty` 罚时模型和统计计算。
