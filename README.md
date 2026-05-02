@@ -1,57 +1,53 @@
-# SharpTimer
+<div align="center">
+  <img src="SharpTimer.App/Assets/Square150x150Logo.scale-200.png" alt="SharpTimer logo" width="128" height="128" />
 
-SharpTimer 是一个 Windows 原生魔方计时器，目标是先做好本地手动计时体验，再接入智能魔方蓝牙计时。
+  <h1>SharpTimer</h1>
 
-## 特点
+  <p>
+    支持智能魔方的 Windows 原生计时器
+  </p>
 
-- Windows 原生客户端，基于 WinUI 3。
-- 手动计时核心与界面分离，便于测试和后续接入硬件。
-- 支持 15 秒观察、`+2`、`DNF` 等 WCA 风格计时规则。
-- 提供基础统计模型：best、mean、ao5、ao12。
-- 使用 SQLite 保存 session 和成绩。
-- WinUI 主界面使用官方 `NavigationView` 侧边栏，包含主计时、成绩列表和设置页面；主计时页提供智能魔方蓝牙入口。
-- 支持少量本地设置：是否启用观察、显示精度、亮/暗主题、背景材质和界面语言。
-- 已建立智能魔方 BLE 接入骨架和 MoYu32 连接入口，支持按当前打乱推进到 READY 后自动起表，并在复原完成后保存成绩。
+  <p>
+    <strong>中文</strong>
+    ·
+    <a href="README-en.md">English</a>
+  </p>
 
-## 技术栈
+  <p>
+    <img alt=".NET 8" src="https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white" />
+    <img alt="C#" src="https://img.shields.io/badge/C%23-12-239120?style=for-the-badge&logo=csharp&logoColor=white" />
+    <img alt="WinUI 3" src="https://img.shields.io/badge/WinUI-3-0078D4?style=for-the-badge&logo=windows&logoColor=white" />
+    <img alt="SQLite" src="https://img.shields.io/badge/SQLite-local-003B57?style=for-the-badge&logo=sqlite&logoColor=white" />
+    <img alt="xUnit" src="https://img.shields.io/badge/xUnit-tests-5E2B97?style=for-the-badge" />
+  </p>
+</div>
 
-- .NET 8
-- WinUI 3 / Windows App SDK
-- SQLite
-- Windows BLE API
+SharpTimer 是一个基于 .NET 8、WinUI 3 和 SQLite 的 Windows 原生魔方计时器，具有基本的计时功能，并且支持 Moyu32 系列智能魔方
 
-## 项目结构
+### 预览
 
-```text
-SharpTimer
-├─ SharpTimer.App          WinUI 3 客户端
-├─ SharpTimer.Core         计时器核心模型、状态机、统计
-├─ SharpTimer.Storage      SQLite schema、迁移和仓储
-├─ SharpTimer.Tests        核心逻辑测试
-└─ SharpTimer.Bluetooth    智能魔方 BLE 协议抽象和 MoYu32 连接入口
-```
+![SharpTimer 主界面](.github/assets/sharptimer-main.png)
 
-## 开发环境
+### 特点
 
-- Windows 10 1809 或更高版本
-- Visual Studio 2022，安装 WinUI / Windows App SDK 相关工作负载
-- .NET SDK 8 或更高版本
+- 原生 Windows 桌面体验，界面基于 WinUI 3 / Windows App SDK
+- 支持空格计时、观察、判罚、成绩 session 管理等基础计时功能
+- 已支持 Moyu32 系列智能魔方的计时接入（智能打乱推进）
+- 提供亮/暗主题、Mica / Mica Alt / Acrylic 背景材质和中英切换
 
-## 常用命令
+### 技术栈
 
-```powershell
-dotnet restore SharpTimer.slnx
-dotnet build SharpTimer.slnx
-dotnet test SharpTimer.slnx
-```
+| 分类 | 技术 |
+| --- | --- |
+| 客户端 | WinUI 3, Windows App SDK, XAML |
+| 运行时 | .NET 8 |
+| 语言 | C# |
+| 存储 | SQLite |
+| 蓝牙 | Windows BLE API |
+| 测试 | xUnit |
 
-## 文档
+### 致谢
 
-- [架构设计](docs/architecture.md)
-- [路线图](docs/roadmap.md)
-
-## 参考资料
-
-- `ref/WinUI-Gallery`：官方 WinUI Gallery 示例源码，作为控件、XAML、样式资源和 Windows App SDK API 的重要前端参考。
-- `ref/smartcube-web-bluetooth`：智能魔方蓝牙协议参考。
-- `ref/cstimer`：计时状态、观察时间、罚时、统计和 session 概念参考。
+- `ref/WinUI-Gallery`：官方 WinUI Gallery 示例，前端重要参考
+- `ref/smartcube-web-bluetooth`：智能魔方蓝牙协议参考
+- `ref/cstimer`：智能魔方蓝牙协议、基础计时功能参考
