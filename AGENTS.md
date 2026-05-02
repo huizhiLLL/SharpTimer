@@ -2,7 +2,7 @@
 
 ## Project
 
-SharpTimer 是一个原生 Windows 桌面魔方计时器，当前目标是先把本地手动计时闭环做稳，再接入智能魔方 BLE。
+SharpTimer 是一个支持智能魔方的原生 Windows 桌面魔方计时器。当前本地手动计时闭环已经建立，智能魔方 BLE 已有 MoYu32 系列接入入口，后续重点是继续验证实机体验、稳定智能打乱推进，并逐步扩展更多智能魔方协议。
 
 当前项目使用：
 
@@ -18,17 +18,18 @@ SharpTimer 是一个原生 Windows 桌面魔方计时器，当前目标是先把
 - `SharpTimer.App`：WinUI 3 客户端，负责界面、输入事件和展示状态。
 - `SharpTimer.Core`：平台无关的计时状态机、成绩模型、罚时模型和统计计算。
 - `SharpTimer.Storage`：SQLite schema、迁移入口和仓储实现。
+- `SharpTimer.Bluetooth`：Windows BLE 智能魔方接入、协议抽象和 MoYu32 连接入口。
 - `SharpTimer.Tests`：核心计时、统计、模型和存储测试。
 - `docs/`：架构、路线图和阶段状态说明。
 - `ref/`：外部参考资料，仅在需要迁移或比对行为时使用。
 
-`SharpTimer.Bluetooth` 目前还没有建立。所有 BLE 相关设计先保持在文档或后续独立项目中，不要提前混入本地计时闭环。
+当前已经支持基础手动计时、观察、判罚、session 管理、SQLite 持久化、基础统计、主题/背景材质/中英文设置，以及 MoYu32 系列智能魔方的连接、智能打乱推进、READY 后首转起表和复原完成保存成绩。
 
 重要本地参考：
 
 - `ref/WinUI-Gallery`：官方 WinUI Gallery 示例源码，是前端控件选择、XAML 写法、WinUI API 使用、样式资源和交互模式的优先参考。
-- `ref/smartcube-web-bluetooth`：后续智能魔方 BLE 协议迁移参考。
-- `ref/cstimer`：计时状态、观察、罚时、统计和 session 概念参考。
+- `ref/smartcube-web-bluetooth`：智能魔方 BLE 协议迁移参考。
+- `ref/cstimer`：计时状态、观察、罚时、统计、session 概念和智能魔方协议行为参考。
 
 ## Core Rule
 
@@ -71,7 +72,9 @@ SharpTimer 是一个原生 Windows 桌面魔方计时器，当前目标是先把
 保持分层清楚：
 
 - 计时规则、观察时间、罚时判定和统计规则放在 `SharpTimer.Core`。
+- 智能魔方打乱推进中不依赖 Windows BLE 的规则部分优先放在 `SharpTimer.Core`，保持可测试。
 - SQLite schema、迁移和 SQL 访问放在 `SharpTimer.Storage`。
+- Windows BLE 扫描、连接、通知订阅、协议解析和设备命令放在 `SharpTimer.Bluetooth`。
 - WinUI 输入事件、界面渲染和本地设置串联放在 `SharpTimer.App`。
 - 跨层编排放在 `SharpTimer.App.Services`，不要把核心规则直接塞进 XAML code-behind。
 - 新增核心规则时优先补 `SharpTimer.Tests`。
@@ -160,6 +163,27 @@ SharpTimer 是一个原生 Windows 桌面魔方计时器，当前目标是先把
 - UI 刷新不能阻塞计时状态机。
 - 删除、归档、罚时修改等破坏性或半破坏性操作应使用官方确认控件。
 - 数据持久化路径和 SQLite schema 变更必须同步测试和文档。
+
+## Smart Cube Behavior
+
+智能魔方相关改动要优先保证手动计时路径不回退：
+
+- MoYu32 是当前已经接入的智能魔方系列，新增 BLE 行为前先确认不会破坏现有 MoYu32 连接、断开、状态同步和打乱推进流程。
+- 未完成打乱时，智能魔方转动只推进打乱进度或给出纠错提示，不应提前启动计时。
+- 只有进入智能魔方 `READY` 后，首个有效转动才应启动复原计时。
+- 运行中回到复原态且本轮已经发生过转动后，才应自动停止并保存成绩。
+- BLE 协议兼容性不确定时，优先隔离在 `SharpTimer.Bluetooth`，不要把厂商特例散落到 UI code-behind。
+- 涉及协议、加密、坐标系、打乱推进或复原判定时，应优先补 `SharpTimer.Tests` 中的平台无关测试。
+
+## README And Assets
+
+README 用于展示稳定功能和项目特点：
+
+- `README.md` 是默认中文入口。
+- `README-en.md` 是英文版，应严格同步 `README.md` 的结构和含义，不额外扩写。
+- README 顶部使用 `SharpTimer.App/Assets/Square150x150Logo.scale-200.png` 作为居中图标。
+- README 的应用截图放在 `.github/assets/sharptimer-main.png`，引用路径保持仓库相对路径。
+- README 只写稳定功能、技术栈、预览和致谢，不写临时进度流水账。
 
 ## Testing And Verification
 
