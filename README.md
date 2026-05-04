@@ -19,6 +19,7 @@
     <img alt="WinUI 3" src="https://img.shields.io/badge/WinUI-3-0078D4?style=for-the-badge&logo=windows&logoColor=white" />
     <img alt="SQLite" src="https://img.shields.io/badge/SQLite-local-003B57?style=for-the-badge&logo=sqlite&logoColor=white" />
     <img alt="xUnit" src="https://img.shields.io/badge/xUnit-tests-5E2B97?style=for-the-badge" />
+    <img alt="License GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" />
   </p>
 </div>
 
@@ -33,6 +34,9 @@
 - 已支持 Moyu32 系列智能魔方的计时接入（智能打乱推进）
 - 提供亮/暗主题、Mica / Mica Alt / Acrylic 背景材质和中英切换
 
+### 许可证
+
+GPL-3.0
 
 ### 致谢
 

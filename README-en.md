@@ -19,6 +19,7 @@
     <img alt="WinUI 3" src="https://img.shields.io/badge/WinUI-3-0078D4?style=for-the-badge&logo=windows&logoColor=white" />
     <img alt="SQLite" src="https://img.shields.io/badge/SQLite-local-003B57?style=for-the-badge&logo=sqlite&logoColor=white" />
     <img alt="xUnit" src="https://img.shields.io/badge/xUnit-tests-5E2B97?style=for-the-badge" />
+    <img alt="License GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" />
   </p>
 </div>
 
@@ -32,6 +33,10 @@
 - Supports basic timing features such as spacebar timing, inspection, penalties, and solve session management
 - Supports timing integration for Moyu32 series smart cubes, including smart scramble progression
 - Provides light / dark themes, Mica / Mica Alt / Acrylic backdrop materials, and Chinese / English switching
+
+### License
+
+GPL-3.0
 
 ### Acknowledgements
 
