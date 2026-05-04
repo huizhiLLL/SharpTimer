@@ -9,12 +9,10 @@ public sealed record LocalizedStrings
     public required string RenameSession { get; init; }
     public required string ArchiveSession { get; init; }
     public required string TimeColumn { get; init; }
-    public required string PenaltyColumn { get; init; }
-    public required string ClearPenalty { get; init; }
+    public required string NoPenalty { get; init; }
     public required string Delete { get; init; }
     public required string AnalysisCountLabel { get; init; }
     public required string SolveDetailsTitleFormat { get; init; }
-    public required string SolveRawTimeLabel { get; init; }
     public required string SolveCreatedAtLabel { get; init; }
     public required string SolveScrambleLabel { get; init; }
     public required string SolveReplayLabel { get; init; }
@@ -77,16 +75,14 @@ public sealed record LocalizedStrings
         RenameSession = "重命名",
         ArchiveSession = "归档",
         TimeColumn = "时间",
-        PenaltyColumn = "判罚",
-        ClearPenalty = "清除罚时",
+        NoPenalty = "无罚时",
         Delete = "删除",
         AnalysisCountLabel = "次数",
-        SolveDetailsTitleFormat = "第 {0} 次成绩",
-        SolveRawTimeLabel = "原始时间",
-        SolveCreatedAtLabel = "记录时间",
+        SolveDetailsTitleFormat = "Solves {0}",
+        SolveCreatedAtLabel = "日期",
         SolveScrambleLabel = "打乱",
-        SolveReplayLabel = "复盘步骤",
-        SolveReplayUnavailable = "当前成绩暂无智能魔方复盘数据",
+        SolveReplayLabel = "解法",
+        SolveReplayUnavailable = "无",
         SettingsTitle = "设置",
         SettingsDescription = "本地偏好会立即生效，并保存在当前 Windows 用户数据里",
         InspectionHeader = "15 秒观察",
@@ -141,16 +137,14 @@ public sealed record LocalizedStrings
         RenameSession = "Rename",
         ArchiveSession = "Archive",
         TimeColumn = "Time",
-        PenaltyColumn = "Penalty",
-        ClearPenalty = "Clear penalty",
+        NoPenalty = "No penalty",
         Delete = "Delete",
         AnalysisCountLabel = "Solves",
-        SolveDetailsTitleFormat = "Solve #{0}",
-        SolveRawTimeLabel = "Raw time",
-        SolveCreatedAtLabel = "Created at",
+        SolveDetailsTitleFormat = "Solves {0}",
+        SolveCreatedAtLabel = "Date",
         SolveScrambleLabel = "Scramble",
-        SolveReplayLabel = "Replay",
-        SolveReplayUnavailable = "No smart cube replay data is available for this solve yet",
+        SolveReplayLabel = "Solution",
+        SolveReplayUnavailable = "Nothing",
         SettingsTitle = "Settings",
         SettingsDescription = "Local preferences apply immediately and are saved to your Windows user data.",
         InspectionHeader = "15-second inspection",

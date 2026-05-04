@@ -367,6 +367,14 @@
                         SelectionMode="Single"
                         IsItemClickEnabled="True"
                         ItemClick="SolvesList_ItemClick">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="0" />
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="MinHeight" Value="0" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
                         <ListView.Header>
                             <Grid
                                 Padding="4,0,4,8"
@@ -374,20 +382,32 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="44" />
                                     <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="72" />
+                                    <ColumnDefinition Width="72" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock
-                                    Text="#"
+                                    Text="序号"
+                                    HorizontalAlignment="Stretch"
+                                    TextAlignment="Center"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <TextBlock
                                     x:Name="TimeColumnText"
                                     Grid.Column="1"
                                     Text="时间"
+                                    HorizontalAlignment="Stretch"
+                                    TextAlignment="Center"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 <TextBlock
                                     Grid.Column="2"
                                     Text="ao5"
-                                    HorizontalAlignment="Right"
+                                    HorizontalAlignment="Stretch"
+                                    TextAlignment="Center"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock
+                                    Grid.Column="3"
+                                    Text="ao12"
+                                    HorizontalAlignment="Stretch"
+                                    TextAlignment="Center"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </Grid>
                         </ListView.Header>
@@ -395,14 +415,18 @@
                             <DataTemplate>
                                 <Grid
                                     Padding="4,8"
-                                    ColumnSpacing="12">
+                                    ColumnSpacing="12"
+                                    HorizontalAlignment="Stretch">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="44" />
                                         <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="72" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock
                                         Text="{Binding Number}"
+                                        HorizontalAlignment="Stretch"
+                                        TextAlignment="Center"
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                         VerticalAlignment="Center" />
                                     <TextBlock
@@ -410,11 +434,21 @@
                                         Text="{Binding Time}"
                                         FontSize="18"
                                         FontWeight="SemiBold"
+                                        HorizontalAlignment="Stretch"
+                                        TextAlignment="Center"
                                         VerticalAlignment="Center" />
                                     <TextBlock
                                         Grid.Column="2"
                                         Text="{Binding AverageOf5}"
-                                        HorizontalAlignment="Right"
+                                        HorizontalAlignment="Stretch"
+                                        TextAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock
+                                        Grid.Column="3"
+                                        Text="{Binding AverageOf12}"
+                                        HorizontalAlignment="Stretch"
+                                        TextAlignment="Center"
                                         VerticalAlignment="Center"
                                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                 </Grid>
@@ -558,7 +592,7 @@
                 CornerRadius="8"
                 BorderThickness="1"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
                 Tapped="SolveDetailsCard_Tapped">
                 <ScrollViewer MaxHeight="620">
                     <ContentPresenter x:Name="SolveDetailsContent" />

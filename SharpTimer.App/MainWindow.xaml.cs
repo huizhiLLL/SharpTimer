@@ -519,6 +519,9 @@ namespace SharpTimer.App
                     AverageOf5 = FormatNullableTime(
                         StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 5),
                         _settings.DecimalPlaces),
+                    AverageOf12 = FormatNullableTime(
+                        StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 12),
+                        _settings.DecimalPlaces),
                     Solve = solve
                 })
                 .Reverse()
@@ -561,28 +564,24 @@ namespace SharpTimer.App
                 FontSize = 20,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             });
-            content.Children.Add(CreateDetailRow(_strings.TimeColumn, item.Time));
-            content.Children.Add(CreateDetailRow(_strings.SolveRawTimeLabel, FormatTime(item.Solve.Duration, _settings.DecimalPlaces)));
-            content.Children.Add(CreateDetailRow(_strings.PenaltyColumn, FormatPenalty(item.Solve.Penalty)));
-            content.Children.Add(CreateDetailRow(_strings.SolveCreatedAtLabel, item.Solve.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")));
+            content.Children.Add(CreateDetailRow(_strings.TimeColumn, FormatSolveDetailTime(item.Solve, _settings.DecimalPlaces)));
             content.Children.Add(CreateDetailRow(_strings.SolveScrambleLabel, string.IsNullOrWhiteSpace(item.Solve.Scramble) ? "--" : item.Solve.Scramble));
             content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, _strings.SolveReplayUnavailable));
+            content.Children.Add(CreateDetailRow(_strings.SolveCreatedAtLabel, item.Solve.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")));
 
-            var penaltyButtons = new StackPanel
+            var actionButtons = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 8
             };
 
-            penaltyButtons.Children.Add(CreatePenaltyButton("+2", Penalty.PlusTwo, item.Id));
-            penaltyButtons.Children.Add(CreatePenaltyButton("DNF", Penalty.Dnf, item.Id));
-            penaltyButtons.Children.Add(CreatePenaltyButton(_strings.ClearPenalty, Penalty.None, item.Id));
-            content.Children.Add(penaltyButtons);
+            actionButtons.Children.Add(CreatePenaltyButton("+2", Penalty.PlusTwo, item.Id));
+            actionButtons.Children.Add(CreatePenaltyButton("DNF", Penalty.Dnf, item.Id));
+            actionButtons.Children.Add(CreatePenaltyButton(_strings.NoPenalty, Penalty.None, item.Id));
 
             var deleteButton = new Button
             {
-                Content = _strings.Delete,
-                HorizontalAlignment = HorizontalAlignment.Left
+                Content = _strings.Delete
             };
             deleteButton.Click += async (_, _) =>
             {
@@ -595,7 +594,8 @@ namespace SharpTimer.App
                 Render(await _appService.DeleteSolveAsync(item.Id));
                 RootGrid.Focus(FocusState.Programmatic);
             };
-            content.Children.Add(deleteButton);
+            actionButtons.Children.Add(deleteButton);
+            content.Children.Add(actionButtons);
 
             SolveDetailsContent.Content = content;
             SolveDetailsOverlay.Visibility = Visibility.Visible;
@@ -635,6 +635,13 @@ namespace SharpTimer.App
             grid.Children.Add(labelText);
             grid.Children.Add(valueText);
             return grid;
+        }
+
+        private static string FormatSolveDetailTime(Solve solve, int decimalPlaces)
+        {
+            var time = FormatTime(solve.Duration, decimalPlaces);
+            var penalty = FormatPenalty(solve.Penalty);
+            return string.IsNullOrEmpty(penalty) ? time : $"{time} {penalty}";
         }
 
         private Button CreatePenaltyButton(string text, Penalty penalty, Guid solveId)
