@@ -73,6 +73,8 @@ namespace SharpTimer.App
             SolvesList.ItemsSource = _solveItems;
             SessionComboBox.ItemsSource = _sessionItems;
             BluetoothDevicesList.ItemsSource = _bluetoothDeviceItems;
+            AppRoot.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(RootGrid_KeyDown), true);
+            AppRoot.AddHandler(UIElement.KeyUpEvent, new KeyEventHandler(RootGrid_KeyUp), true);
             RootGrid.Loaded += RootGrid_Loaded;
             Closed += MainWindow_Closed;
 
@@ -111,7 +113,7 @@ namespace SharpTimer.App
         private void TitleBarPaneToggleButton_Click(object sender, RoutedEventArgs e)
         {
             RootGrid.IsPaneOpen = !RootGrid.IsPaneOpen;
-            RootGrid.Focus(FocusState.Programmatic);
+            FocusTimerInput();
         }
 
         private async void MainWindow_Closed(object sender, WindowEventArgs args)
@@ -144,6 +146,7 @@ namespace SharpTimer.App
             Render(snapshot);
             RenderSettings();
             _uiTimer.Start();
+            DispatcherQueue.TryEnqueue(FocusTimerInput);
         }
 
         private void UiTimer_Tick(object? sender, object e)
@@ -170,6 +173,11 @@ namespace SharpTimer.App
                 return;
             }
 
+            if (IsTextInputSource(e.OriginalSource))
+            {
+                return;
+            }
+
             e.Handled = true;
             if (_appService is null || _lastSnapshot is null || _isSpaceDown)
             {
@@ -190,6 +198,11 @@ namespace SharpTimer.App
         private async void RootGrid_KeyUp(object sender, KeyRoutedEventArgs e)
         {
             if (e.Key != Windows.System.VirtualKey.Space)
+            {
+                return;
+            }
+
+            if (IsTextInputSource(e.OriginalSource))
             {
                 return;
             }
@@ -227,7 +240,10 @@ namespace SharpTimer.App
                 ShowPage(SettingsPage);
             }
 
-            RootGrid.Focus(FocusState.Programmatic);
+            if (ReferenceEquals(args.SelectedItem, TimerNavItem))
+            {
+                DispatcherQueue.TryEnqueue(FocusTimerInput);
+            }
         }
 
         private async void SessionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -712,6 +728,27 @@ namespace SharpTimer.App
             {
                 AnimatePageEntrance(page);
             }
+        }
+
+        private void FocusTimerInput()
+        {
+            if (!AppRoot.Focus(FocusState.Programmatic))
+            {
+                RootGrid.Focus(FocusState.Programmatic);
+            }
+        }
+
+        private static bool IsTextInputSource(object source)
+        {
+            for (var current = source as DependencyObject; current is not null; current = VisualTreeHelper.GetParent(current))
+            {
+                if (current is TextBox or PasswordBox or RichEditBox)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void AnimatePageEntrance(FrameworkElement page)

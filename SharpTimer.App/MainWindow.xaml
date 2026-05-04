@@ -12,7 +12,10 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid Background="Transparent">
+    <Grid
+        x:Name="AppRoot"
+        IsTabStop="True"
+        Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />
             <RowDefinition Height="*" />
@@ -70,8 +73,6 @@
             x:Name="RootGrid"
             Grid.Row="1"
             IsTabStop="True"
-            KeyDown="RootGrid_KeyDown"
-            KeyUp="RootGrid_KeyUp"
             PaneDisplayMode="Left"
             OpenPaneLength="268"
             CompactPaneLength="56"
