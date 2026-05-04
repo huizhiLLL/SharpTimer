@@ -13,6 +13,7 @@ public sealed record LocalizedStrings
     public required string ClearPenalty { get; init; }
     public required string Delete { get; init; }
     public required string AnalysisCountLabel { get; init; }
+    public required string SolveDetailsTitleFormat { get; init; }
     public required string SolveRawTimeLabel { get; init; }
     public required string SolveCreatedAtLabel { get; init; }
     public required string SolveScrambleLabel { get; init; }
@@ -80,6 +81,7 @@ public sealed record LocalizedStrings
         ClearPenalty = "清除罚时",
         Delete = "删除",
         AnalysisCountLabel = "次数",
+        SolveDetailsTitleFormat = "第 {0} 次成绩",
         SolveRawTimeLabel = "原始时间",
         SolveCreatedAtLabel = "记录时间",
         SolveScrambleLabel = "打乱",
@@ -143,6 +145,7 @@ public sealed record LocalizedStrings
         ClearPenalty = "Clear penalty",
         Delete = "Delete",
         AnalysisCountLabel = "Solves",
+        SolveDetailsTitleFormat = "Solve #{0}",
         SolveRawTimeLabel = "Raw time",
         SolveCreatedAtLabel = "Created at",
         SolveScrambleLabel = "Scramble",

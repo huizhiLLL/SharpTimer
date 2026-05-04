@@ -3,7 +3,6 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -519,6 +518,16 @@ namespace SharpTimer.App
                 ?? _solveItems.FirstOrDefault();
         }
 
+        private void SolveDetailsOverlay_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            HideSolveDetails();
+        }
+
+        private void SolveDetailsCard_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            e.Handled = true;
+        }
+
         private void ShowSolveDetails(SolveListItem item)
         {
             if (_appService is null)
@@ -528,9 +537,14 @@ namespace SharpTimer.App
 
             var content = new StackPanel
             {
-                Spacing = 14,
-                MaxWidth = 460
+                Spacing = 16
             };
+            content.Children.Add(new TextBlock
+            {
+                Text = string.Format(_strings.SolveDetailsTitleFormat, item.Number),
+                FontSize = 20,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            });
             content.Children.Add(CreateDetailRow(_strings.TimeColumn, item.Time));
             content.Children.Add(CreateDetailRow(_strings.SolveRawTimeLabel, FormatTime(item.Solve.Duration, _settings.DecimalPlaces)));
             content.Children.Add(CreateDetailRow(_strings.PenaltyColumn, FormatPenalty(item.Solve.Penalty)));
@@ -538,21 +552,15 @@ namespace SharpTimer.App
             content.Children.Add(CreateDetailRow(_strings.SolveScrambleLabel, string.IsNullOrWhiteSpace(item.Solve.Scramble) ? "--" : item.Solve.Scramble));
             content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, _strings.SolveReplayUnavailable));
 
-            var flyout = new Flyout
-            {
-                Placement = FlyoutPlacementMode.Right,
-                Content = content
-            };
-
             var penaltyButtons = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 8
             };
 
-            penaltyButtons.Children.Add(CreatePenaltyButton("+2", Penalty.PlusTwo, flyout, item.Id));
-            penaltyButtons.Children.Add(CreatePenaltyButton("DNF", Penalty.Dnf, flyout, item.Id));
-            penaltyButtons.Children.Add(CreatePenaltyButton(_strings.ClearPenalty, Penalty.None, flyout, item.Id));
+            penaltyButtons.Children.Add(CreatePenaltyButton("+2", Penalty.PlusTwo, item.Id));
+            penaltyButtons.Children.Add(CreatePenaltyButton("DNF", Penalty.Dnf, item.Id));
+            penaltyButtons.Children.Add(CreatePenaltyButton(_strings.ClearPenalty, Penalty.None, item.Id));
             content.Children.Add(penaltyButtons);
 
             var deleteButton = new Button
@@ -562,7 +570,7 @@ namespace SharpTimer.App
             };
             deleteButton.Click += async (_, _) =>
             {
-                flyout.Hide();
+                HideSolveDetails();
                 if (_appService is null)
                 {
                     return;
@@ -573,8 +581,15 @@ namespace SharpTimer.App
             };
             content.Children.Add(deleteButton);
 
-            var target = SolvesList.ContainerFromItem(item) as FrameworkElement ?? SolvesList;
-            flyout.ShowAt(target);
+            SolveDetailsContent.Content = content;
+            SolveDetailsOverlay.Visibility = Visibility.Visible;
+        }
+
+        private void HideSolveDetails()
+        {
+            SolveDetailsOverlay.Visibility = Visibility.Collapsed;
+            SolveDetailsContent.Content = null;
+            RootGrid.Focus(FocusState.Programmatic);
         }
 
         private static FrameworkElement CreateDetailRow(string label, string value)
@@ -606,12 +621,12 @@ namespace SharpTimer.App
             return grid;
         }
 
-        private Button CreatePenaltyButton(string text, Penalty penalty, Flyout flyout, Guid solveId)
+        private Button CreatePenaltyButton(string text, Penalty penalty, Guid solveId)
         {
             var button = new Button { Content = text };
             button.Click += async (_, _) =>
             {
-                flyout.Hide();
+                HideSolveDetails();
                 await SetSolvePenaltyAsync(solveId, penalty);
             };
             return button;

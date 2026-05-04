@@ -540,5 +540,29 @@
             </Grid>
         </Grid>
         </NavigationView>
+
+        <Grid
+            x:Name="SolveDetailsOverlay"
+            Grid.RowSpan="2"
+            Background="#27000000"
+            Visibility="Collapsed"
+            Tapped="SolveDetailsOverlay_Tapped">
+            <Border
+                x:Name="SolveDetailsCard"
+                Width="540"
+                MaxWidth="540"
+                Padding="24"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                Tapped="SolveDetailsCard_Tapped">
+                <ScrollViewer MaxHeight="620">
+                    <ContentPresenter x:Name="SolveDetailsContent" />
+                </ScrollViewer>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
