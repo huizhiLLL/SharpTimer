@@ -2,6 +2,7 @@ using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
@@ -510,19 +511,34 @@ namespace SharpTimer.App
             var orderedSolves = snapshot.Solves
                 .OrderBy(solve => solve.CreatedAt)
                 .ToArray();
+
+            var primaryBrush = GetThemeBrush("TextFillColorPrimaryBrush");
+            var secondaryBrush = GetThemeBrush("TextFillColorSecondaryBrush");
+            var personalBestBrush = new SolidColorBrush(Microsoft.UI.Colors.OrangeRed);
+            var bestSingle = (TimeSpan?)null;
+            var bestAverageOf5 = (TimeSpan?)null;
+            var bestAverageOf12 = (TimeSpan?)null;
             var items = orderedSolves
-                .Select((solve, index) => new SolveListItem
+                .Select((solve, index) =>
                 {
-                    Id = solve.Id,
-                    Number = (index + 1).ToString(),
-                    Time = FormatSolveTime(solve, _settings.DecimalPlaces),
-                    AverageOf5 = FormatNullableTime(
-                        StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 5),
-                        _settings.DecimalPlaces),
-                    AverageOf12 = FormatNullableTime(
-                        StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 12),
-                        _settings.DecimalPlaces),
-                    Solve = solve
+                    var averageOf5 = StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 5);
+                    var averageOf12 = StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 12);
+                    var isSinglePersonalBest = IsNewPersonalBest(solve.EffectiveDuration, ref bestSingle);
+                    var isAverageOf5PersonalBest = IsNewPersonalBest(averageOf5, ref bestAverageOf5);
+                    var isAverageOf12PersonalBest = IsNewPersonalBest(averageOf12, ref bestAverageOf12);
+
+                    return new SolveListItem
+                    {
+                        Id = solve.Id,
+                        Number = (index + 1).ToString(),
+                        Time = FormatSolveTime(solve, _settings.DecimalPlaces),
+                        TimeForeground = isSinglePersonalBest ? personalBestBrush : primaryBrush,
+                        AverageOf5 = FormatNullableTime(averageOf5, _settings.DecimalPlaces),
+                        AverageOf5Foreground = isAverageOf5PersonalBest ? personalBestBrush : secondaryBrush,
+                        AverageOf12 = FormatNullableTime(averageOf12, _settings.DecimalPlaces),
+                        AverageOf12Foreground = isAverageOf12PersonalBest ? personalBestBrush : secondaryBrush,
+                        Solve = solve
+                    };
                 })
                 .Reverse()
                 .ToArray();
@@ -535,6 +551,28 @@ namespace SharpTimer.App
 
             SolvesList.SelectedItem = _solveItems.FirstOrDefault(item => item.Id == selectedId)
                 ?? _solveItems.FirstOrDefault();
+        }
+
+        private static bool IsNewPersonalBest(TimeSpan? value, ref TimeSpan? best)
+        {
+            if (value is null)
+            {
+                return false;
+            }
+
+            if (best is null || value.Value < best.Value)
+            {
+                best = value.Value;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static Brush GetThemeBrush(string resourceKey)
+        {
+            return Application.Current.Resources[resourceKey] as Brush
+                ?? new SolidColorBrush(Microsoft.UI.Colors.Black);
         }
 
         private void SolveDetailsOverlay_Tapped(object sender, TappedRoutedEventArgs e)
@@ -1421,9 +1459,12 @@ namespace SharpTimer.App
                 settingsItem.Content = _strings.SettingsNav;
             }
 
-            NewSessionButton.Content = _strings.NewSession;
-            RenameSessionButton.Content = _strings.RenameSession;
-            ArchiveSessionButton.Content = _strings.ArchiveSession;
+            ToolTipService.SetToolTip(RenameSessionButton, _strings.RenameSession);
+            ToolTipService.SetToolTip(NewSessionButton, _strings.NewSession);
+            ToolTipService.SetToolTip(ArchiveSessionButton, _strings.Delete);
+            AutomationProperties.SetName(RenameSessionButton, _strings.RenameSession);
+            AutomationProperties.SetName(NewSessionButton, _strings.NewSession);
+            AutomationProperties.SetName(ArchiveSessionButton, _strings.Delete);
             TimeColumnText.Text = _strings.TimeColumn;
             AnalysisCountLabelText.Text = _strings.AnalysisCountLabel;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;

@@ -339,20 +339,38 @@
                                 DisplayMemberPath="DisplayName"
                                 SelectionChanged="SessionComboBox_SelectionChanged" />
                             <Button
-                                x:Name="NewSessionButton"
-                                Content="新建"
-                                VerticalAlignment="Bottom"
-                                Click="NewSessionButton_Click" />
-                            <Button
                                 x:Name="RenameSessionButton"
-                                Content="重命名"
+                                Width="36"
+                                Height="32"
+                                Padding="0"
                                 VerticalAlignment="Bottom"
-                                Click="RenameSessionButton_Click" />
+                                AutomationProperties.Name="重命名"
+                                ToolTipService.ToolTip="重命名"
+                                Click="RenameSessionButton_Click">
+                                <FontIcon Glyph="&#xE70F;" FontSize="18" />
+                            </Button>
+                            <Button
+                                x:Name="NewSessionButton"
+                                Width="36"
+                                Height="32"
+                                Padding="0"
+                                VerticalAlignment="Bottom"
+                                AutomationProperties.Name="新建"
+                                ToolTipService.ToolTip="新建"
+                                Click="NewSessionButton_Click">
+                                <FontIcon Glyph="&#xE710;" FontSize="18" />
+                            </Button>
                             <Button
                                 x:Name="ArchiveSessionButton"
-                                Content="归档"
+                                Width="36"
+                                Height="32"
+                                Padding="0"
                                 VerticalAlignment="Bottom"
-                                Click="ArchiveSessionButton_Click" />
+                                AutomationProperties.Name="删除"
+                                ToolTipService.ToolTip="删除"
+                                Click="ArchiveSessionButton_Click">
+                                <FontIcon Glyph="&#xE74D;" FontSize="18" />
+                            </Button>
                         </StackPanel>
                         <TextBlock
                             x:Name="CountText"
@@ -434,6 +452,7 @@
                                         Text="{Binding Time}"
                                         FontSize="18"
                                         FontWeight="SemiBold"
+                                        Foreground="{Binding TimeForeground}"
                                         HorizontalAlignment="Stretch"
                                         TextAlignment="Center"
                                         VerticalAlignment="Center" />
@@ -443,14 +462,14 @@
                                         HorizontalAlignment="Stretch"
                                         TextAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        Foreground="{Binding AverageOf5Foreground}" />
                                     <TextBlock
                                         Grid.Column="3"
                                         Text="{Binding AverageOf12}"
                                         HorizontalAlignment="Stretch"
                                         TextAlignment="Center"
                                         VerticalAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        Foreground="{Binding AverageOf12Foreground}" />
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
