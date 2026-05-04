@@ -3,6 +3,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -301,35 +302,18 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private async void PlusTwoButton_Click(object sender, RoutedEventArgs e)
-        {
-            await SetSelectedPenaltyAsync(Penalty.PlusTwo);
-        }
-
-        private async void DnfButton_Click(object sender, RoutedEventArgs e)
-        {
-            await SetSelectedPenaltyAsync(Penalty.Dnf);
-        }
-
-        private async void ClearPenaltyButton_Click(object sender, RoutedEventArgs e)
-        {
-            await SetSelectedPenaltyAsync(Penalty.None);
-        }
-
-        private async void DeleteButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_appService is null || SolvesList.SelectedItem is not SolveListItem item)
-            {
-                return;
-            }
-
-            Render(await _appService.DeleteSolveAsync(item.Id));
-            RootGrid.Focus(FocusState.Programmatic);
-        }
-
         private void InspectionSwitch_Toggled(object sender, RoutedEventArgs e)
         {
             ApplySettingsFromControls();
+        }
+
+        private void SolvesList_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (e.ClickedItem is SolveListItem item)
+            {
+                SolvesList.SelectedItem = item;
+                ShowSolveDetails(item);
+            }
         }
 
         private void PrecisionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -424,14 +408,14 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private async System.Threading.Tasks.Task SetSelectedPenaltyAsync(Penalty penalty)
+        private async System.Threading.Tasks.Task SetSolvePenaltyAsync(Guid solveId, Penalty penalty)
         {
-            if (_appService is null || SolvesList.SelectedItem is not SolveListItem item)
+            if (_appService is null)
             {
                 return;
             }
 
-            Render(await _appService.SetPenaltyAsync(item.Id, penalty));
+            Render(await _appService.SetPenaltyAsync(solveId, penalty));
             RootGrid.Focus(FocusState.Programmatic);
         }
 
@@ -454,6 +438,9 @@ namespace SharpTimer.App
             Ao5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
             Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
             CountText.Text = string.Format(_strings.CountFormat, snapshot.Statistics.Count);
+            AnalysisAo5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
+            AnalysisAo12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
+            AnalysisCountText.Text = snapshot.Statistics.Count.ToString();
 
             if (refreshList)
             {
@@ -514,12 +501,8 @@ namespace SharpTimer.App
                     Id = solve.Id,
                     Number = (index + 1).ToString(),
                     Time = FormatSolveTime(solve, _settings.DecimalPlaces),
-                    Penalty = FormatPenalty(solve.Penalty),
                     AverageOf5 = FormatNullableTime(
                         StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 5),
-                        _settings.DecimalPlaces),
-                    AverageOf12 = FormatNullableTime(
-                        StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 12),
                         _settings.DecimalPlaces),
                     Solve = solve
                 })
@@ -534,6 +517,104 @@ namespace SharpTimer.App
 
             SolvesList.SelectedItem = _solveItems.FirstOrDefault(item => item.Id == selectedId)
                 ?? _solveItems.FirstOrDefault();
+        }
+
+        private void ShowSolveDetails(SolveListItem item)
+        {
+            if (_appService is null)
+            {
+                return;
+            }
+
+            var content = new StackPanel
+            {
+                Spacing = 14,
+                MaxWidth = 460
+            };
+            content.Children.Add(CreateDetailRow(_strings.TimeColumn, item.Time));
+            content.Children.Add(CreateDetailRow(_strings.SolveRawTimeLabel, FormatTime(item.Solve.Duration, _settings.DecimalPlaces)));
+            content.Children.Add(CreateDetailRow(_strings.PenaltyColumn, FormatPenalty(item.Solve.Penalty)));
+            content.Children.Add(CreateDetailRow(_strings.SolveCreatedAtLabel, item.Solve.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")));
+            content.Children.Add(CreateDetailRow(_strings.SolveScrambleLabel, string.IsNullOrWhiteSpace(item.Solve.Scramble) ? "--" : item.Solve.Scramble));
+            content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, _strings.SolveReplayUnavailable));
+
+            var flyout = new Flyout
+            {
+                Placement = FlyoutPlacementMode.Right,
+                Content = content
+            };
+
+            var penaltyButtons = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 8
+            };
+
+            penaltyButtons.Children.Add(CreatePenaltyButton("+2", Penalty.PlusTwo, flyout, item.Id));
+            penaltyButtons.Children.Add(CreatePenaltyButton("DNF", Penalty.Dnf, flyout, item.Id));
+            penaltyButtons.Children.Add(CreatePenaltyButton(_strings.ClearPenalty, Penalty.None, flyout, item.Id));
+            content.Children.Add(penaltyButtons);
+
+            var deleteButton = new Button
+            {
+                Content = _strings.Delete,
+                HorizontalAlignment = HorizontalAlignment.Left
+            };
+            deleteButton.Click += async (_, _) =>
+            {
+                flyout.Hide();
+                if (_appService is null)
+                {
+                    return;
+                }
+
+                Render(await _appService.DeleteSolveAsync(item.Id));
+                RootGrid.Focus(FocusState.Programmatic);
+            };
+            content.Children.Add(deleteButton);
+
+            var target = SolvesList.ContainerFromItem(item) as FrameworkElement ?? SolvesList;
+            flyout.ShowAt(target);
+        }
+
+        private static FrameworkElement CreateDetailRow(string label, string value)
+        {
+            var grid = new Grid
+            {
+                ColumnSpacing = 12
+            };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(96) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var labelText = new TextBlock
+            {
+                Text = label,
+                Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+
+            var valueText = new TextBlock
+            {
+                Text = value,
+                TextWrapping = TextWrapping.WrapWholeWords,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            Grid.SetColumn(valueText, 1);
+
+            grid.Children.Add(labelText);
+            grid.Children.Add(valueText);
+            return grid;
+        }
+
+        private Button CreatePenaltyButton(string text, Penalty penalty, Flyout flyout, Guid solveId)
+        {
+            var button = new Button { Content = text };
+            button.Click += async (_, _) =>
+            {
+                flyout.Hide();
+                await SetSolvePenaltyAsync(solveId, penalty);
+            };
+            return button;
         }
 
         private string FormatInspection(TimerSnapshot snapshot)
@@ -1210,9 +1291,12 @@ namespace SharpTimer.App
 
         private static string FormatSolveTime(Solve solve, int decimalPlaces)
         {
-            return solve.Penalty == Penalty.Dnf
-                ? "DNF"
-                : FormatTime(solve.EffectiveDuration ?? solve.Duration, decimalPlaces);
+            return solve.Penalty switch
+            {
+                Penalty.Dnf => "DNF",
+                Penalty.PlusTwo => $"({FormatTime(solve.EffectiveDuration ?? solve.Duration, decimalPlaces)}+)",
+                _ => FormatTime(solve.Duration, decimalPlaces)
+            };
         }
 
         private static string FormatNullableTime(TimeSpan? time, int decimalPlaces)
@@ -1278,14 +1362,11 @@ namespace SharpTimer.App
                 settingsItem.Content = _strings.SettingsNav;
             }
 
-            SessionComboBox.Header = _strings.SessionHeader;
             NewSessionButton.Content = _strings.NewSession;
             RenameSessionButton.Content = _strings.RenameSession;
             ArchiveSessionButton.Content = _strings.ArchiveSession;
             TimeColumnText.Text = _strings.TimeColumn;
-            PenaltyColumnText.Text = _strings.PenaltyColumn;
-            ClearPenaltyButton.Content = _strings.ClearPenalty;
-            DeleteButton.Content = _strings.Delete;
+            AnalysisCountLabelText.Text = _strings.AnalysisCountLabel;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
             ResetCubeStateButton.Content = _strings.BluetoothResetCubeState;
             DisconnectCubeButton.Content = _strings.BluetoothDisconnect;

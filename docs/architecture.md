@@ -29,7 +29,7 @@ SharpTimer
 
 - 手动计时：空格进入 Ready，松开后开始观察或复原，运行中按空格停止并保存成绩。
 - 观察与判罚：支持 15 秒观察、`+2`、`DNF`。
-- 成绩管理：支持 session、成绩保存、罚时修改、删除、基础统计。
+- 成绩管理：支持 session、成绩保存、行详情弹窗、罚时修改、删除和基础统计分析区。
 - 设置：支持显示精度、观察开关、亮/暗主题、Mica / Mica Alt / Acrylic 背景材质和中英文界面。
 - 智能魔方：已接入 MoYu32 系列，支持连接、电量/状态/转动事件、智能打乱推进、READY 后首转起表和复原完成保存成绩。
 
@@ -51,7 +51,7 @@ SQLite 当前使用 v1 schema：
 
 ## UI 与 WinUI 约束
 
-- 主界面使用官方 `NavigationView`，包含主计时、成绩列表和设置区域。
+- 主界面使用官方 `NavigationView`，包含主计时、成绩列表、成绩分析区和设置区域。
 - 常规操作优先使用 WinUI 官方控件，如 `Button`、`ListView`、`ContentDialog`、`ToggleSwitch`、`ComboBox`。
 - 样式优先使用 `ThemeResource` 和 Windows App SDK 能力，避免硬编码整套伪 Fluent 视觉系统。
 - UI 控件、窗口 API 或样式资源不确定时，优先查 `ref/WinUI-Gallery`。

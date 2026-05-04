@@ -5,7 +5,6 @@ public sealed record LocalizedStrings
     public required string TimerNav { get; init; }
     public required string SolvesNav { get; init; }
     public required string SettingsNav { get; init; }
-    public required string SessionHeader { get; init; }
     public required string NewSession { get; init; }
     public required string RenameSession { get; init; }
     public required string ArchiveSession { get; init; }
@@ -13,6 +12,12 @@ public sealed record LocalizedStrings
     public required string PenaltyColumn { get; init; }
     public required string ClearPenalty { get; init; }
     public required string Delete { get; init; }
+    public required string AnalysisCountLabel { get; init; }
+    public required string SolveRawTimeLabel { get; init; }
+    public required string SolveCreatedAtLabel { get; init; }
+    public required string SolveScrambleLabel { get; init; }
+    public required string SolveReplayLabel { get; init; }
+    public required string SolveReplayUnavailable { get; init; }
     public required string SettingsTitle { get; init; }
     public required string SettingsDescription { get; init; }
     public required string InspectionHeader { get; init; }
@@ -67,7 +72,6 @@ public sealed record LocalizedStrings
         TimerNav = "计时",
         SolvesNav = "成绩",
         SettingsNav = "设置",
-        SessionHeader = "Session",
         NewSession = "新建",
         RenameSession = "重命名",
         ArchiveSession = "归档",
@@ -75,6 +79,12 @@ public sealed record LocalizedStrings
         PenaltyColumn = "判罚",
         ClearPenalty = "清除罚时",
         Delete = "删除",
+        AnalysisCountLabel = "次数",
+        SolveRawTimeLabel = "原始时间",
+        SolveCreatedAtLabel = "记录时间",
+        SolveScrambleLabel = "打乱",
+        SolveReplayLabel = "复盘步骤",
+        SolveReplayUnavailable = "当前成绩暂无智能魔方复盘数据",
         SettingsTitle = "设置",
         SettingsDescription = "本地偏好会立即生效，并保存在当前 Windows 用户数据里",
         InspectionHeader = "15 秒观察",
@@ -125,7 +135,6 @@ public sealed record LocalizedStrings
         TimerNav = "Timer",
         SolvesNav = "Solves",
         SettingsNav = "Settings",
-        SessionHeader = "Session",
         NewSession = "New",
         RenameSession = "Rename",
         ArchiveSession = "Archive",
@@ -133,6 +142,12 @@ public sealed record LocalizedStrings
         PenaltyColumn = "Penalty",
         ClearPenalty = "Clear penalty",
         Delete = "Delete",
+        AnalysisCountLabel = "Solves",
+        SolveRawTimeLabel = "Raw time",
+        SolveCreatedAtLabel = "Created at",
+        SolveScrambleLabel = "Scramble",
+        SolveReplayLabel = "Replay",
+        SolveReplayUnavailable = "No smart cube replay data is available for this solve yet",
         SettingsTitle = "Settings",
         SettingsDescription = "Local preferences apply immediately and are saved to your Windows user data.",
         InspectionHeader = "15-second inspection",

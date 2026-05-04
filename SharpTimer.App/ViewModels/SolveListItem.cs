@@ -11,11 +11,7 @@ public sealed class SolveListItem
 
     public required string Time { get; init; }
 
-    public required string Penalty { get; init; }
-
     public required string AverageOf5 { get; init; }
-
-    public required string AverageOf12 { get; init; }
 
     public required Solve Solve { get; init; }
 }

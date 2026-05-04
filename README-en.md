@@ -4,13 +4,13 @@
   <h1>SharpTimer</h1>
 
   <p>
-    A native Windows timer with smart cube support
-  </p>
-
-  <p>
     <a href="README.md">中文</a>
     ·
     <strong>English</strong>
+  </p>
+    
+  <p>
+    A native Windows speedcubing timer based on WinUI 3, with smart cube support
   </p>
 
   <p>
@@ -22,11 +22,9 @@
   </p>
 </div>
 
-SharpTimer is a native Windows speedcubing timer built with .NET 8, WinUI 3, and SQLite. It provides basic timing features and supports Moyu32 series smart cubes.
-
-### Preview
-
 ![SharpTimer main interface](.github/assets/sharptimer-main.png)
+
+---
 
 ### Features
 
@@ -35,19 +33,8 @@ SharpTimer is a native Windows speedcubing timer built with .NET 8, WinUI 3, and
 - Supports timing integration for Moyu32 series smart cubes, including smart scramble progression
 - Provides light / dark themes, Mica / Mica Alt / Acrylic backdrop materials, and Chinese / English switching
 
-### Tech Stack
-
-| Category | Technology |
-| --- | --- |
-| Client | WinUI 3, Windows App SDK, XAML |
-| Runtime | .NET 8 |
-| Language | C# |
-| Storage | SQLite |
-| Bluetooth | Windows BLE API |
-| Testing | xUnit |
-
 ### Acknowledgements
 
-- `ref/WinUI-Gallery`: official WinUI Gallery examples, an important frontend reference
-- `ref/smartcube-web-bluetooth`: smart cube Bluetooth protocol reference
-- `ref/cstimer`: smart cube Bluetooth protocol and basic timing feature reference
+- `WinUI-Gallery`: official WinUI Gallery examples, frontend reference
+- `smartcube-web-bluetooth`: smart cube Bluetooth protocol reference
+- `cstimer`: smart cube Bluetooth protocol and basic timing feature reference
