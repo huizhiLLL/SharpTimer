@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="SharpTimer.App/Assets/Square150x150Logo.scale-200.png" alt="SharpTimer logo" width="128" height="128" />
+  <img src=".github/assets/sharptimer-logo.png" alt="SharpTimer logo" width="128" height="128" />
 
   <h1>SharpTimer</h1>
 
