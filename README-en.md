@@ -1,13 +1,9 @@
+<h4 align="right">English | <strong><a href="README.md">简体中文</a></strong></h4>
+
 <div align="center">
   <img src=".github/assets/sharptimer-logo.png" alt="SharpTimer logo" width="128" height="128" />
 
   <h1>SharpTimer</h1>
-
-  <p>
-    <a href="README.md">中文</a>
-    ·
-    <strong>English</strong>
-  </p>
     
   <p>
     A native Windows speedcubing timer based on WinUI 3, with smart cube support

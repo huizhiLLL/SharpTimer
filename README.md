@@ -1,13 +1,9 @@
+<h4 align="right"><strong><a href="README-en.md">English</a></strong> | 简体中文</h4>
+
 <div align="center">
   <img src=".github/assets/sharptimer-logo.png" alt="SharpTimer logo" width="128" height="128" />
 
   <h1>SharpTimer</h1>
-
-  <p>
-    <strong>中文</strong>
-    ·
-    <a href="README-en.md">English</a>
-  </p>
     
   <p>
     基于 WinUI 3 的 Windows 原生魔方计时器，支持智能魔方
