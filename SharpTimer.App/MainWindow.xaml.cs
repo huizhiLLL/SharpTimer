@@ -932,7 +932,8 @@ namespace SharpTimer.App
             }
             else
             {
-                _bluetoothDeviceItems[existing.index] = item;
+                var merged = existing.value.Device.MergeAdvertisement(device);
+                _bluetoothDeviceItems[existing.index] = CreateBluetoothDeviceListItem(merged);
             }
         }
 
@@ -1102,11 +1103,17 @@ namespace SharpTimer.App
         private async System.Threading.Tasks.Task HandleSmartCubeFaceletsEventAsync(SmartCubeFaceletsEvent facelets)
         {
             SmartCubePreviewCanvas.Visibility = Visibility.Visible;
-            var shouldUseFaceletsState = !_smartCubeHasLocalMoveState || _lastSnapshot?.Timer.Phase == TimerPhase.Running;
+            var shouldUseFaceletsState = facelets.IsAuthoritative
+                || !_smartCubeHasLocalMoveState
+                || _lastSnapshot?.Timer.Phase == TimerPhase.Running;
             if (shouldUseFaceletsState)
             {
                 _smartCubeFacelets = facelets.Facelets;
                 RenderSmartCubePreview(facelets.Facelets);
+                if (facelets.IsAuthoritative)
+                {
+                    _smartCubeHasLocalMoveState = false;
+                }
             }
 
             var solved = ThreeByThreeFacelets.IsSolvedIgnoringRotation(facelets.Facelets);

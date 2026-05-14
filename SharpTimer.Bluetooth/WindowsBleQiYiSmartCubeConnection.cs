@@ -8,17 +8,25 @@ namespace SharpTimer.Bluetooth;
 internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
 {
     private static readonly byte[] Key = { 87, 177, 249, 171, 205, 90, 232, 167, 156, 185, 140, 231, 87, 140, 81, 8 };
-    private static readonly byte[] Iv = new byte[16];
     private static readonly HashSet<ushort> QiYiCompanyIds = new() { 0x0504 };
+    private const int HistorySlotCount = 11;
+    private const int HistorySlotStart = 36;
+    private const int HistorySlotSize = 5;
+    private const double DeviceTimeScale = 1.6d;
 
     private readonly BluetoothLEDevice _device;
     private readonly SmartCubeDeviceInfo _advertisedDevice;
+    private readonly IReadOnlyList<string> _macCandidates;
     private readonly object _lifetimeLock = new();
+    private readonly SemaphoreSlim _helloLock = new(1, 1);
     private GattDeviceService? _service;
     private GattCharacteristic? _cubeCharacteristic;
+    private GattCharacteristic? _writeCharacteristic;
     private string? _currentFacelets;
-    private uint _lastTimestamp;
+    private TaskCompletionSource<bool>? _helloProbe;
+    private long _lastTimestamp = -1;
     private int? _batteryLevel;
+    private bool _helloReceived;
     private bool _isDisconnecting;
     private bool _isDisposed;
 
@@ -27,7 +35,8 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         _device = device;
         _advertisedDevice = advertisedDevice;
         DeviceName = !string.IsNullOrWhiteSpace(device.Name) ? device.Name : advertisedDevice.Name ?? "QiYi";
-        DeviceMac = ResolveMac(advertisedDevice, device.BluetoothAddress);
+        _macCandidates = ResolveMacCandidates(advertisedDevice, device.BluetoothAddress);
+        DeviceMac = _macCandidates[0];
         Protocol = new SmartCubeProtocolInfo("qiyi", "QiYi");
         Capabilities = new SmartCubeCapabilities(
             Gyroscope: false,
@@ -39,7 +48,7 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
 
     public string DeviceName { get; }
 
-    public string? DeviceMac { get; }
+    public string? DeviceMac { get; private set; }
 
     public SmartCubeProtocolInfo Protocol { get; }
 
@@ -66,16 +75,20 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
             throw new InvalidOperationException("无法读取 QiYi GATT 特征。");
         }
 
-        _cubeCharacteristic = characteristicsResult.Characteristics.FirstOrDefault(
+        var characteristics = characteristicsResult.Characteristics;
+        _cubeCharacteristic = characteristics.FirstOrDefault(
             item => item.Uuid == SmartCubeBluetoothServices.GanGen1MovesCharacteristic);
         if (_cubeCharacteristic is null)
         {
             throw new InvalidOperationException("找不到 QiYi 通信特征。");
         }
 
+        _writeCharacteristic = ResolveWriteCharacteristic(characteristics, _cubeCharacteristic)
+            ?? throw new InvalidOperationException("找不到 QiYi 写入特征。");
+
         _cubeCharacteristic.ValueChanged += CubeCharacteristic_ValueChanged;
         var status = await _cubeCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(
-                GattClientCharacteristicConfigurationDescriptorValue.Notify)
+                ResolveNotifyMode(_cubeCharacteristic))
             .AsTask(cancellationToken);
         if (status != GattCommunicationStatus.Success)
         {
@@ -83,7 +96,6 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         }
 
         EventReceived?.Invoke(this, new SmartCubeHardwareEvent(DateTimeOffset.UtcNow, HardwareName: DeviceName));
-        await SendHelloAsync(cancellationToken);
     }
 
     public Task SendCommandAsync(SmartCubeCommand command, CancellationToken cancellationToken = default)
@@ -111,7 +123,10 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
             cubeCharacteristic = _cubeCharacteristic;
             service = _service;
             _cubeCharacteristic = null;
+            _writeCharacteristic = null;
             _service = null;
+            _helloProbe?.TrySetResult(false);
+            _helloProbe = null;
         }
 
         if (cubeCharacteristic is not null)
@@ -151,14 +166,52 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
 
     private async Task SendHelloAsync(CancellationToken cancellationToken)
     {
-        var characteristic = _cubeCharacteristic;
-        if (IsConnectionClosing() || characteristic is null || string.IsNullOrWhiteSpace(DeviceMac))
+        if (IsConnectionClosing() || string.IsNullOrWhiteSpace(DeviceMac))
         {
             return;
         }
 
+        await _helloLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_helloReceived)
+            {
+                await SendHelloForMacAsync(DeviceMac, cancellationToken);
+                return;
+            }
+
+            foreach (var candidate in _macCandidates)
+            {
+                if (IsConnectionClosing())
+                {
+                    return;
+                }
+
+                DeviceMac = candidate;
+                _helloProbe = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                await SendHelloForMacAsync(candidate, cancellationToken);
+                var completed = await Task.WhenAny(
+                    _helloProbe.Task,
+                    Task.Delay(TimeSpan.FromMilliseconds(900), cancellationToken));
+                if (completed == _helloProbe.Task && await _helloProbe.Task)
+                {
+                    _helloProbe = null;
+                    return;
+                }
+            }
+
+            _helloProbe = null;
+        }
+        finally
+        {
+            _helloLock.Release();
+        }
+    }
+
+    private async Task SendHelloForMacAsync(string macText, CancellationToken cancellationToken)
+    {
         var content = new List<byte> { 0x00, 0x6b, 0x01, 0x00, 0x00, 0x22, 0x06, 0x00, 0x02, 0x08, 0x00 };
-        var mac = SmartCubeBluetoothAddress.Parse(DeviceMac);
+        var mac = SmartCubeBluetoothAddress.Parse(macText);
         for (var index = 5; index >= 0; index--)
         {
             content.Add(mac[index]);
@@ -174,7 +227,7 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
 
     private async Task SendMessageAsync(byte[] content, CancellationToken cancellationToken)
     {
-        var characteristic = _cubeCharacteristic;
+        var characteristic = _writeCharacteristic;
         if (IsConnectionClosing() || characteristic is null)
         {
             return;
@@ -190,8 +243,10 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
             message.Add(0);
         }
 
-        var encrypted = SmartCubeCrypto.TransformAesCbcAllBlocks(message.ToArray(), encrypt: true, Key, Iv);
-        await characteristic.WriteValueAsync(CryptographicBuffer.CreateFromByteArray(encrypted))
+        var encrypted = SmartCubeCrypto.TransformAesEcbAllBlocks(message.ToArray(), encrypt: true, Key);
+        await characteristic.WriteValueAsync(
+                CryptographicBuffer.CreateFromByteArray(encrypted),
+                ResolveWriteOption(characteristic))
             .AsTask(cancellationToken);
     }
 
@@ -210,7 +265,7 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
                 return;
             }
 
-            var decoded = SmartCubeCrypto.TransformAesCbcAllBlocks(encrypted, encrypt: false, Key, Iv);
+            var decoded = SmartCubeCrypto.TransformAesEcbAllBlocks(encrypted, encrypt: false, Key);
             ParseDecoded(decoded, DateTimeOffset.UtcNow);
         }
         catch
@@ -237,63 +292,66 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         var cubeTimestamp = ReadUInt32BE(message, 3);
         if (opcode == 0x02 && message.Length >= 36)
         {
+            MarkHelloReceived();
             _ = SendAckAsync(message.Skip(2).Take(5).ToArray());
             _currentFacelets = ParseFacelets(message.Skip(7).Take(27).ToArray());
             _lastTimestamp = cubeTimestamp;
-            Emit(new SmartCubeFaceletsEvent(timestamp, _currentFacelets));
+            Emit(new SmartCubeFaceletsEvent(timestamp, _currentFacelets, IsAuthoritative: true));
             EmitBattery(message[35], timestamp);
         }
         else if (opcode == 0x03 && message.Length >= 36)
         {
-            if (message.Length > 91 && message[91] != 0)
+            MarkHelloReceived();
+            _ = SendAckAsync(message.Skip(2).Take(5).ToArray());
+
+            var facelets = ParseFacelets(message.Skip(7).Take(27).ToArray());
+            if (!ThreeByThreeFacelets.IsValidState(_currentFacelets ?? string.Empty))
             {
-                _ = SendAckAsync(message.Skip(2).Take(5).ToArray());
+                _currentFacelets = facelets;
+                _lastTimestamp = cubeTimestamp;
+                Emit(new SmartCubeFaceletsEvent(timestamp, facelets, IsAuthoritative: true));
+                EmitBattery(message[35], timestamp);
+                return;
             }
 
-            var moves = CollectStateChangeMoves(message, cubeTimestamp)
-                .Where(item => item.Code is >= 1 and <= 12 && IsTimestampNewer(item.Timestamp, _lastTimestamp))
+            var previousTimestamp = _lastTimestamp;
+            var moves = CollectStateChangeMoves(message, previousTimestamp)
                 .ToArray();
             foreach (var move in moves)
             {
                 EmitMove(move.Code, move.Timestamp, timestamp);
             }
 
-            if (moves.Length > 0)
-            {
-                _lastTimestamp = moves[^1].Timestamp;
-            }
+            _currentFacelets = facelets;
+            Emit(new SmartCubeFaceletsEvent(timestamp, facelets, IsAuthoritative: true));
 
+            _lastTimestamp = Math.Max(_lastTimestamp, cubeTimestamp);
             EmitBattery(message[35], timestamp);
         }
-        else if (opcode == 0x04 && message[1] == 38)
+        else if (opcode == 0x04 && message.Length >= 36)
         {
-            _currentFacelets = ThreeByThreeFacelets.Solved;
+            MarkHelloReceived();
+            _currentFacelets = ParseFacelets(message.Skip(7).Take(27).ToArray());
             _lastTimestamp = cubeTimestamp;
-            Emit(new SmartCubeFaceletsEvent(timestamp, _currentFacelets));
+            Emit(new SmartCubeFaceletsEvent(timestamp, _currentFacelets, IsAuthoritative: true));
+            EmitBattery(message[35], timestamp);
         }
     }
 
-    private void EmitMove(byte code, uint cubeTimestamp, DateTimeOffset timestamp)
+    private void EmitMove(byte code, long cubeTimestamp, DateTimeOffset timestamp)
     {
         var face = new[] { 4, 1, 3, 0, 2, 5 }[(code - 1) >> 1];
         var direction = (code & 1) == 0 ? 0 : 1;
         var move = "URFDLB"[face] + ((code & 1) == 0 ? string.Empty : "'");
-        if (ThreeByThreeFacelets.IsValidState(_currentFacelets ?? string.Empty))
-        {
-            _currentFacelets = ThreeByThreeFacelets.ApplyMove(_currentFacelets!, move);
-        }
-
         Emit(new SmartCubeMoveEvent(
             timestamp,
             face,
             direction,
             move,
             LocalTimestamp: timestamp,
-            CubeTimestamp: TimeSpan.FromMilliseconds(Math.Truncate(cubeTimestamp / 1.6))));
-        if (ThreeByThreeFacelets.IsValidState(_currentFacelets ?? string.Empty))
-        {
-            Emit(new SmartCubeFaceletsEvent(timestamp, _currentFacelets!));
-        }
+            CubeTimestamp: TimeSpan.FromMilliseconds(Math.Truncate(cubeTimestamp / DeviceTimeScale))));
+
+        _lastTimestamp = cubeTimestamp;
     }
 
     private void TryParseGyro(byte[] decoded, DateTimeOffset timestamp)
@@ -338,26 +396,79 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         }
     }
 
-    private static IEnumerable<(byte Code, uint Timestamp)> CollectStateChangeMoves(byte[] message, uint headerTimestamp)
+    private void MarkHelloReceived()
     {
-        yield return (message[34], headerTimestamp);
-        for (var count = 1; count < 10; count++)
+        _helloReceived = true;
+        _helloProbe?.TrySetResult(true);
+    }
+
+    private static IEnumerable<(byte Code, long Timestamp)> CollectStateChangeMoves(
+        byte[] message,
+        long lastTimestamp)
+    {
+        var candidates = new List<(byte Code, long Timestamp)>
         {
-            var offset = 91 - 5 * count;
-            if (offset + 4 >= message.Length)
+            (message[34], ReadUInt32BE(message, 3))
+        };
+
+        for (var index = 0; index < HistorySlotCount; index++)
+        {
+            var offset = HistorySlotStart + HistorySlotSize * index;
+            if (offset + HistorySlotSize > message.Length)
             {
-                yield break;
+                break;
             }
 
-            var timestamp = ReadUInt32BE(message, offset);
-            var code = message[offset + 4];
-            if (timestamp == 0)
+            if (IsEmptyHistorySlot(message, offset))
             {
-                yield break;
+                continue;
             }
 
-            yield return (code, timestamp);
+            candidates.Add((message[offset + 4], ReadUInt32BE(message, offset)));
         }
+
+        var seen = new HashSet<(byte Code, long Timestamp)>();
+        foreach (var candidate in candidates
+            .OrderBy(item => item.Timestamp)
+            .Where(item => item.Timestamp > lastTimestamp
+                && ConvertMove(item.Code) >= 0))
+        {
+            if (seen.Add(candidate))
+            {
+                yield return candidate;
+            }
+        }
+    }
+
+    private static bool IsEmptyHistorySlot(IReadOnlyList<byte> message, int offset)
+    {
+        for (var index = 0; index < HistorySlotSize; index++)
+        {
+            if (message[offset + index] != 0xFF)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int ConvertMove(byte rawMove)
+    {
+        if (rawMove == 0)
+        {
+            return -1;
+        }
+
+        var axisIndex = (rawMove - 1) >> 1;
+        if (axisIndex < 0 || axisIndex >= 6)
+        {
+            return -1;
+        }
+
+        var axis = new[] { 4, 1, 3, 0, 2, 5 }[axisIndex];
+        var power = (rawMove & 1) == 0 ? 0 : 2;
+        return axis * 3 + power;
     }
 
     private static string ParseFacelets(byte[] faceMessage)
@@ -372,9 +483,36 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         return new string(facelets);
     }
 
-    private static bool IsTimestampNewer(uint timestamp, uint previous)
+    private static GattCharacteristic? ResolveWriteCharacteristic(
+        IReadOnlyList<GattCharacteristic> characteristics,
+        GattCharacteristic cubeCharacteristic)
     {
-        return previous == 0 || timestamp != previous && unchecked(timestamp - previous) < 0x80000000;
+        return SupportsWrite(cubeCharacteristic)
+            ? cubeCharacteristic
+            : characteristics.FirstOrDefault(item =>
+                item.Uuid == SmartCubeBluetoothServices.GanGen1StateCharacteristic
+                && SupportsWrite(item));
+    }
+
+    private static bool SupportsWrite(GattCharacteristic characteristic)
+    {
+        return characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Write)
+            || characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.WriteWithoutResponse);
+    }
+
+    private static GattClientCharacteristicConfigurationDescriptorValue ResolveNotifyMode(GattCharacteristic characteristic)
+    {
+        return characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Indicate)
+            && !characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Notify)
+            ? GattClientCharacteristicConfigurationDescriptorValue.Indicate
+            : GattClientCharacteristicConfigurationDescriptorValue.Notify;
+    }
+
+    private static GattWriteOption ResolveWriteOption(GattCharacteristic characteristic)
+    {
+        return characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.WriteWithoutResponse)
+            ? GattWriteOption.WriteWithoutResponse
+            : GattWriteOption.WriteWithResponse;
     }
 
     private static ushort Crc16Modbus(IReadOnlyList<byte> data)
@@ -392,9 +530,12 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         return (ushort)crc;
     }
 
-    private static uint ReadUInt32BE(IReadOnlyList<byte> data, int offset)
+    private static long ReadUInt32BE(IReadOnlyList<byte> data, int offset)
     {
-        return (uint)(data[offset] << 24 | data[offset + 1] << 16 | data[offset + 2] << 8 | data[offset + 3]);
+        return (data[offset] & 0xFFL) << 24
+            | (data[offset + 1] & 0xFFL) << 16
+            | (data[offset + 2] & 0xFFL) << 8
+            | (data[offset + 3] & 0xFFL);
     }
 
     private static short ReadInt16BE(IReadOnlyList<byte> data, int offset)
@@ -402,18 +543,30 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         return unchecked((short)(data[offset] << 8 | data[offset + 1]));
     }
 
-    private static string ResolveMac(SmartCubeDeviceInfo advertisedDevice, ulong bluetoothAddress)
+    private static IReadOnlyList<string> ResolveMacCandidates(SmartCubeDeviceInfo advertisedDevice, ulong bluetoothAddress)
     {
+        var candidates = new List<string>();
+        candidates.AddRange(BuildQiYiMacCandidatesFromName(advertisedDevice.Name));
+
+        var windowsAddress = SmartCubeBluetoothAddress.Format(bluetoothAddress);
+        if (!string.IsNullOrWhiteSpace(windowsAddress))
+        {
+            candidates.Add(windowsAddress);
+        }
+
         var manufacturerMac = SmartCubeBluetoothAddress.TryParseManufacturerMac(
             advertisedDevice.ManufacturerData,
             QiYiCompanyIds);
         if (manufacturerMac is not null)
         {
-            return SmartCubeBluetoothAddress.Format(manufacturerMac);
+            candidates.Add(SmartCubeBluetoothAddress.Format(manufacturerMac));
         }
 
-        var nameMac = BuildQiYiMacCandidatesFromName(advertisedDevice.Name).FirstOrDefault();
-        return nameMac ?? SmartCubeBluetoothAddress.Format(bluetoothAddress);
+        return candidates
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .DefaultIfEmpty(SmartCubeBluetoothAddress.Format(bluetoothAddress))
+            .ToArray();
     }
 
     private static IReadOnlyList<string> BuildQiYiMacCandidatesFromName(string? deviceName)
@@ -425,26 +578,18 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
 
         var text = deviceName.Trim();
         var candidates = new List<string>();
-        var qyA = System.Text.RegularExpressions.Regex.Match(text, "^QY-QYSC-A-([0-9A-Fa-f]{4})$");
-        if (qyA.Success)
+        var qy = System.Text.RegularExpressions.Regex.Match(text, "^QY-QYSC-.*-([0-9A-Fa-f]{4})$");
+        if (qy.Success)
         {
-            var suffix = qyA.Groups[1].Value.ToUpperInvariant();
-            candidates.Add($"CC:A2:00:00:{suffix[..2]}:{suffix[2..]}");
-        }
-
-        var qyS = System.Text.RegularExpressions.Regex.Match(text, "^QY-QYSC-S-([0-9A-Fa-f]{4})$");
-        if (qyS.Success)
-        {
-            var suffix = qyS.Groups[1].Value.ToUpperInvariant();
+            var suffix = qy.Groups[1].Value.ToUpperInvariant();
             candidates.Add($"CC:A3:00:00:{suffix[..2]}:{suffix[2..]}");
-            candidates.Add($"CC:A3:00:01:{suffix[..2]}:{suffix[2..]}");
         }
 
         var xmd = System.Text.RegularExpressions.Regex.Match(text, "^XMD-TornadoV4-i-([0-9A-Fa-f]{4})$");
         if (xmd.Success)
         {
             var suffix = xmd.Groups[1].Value.ToUpperInvariant();
-            candidates.Add($"CC:A6:00:00:{suffix[..2]}:{suffix[2..]}");
+            candidates.Add($"CC:A3:00:00:{suffix[..2]}:{suffix[2..]}");
         }
 
         return candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();

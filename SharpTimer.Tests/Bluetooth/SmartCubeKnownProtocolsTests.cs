@@ -37,4 +37,26 @@ public sealed class SmartCubeKnownProtocolsTests
         Assert.NotNull(protocol);
         Assert.Equal("gocube", protocol.Info.Id);
     }
+
+    [Fact]
+    public void MergeAdvertisement_PreservesPreviouslySeenServices()
+    {
+        var first = new SmartCubeDeviceInfo(
+            1,
+            "GANicE2_3835",
+            -50,
+            new HashSet<Guid> { SmartCubeBluetoothServices.GanGen3Service },
+            DateTimeOffset.UtcNow);
+        var second = new SmartCubeDeviceInfo(
+            1,
+            "GANicE2_3835",
+            -48,
+            new HashSet<Guid>(),
+            DateTimeOffset.UtcNow.AddSeconds(1));
+
+        var merged = first.MergeAdvertisement(second);
+
+        Assert.Contains(SmartCubeBluetoothServices.GanGen3Service, merged.ServiceUuids);
+        Assert.Equal(-48, merged.RawSignalStrengthInDBm);
+    }
 }

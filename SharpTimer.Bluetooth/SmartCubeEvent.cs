@@ -11,7 +11,7 @@ public sealed record SmartCubeMoveEvent(
     TimeSpan? CubeTimestamp = null)
     : SmartCubeEvent(Timestamp);
 
-public sealed record SmartCubeFaceletsEvent(DateTimeOffset Timestamp, string Facelets)
+public sealed record SmartCubeFaceletsEvent(DateTimeOffset Timestamp, string Facelets, bool IsAuthoritative = false)
     : SmartCubeEvent(Timestamp);
 
 public sealed record SmartCubeGyroEvent(

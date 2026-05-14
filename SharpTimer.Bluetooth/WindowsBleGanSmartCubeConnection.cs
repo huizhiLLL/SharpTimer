@@ -13,83 +13,89 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
 
     private readonly BluetoothLEDevice _device;
     private readonly SmartCubeDeviceInfo _advertisedDevice;
-    private readonly GanGeneration _generation;
     private readonly object _lifetimeLock = new();
-    private readonly byte[] _key;
-    private readonly byte[] _iv;
+    private byte[] _key = Array.Empty<byte>();
+    private byte[] _iv = Array.Empty<byte>();
+    private GanGeneration? _generation;
     private GattDeviceService? _service;
     private GattCharacteristic? _readCharacteristic;
     private GattCharacteristic? _writeCharacteristic;
+    private readonly List<GanBufferedMove> _moveBuffer = new();
     private int _lastMoveCount = -1;
+    private int _currentMoveCount = -1;
     private long _cubeTimestamp;
+    private DateTimeOffset? _lastLocalMoveTimestamp;
     private bool _isDisconnecting;
     private bool _isDisposed;
 
     private WindowsBleGanSmartCubeConnection(
         BluetoothLEDevice device,
         SmartCubeDeviceInfo advertisedDevice,
-        GanGeneration generation)
+        GanGeneration? generation)
     {
         _device = device;
         _advertisedDevice = advertisedDevice;
         _generation = generation;
         DeviceName = !string.IsNullOrWhiteSpace(device.Name) ? device.Name : advertisedDevice.Name ?? "GAN";
         DeviceMac = ResolveMac(advertisedDevice, device.BluetoothAddress);
-        Protocol = new SmartCubeProtocolInfo("gan", $"GAN {generation}");
-        Capabilities = new SmartCubeCapabilities(
-            Gyroscope: generation == GanGeneration.Gen2,
-            Battery: true,
-            Facelets: true,
-            Hardware: true,
-            Reset: true);
-
-        var baseKey = DeviceName.StartsWith("AiCube", StringComparison.OrdinalIgnoreCase) && generation == GanGeneration.Gen2
-            ? AiCubeKey
-            : DefaultKey;
-        var baseIv = DeviceName.StartsWith("AiCube", StringComparison.OrdinalIgnoreCase) && generation == GanGeneration.Gen2
-            ? AiCubeIv
-            : DefaultIv;
-        (_key, _iv) = CreateKeyAndIv(baseKey, baseIv, SmartCubeBluetoothAddress.Parse(DeviceMac));
+        ApplyGeneration(generation ?? GanGeneration.Gen2);
     }
 
     public string DeviceName { get; }
 
-    public string? DeviceMac { get; }
+    public string DeviceMac { get; }
 
-    public SmartCubeProtocolInfo Protocol { get; }
+    public SmartCubeProtocolInfo Protocol { get; private set; } = new("gan", "GAN");
 
-    public SmartCubeCapabilities Capabilities { get; }
+    public SmartCubeCapabilities Capabilities { get; private set; } = new(
+        Gyroscope: false,
+        Battery: true,
+        Facelets: true,
+        Hardware: true,
+        Reset: true);
 
     public event EventHandler<SmartCubeEvent>? EventReceived;
 
     public static WindowsBleGanSmartCubeConnection Create(BluetoothLEDevice device, SmartCubeDeviceInfo advertisedDevice)
     {
+        return new WindowsBleGanSmartCubeConnection(device, advertisedDevice, ResolveInitialGeneration(device, advertisedDevice));
+    }
+
+    private static GanGeneration? ResolveInitialGeneration(BluetoothLEDevice device, SmartCubeDeviceInfo advertisedDevice)
+    {
+        if (SmartCubeBluetoothServices.IsGanGen4DeviceName(device.Name)
+            || SmartCubeBluetoothServices.IsGanGen4DeviceName(advertisedDevice.Name))
+        {
+            return GanGeneration.Gen4;
+        }
+
         var services = advertisedDevice.ServiceUuids;
-        var generation = services.Contains(SmartCubeBluetoothServices.GanGen4Service)
-            ? GanGeneration.Gen4
-            : services.Contains(SmartCubeBluetoothServices.GanGen3Service)
-                ? GanGeneration.Gen3
-                : GanGeneration.Gen2;
-        return new WindowsBleGanSmartCubeConnection(device, advertisedDevice, generation);
+        if (services.Contains(SmartCubeBluetoothServices.GanGen4Service))
+        {
+            return GanGeneration.Gen4;
+        }
+
+        if (services.Contains(SmartCubeBluetoothServices.GanGen3Service))
+        {
+            return GanGeneration.Gen3;
+        }
+
+        return services.Contains(SmartCubeBluetoothServices.GanGen2Service)
+            ? GanGeneration.Gen2
+            : null;
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
-        var serviceUuid = _generation switch
+        var service = await FindServiceAsync(cancellationToken);
+        if (service is null || _generation is null)
         {
-            GanGeneration.Gen4 => SmartCubeBluetoothServices.GanGen4Service,
-            GanGeneration.Gen3 => SmartCubeBluetoothServices.GanGen3Service,
-            _ => SmartCubeBluetoothServices.GanGen2Service
-        };
-
-        var servicesResult = await _device.GetGattServicesForUuidAsync(serviceUuid, BluetoothCacheMode.Uncached)
-            .AsTask(cancellationToken);
-        if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
-        {
-            throw new InvalidOperationException($"找不到 GAN {_generation} GATT 服务。");
+            throw new InvalidOperationException("找不到 GAN GATT 服务（已尝试 Gen4 / Gen3 / Gen2）。");
         }
 
-        _service = servicesResult.Services[0];
+        _service = service;
+        var generation = _generation.Value;
+
         var characteristicsResult = await _service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached)
             .AsTask(cancellationToken);
         if (characteristicsResult.Status != GattCommunicationStatus.Success)
@@ -97,13 +103,13 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
             throw new InvalidOperationException("无法读取 GAN GATT 特征。");
         }
 
-        var readUuid = _generation switch
+        var readUuid = generation switch
         {
             GanGeneration.Gen4 => SmartCubeBluetoothServices.GanGen4StateCharacteristic,
             GanGeneration.Gen3 => SmartCubeBluetoothServices.GanGen3StateCharacteristic,
             _ => SmartCubeBluetoothServices.GanGen2StateCharacteristic
         };
-        var writeUuid = _generation switch
+        var writeUuid = generation switch
         {
             GanGeneration.Gen4 => SmartCubeBluetoothServices.GanGen4CommandCharacteristic,
             GanGeneration.Gen3 => SmartCubeBluetoothServices.GanGen3CommandCharacteristic,
@@ -127,6 +133,66 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         await SendCommandAsync(SmartCubeCommand.RequestHardware, cancellationToken);
         await SendCommandAsync(SmartCubeCommand.RequestFacelets, cancellationToken);
         await SendCommandAsync(SmartCubeCommand.RequestBattery, cancellationToken);
+    }
+
+    private async Task<GattDeviceService?> FindServiceAsync(CancellationToken cancellationToken)
+    {
+        foreach (var generation in GetCandidateGenerations())
+        {
+            var serviceUuid = generation switch
+            {
+                GanGeneration.Gen4 => SmartCubeBluetoothServices.GanGen4Service,
+                GanGeneration.Gen3 => SmartCubeBluetoothServices.GanGen3Service,
+                _ => SmartCubeBluetoothServices.GanGen2Service
+            };
+
+            var servicesResult = await _device.GetGattServicesForUuidAsync(serviceUuid, BluetoothCacheMode.Uncached)
+                .AsTask(cancellationToken);
+            if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
+            {
+                continue;
+            }
+
+            _generation = generation;
+            ApplyGeneration(generation);
+            return servicesResult.Services[0];
+        }
+
+        return null;
+    }
+
+    private IReadOnlyList<GanGeneration> GetCandidateGenerations()
+    {
+        if (_generation is not null)
+        {
+            return new[] { _generation.Value };
+        }
+
+        return new[]
+        {
+            GanGeneration.Gen4,
+            GanGeneration.Gen3,
+            GanGeneration.Gen2
+        };
+    }
+
+    private void ApplyGeneration(GanGeneration generation)
+    {
+        Protocol = new SmartCubeProtocolInfo("gan", $"GAN {generation}");
+        Capabilities = new SmartCubeCapabilities(
+            Gyroscope: generation == GanGeneration.Gen2,
+            Battery: true,
+            Facelets: true,
+            Hardware: true,
+            Reset: true);
+
+        var baseKey = DeviceName.StartsWith("AiCube", StringComparison.OrdinalIgnoreCase) && generation == GanGeneration.Gen2
+            ? AiCubeKey
+            : DefaultKey;
+        var baseIv = DeviceName.StartsWith("AiCube", StringComparison.OrdinalIgnoreCase) && generation == GanGeneration.Gen2
+            ? AiCubeIv
+            : DefaultIv;
+        (_key, _iv) = CreateKeyAndIv(baseKey, baseIv, SmartCubeBluetoothAddress.Parse(DeviceMac));
     }
 
     public Task SendCommandAsync(SmartCubeCommand command, CancellationToken cancellationToken = default)
@@ -198,6 +264,11 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
 
     private byte[]? CreateCommandPayload(SmartCubeCommand command)
     {
+        if (_generation is null)
+        {
+            return null;
+        }
+
         return _generation switch
         {
             GanGeneration.Gen2 => command switch
@@ -322,7 +393,12 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
             if (face >= 0 && _lastMoveCount != -1 && serial != _lastMoveCount)
             {
                 _lastMoveCount = serial;
-                yield return CreateMoveEvent(timestamp, face, direction, reader.Get(24, 32, littleEndian: true));
+                yield return CreateMoveEvent(
+                    timestamp,
+                    face,
+                    direction,
+                    reader.Get(24, 32, littleEndian: true),
+                    timestamp);
             }
         }
         else if (type == 0x02)
@@ -363,11 +439,46 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
                 var serial = reader.Get(offset + 48, 16, littleEndian: true);
                 var direction = reader.Get(offset + 64, 2);
                 var face = Array.IndexOf(new[] { 2, 32, 8, 1, 16, 4 }, reader.Get(offset + 66, 6));
-                if (face >= 0 && _lastMoveCount != -1 && serial != _lastMoveCount)
+                if (face >= 0 && _lastMoveCount != -1)
                 {
-                    _lastMoveCount = serial;
-                    yield return CreateMoveEvent(timestamp, face, direction, reader.Get(offset + 16, 32, littleEndian: true));
+                    _currentMoveCount = serial;
+                    _moveBuffer.Add(new GanBufferedMove(
+                        serial,
+                        face,
+                        direction,
+                        reader.Get(offset + 16, 32, littleEndian: true),
+                        timestamp));
+                    _lastLocalMoveTimestamp = timestamp;
                 }
+            }
+
+            foreach (var smartCubeEvent in EvictMoveBuffer(requestHistory: true))
+            {
+                yield return smartCubeEvent;
+            }
+        }
+        else if (type == 0xD1)
+        {
+            var startSerial = reader.Get(16, 8);
+            var count = Math.Max(0, (len - 1) * 2);
+            for (var index = 0; index < count; index++)
+            {
+                var face = Array.IndexOf(new[] { 1, 5, 3, 0, 4, 2 }, reader.Get(24 + 4 * index, 3));
+                var direction = reader.Get(27 + 4 * index, 1);
+                if (face >= 0)
+                {
+                    InjectMissedMove(new GanBufferedMove(
+                        (startSerial - index) & 0xFF,
+                        face,
+                        direction,
+                        null,
+                        null));
+                }
+            }
+
+            foreach (var smartCubeEvent in EvictMoveBuffer(requestHistory: false))
+            {
+                yield return smartCubeEvent;
             }
         }
         else if (type == 0xED)
@@ -376,6 +487,12 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
             if (_lastMoveCount == -1)
             {
                 _lastMoveCount = serial;
+            }
+            else if (_lastLocalMoveTimestamp is not null
+                && timestamp - _lastLocalMoveTimestamp.Value > TimeSpan.FromMilliseconds(500))
+            {
+                _currentMoveCount = serial;
+                RequestMissingMovesFromFacelets(serial);
             }
 
             yield return new SmartCubeFaceletsEvent(timestamp, ParseGanFacelets(reader, 32, 53, 69, 113));
@@ -417,8 +534,133 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
             }
 
             _cubeTimestamp += elapsed;
-            yield return CreateMoveEvent(timestamp, face, direction, _cubeTimestamp);
+            yield return CreateMoveEvent(timestamp, face, direction, _cubeTimestamp, timestamp);
         }
+    }
+
+    private IEnumerable<SmartCubeMoveEvent> EvictMoveBuffer(bool requestHistory)
+    {
+        while (_moveBuffer.Count > 0)
+        {
+            var head = _moveBuffer[0];
+            var diff = _lastMoveCount == -1 ? 1 : (head.Serial - _lastMoveCount) & 0xFF;
+            if (diff > 1)
+            {
+                if (_moveBuffer.Count > 16)
+                {
+                    _ = DisconnectAsync();
+                }
+
+                if (requestHistory)
+                {
+                    _ = RequestMoveHistoryAsync(head.Serial, diff);
+                }
+
+                yield break;
+            }
+
+            _moveBuffer.RemoveAt(0);
+            if (diff == 0)
+            {
+                continue;
+            }
+
+            _lastMoveCount = head.Serial;
+            yield return CreateMoveEvent(
+                head.EventTimestamp ?? DateTimeOffset.UtcNow,
+                head.Face,
+                head.Direction,
+                head.CubeTimestamp,
+                head.EventTimestamp);
+        }
+
+        if (_moveBuffer.Count > 16)
+        {
+            _ = DisconnectAsync();
+        }
+    }
+
+    private void InjectMissedMove(GanBufferedMove move)
+    {
+        if (_moveBuffer.Any(item => item.Serial == move.Serial))
+        {
+            return;
+        }
+
+        if (_moveBuffer.Count > 0)
+        {
+            var head = _moveBuffer[0];
+            if (!IsSerialInRange(_lastMoveCount, head.Serial, move.Serial))
+            {
+                return;
+            }
+
+            if (move.Serial == ((head.Serial - 1) & 0xFF))
+            {
+                _moveBuffer.Insert(0, move);
+            }
+
+            return;
+        }
+
+        if (IsSerialInRange(_lastMoveCount, _currentMoveCount, move.Serial, closedEnd: true))
+        {
+            _moveBuffer.Insert(0, move);
+        }
+    }
+
+    private void RequestMissingMovesFromFacelets(int serial)
+    {
+        var diff = (serial - _lastMoveCount) & 0xFF;
+        if (diff <= 0 || serial == 0)
+        {
+            return;
+        }
+
+        var startSerial = _moveBuffer.Count > 0
+            ? _moveBuffer[0].Serial
+            : (serial + 1) & 0xFF;
+        _ = RequestMoveHistoryAsync(startSerial, diff + 1);
+    }
+
+    private async Task RequestMoveHistoryAsync(int serial, int count)
+    {
+        if (_generation != GanGeneration.Gen4 || IsConnectionClosing())
+        {
+            return;
+        }
+
+        if (serial % 2 == 0)
+        {
+            serial = (serial - 1) & 0xFF;
+        }
+
+        if (count % 2 == 1)
+        {
+            count++;
+        }
+
+        count = Math.Min(count, serial + 1);
+        var payload = CreatePayload(20, 0xD1, 0x04, (byte)serial, 0x00, (byte)count);
+        try
+        {
+            await SendRequestAsync(payload, CancellationToken.None);
+        }
+        catch
+        {
+        }
+    }
+
+    private static bool IsSerialInRange(
+        int start,
+        int end,
+        int serial,
+        bool closedStart = false,
+        bool closedEnd = false)
+    {
+        return ((end - start) & 0xFF) >= ((serial - start) & 0xFF)
+            && (closedStart || ((start - serial) & 0xFF) > 0)
+            && (closedEnd || ((end - serial) & 0xFF) > 0);
     }
 
     private static string ParseGanFacelets(GanBitReader reader, int cpOffset, int coOffset, int epOffset, int eoOffset)
@@ -447,15 +689,25 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         return GanFaceletConverter.ToFacelets(cp, co, ep, eo);
     }
 
-    private SmartCubeMoveEvent CreateMoveEvent(DateTimeOffset timestamp, int face, int direction, long? cubeTimestamp)
+    private SmartCubeMoveEvent CreateMoveEvent(
+        DateTimeOffset timestamp,
+        int face,
+        int direction,
+        long? cubeTimestamp,
+        DateTimeOffset? localTimestamp = null)
     {
-        var move = "URFDLB"[face] + (direction == 0 ? string.Empty : "'");
+        var move = "URFDLB"[face] + (direction switch
+        {
+            1 => "'",
+            2 => "2",
+            _ => string.Empty
+        });
         return new SmartCubeMoveEvent(
             timestamp,
             face,
             direction,
             move,
-            LocalTimestamp: timestamp,
+            LocalTimestamp: localTimestamp,
             CubeTimestamp: cubeTimestamp.HasValue ? TimeSpan.FromMilliseconds(cubeTimestamp.Value) : null);
     }
 
@@ -505,4 +757,11 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         Gen3,
         Gen4
     }
+
+    private sealed record GanBufferedMove(
+        int Serial,
+        int Face,
+        int Direction,
+        long? CubeTimestamp,
+        DateTimeOffset? EventTimestamp);
 }

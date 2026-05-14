@@ -69,6 +69,18 @@ public static class SmartCubeBluetoothServices
         return services;
     }
 
+    public static bool IsGanGen4DeviceName(string? deviceName)
+    {
+        if (string.IsNullOrWhiteSpace(deviceName))
+        {
+            return false;
+        }
+
+        var name = deviceName.Trim();
+        return name.StartsWith("GANicE2", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("GANi4", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static Guid FromBluetooth16Bit(ushort uuid)
     {
         return Guid.Parse($"0000{uuid:x4}{BluetoothBaseUuidSuffix}");

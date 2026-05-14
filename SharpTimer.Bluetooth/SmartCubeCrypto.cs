@@ -7,12 +7,23 @@ internal static class SmartCubeCrypto
     public static byte[] TransformAesCbcBlocks(byte[] data, bool encrypt, byte[] key, byte[] iv)
     {
         var result = data.ToArray();
-        TransformCbcBlock(result, 0, encrypt, key, iv);
-        if (result.Length > 16)
+        if (encrypt)
         {
-            TransformCbcBlock(result, result.Length - 16, encrypt, key, iv);
+            TransformCbcBlock(result, 0, encrypt: true, key, iv);
+            if (result.Length > 16)
+            {
+                TransformCbcBlock(result, result.Length - 16, encrypt: true, key, iv);
+            }
+
+            return result;
         }
 
+        if (result.Length > 16)
+        {
+            TransformCbcBlock(result, result.Length - 16, encrypt: false, key, iv);
+        }
+
+        TransformCbcBlock(result, 0, encrypt: false, key, iv);
         return result;
     }
 
@@ -28,6 +39,21 @@ internal static class SmartCubeCrypto
         aes.Padding = PaddingMode.None;
         aes.Key = key;
         aes.IV = iv;
+        using var transform = encrypt ? aes.CreateEncryptor() : aes.CreateDecryptor();
+        return transform.TransformFinalBlock(data, 0, data.Length);
+    }
+
+    public static byte[] TransformAesEcbAllBlocks(byte[] data, bool encrypt, byte[] key)
+    {
+        if (data.Length % 16 != 0)
+        {
+            throw new ArgumentException("AES-ECB payload length must be block aligned.", nameof(data));
+        }
+
+        using var aes = Aes.Create();
+        aes.Mode = CipherMode.ECB;
+        aes.Padding = PaddingMode.None;
+        aes.Key = key;
         using var transform = encrypt ? aes.CreateEncryptor() : aes.CreateDecryptor();
         return transform.TransformFinalBlock(data, 0, data.Length);
     }

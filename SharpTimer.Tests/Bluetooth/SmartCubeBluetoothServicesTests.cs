@@ -33,4 +33,22 @@ public sealed class SmartCubeBluetoothServicesTests
         Assert.Contains(custom, services);
         Assert.Equal(services.Count, services.Distinct().Count());
     }
+
+    [Theory]
+    [InlineData("GANicE2_3835")]
+    [InlineData("ganice2_3835")]
+    [InlineData("GANi4_A26E")]
+    public void IsGanGen4DeviceName_MatchesKnownGen4Aliases(string name)
+    {
+        Assert.True(SmartCubeBluetoothServices.IsGanGen4DeviceName(name));
+    }
+
+    [Theory]
+    [InlineData("GANicXXX")]
+    [InlineData("GAN12ui--B3C")]
+    [InlineData(null)]
+    public void IsGanGen4DeviceName_DoesNotMatchAmbiguousGanNames(string? name)
+    {
+        Assert.False(SmartCubeBluetoothServices.IsGanGen4DeviceName(name));
+    }
 }
