@@ -29,9 +29,22 @@ SharpTimer 是一个支持智能魔方的原生 Windows 桌面魔方计时器。
 - 开始功能开发、修复或较大改动前，先阅读 `docs/architecture.md` 和 `docs/roadmap.md`。
 - 代码事实优先于文档；如果发现文档与代码不一致，完成改动时同步更新相关 `docs/`。
 - 优先使用官方 WinUI 3 / Windows App SDK 控件、API、样式资源和交互模式。
-- UI 控件或窗口 API 不确定时，先查 `ref/WinUI-Gallery`。
+- UI 控件、窗口 API、布局样式或 Fluent 交互不确定时，先查 `ref/WinUI-Gallery`；涉及窗口生命周期、通知、部署或 Windows App SDK 场景时，再参考官方 WindowsAppSDK samples 或 Microsoft Learn。
 - 不要手写伪 Fluent 控件、自制按钮、自制弹窗、自制导航或 CSS 风格设计系统。
 - 小改动可以沿用现有 `MainWindow.xaml.cs` 编排；新增复杂状态、流程或跨层逻辑时，优先抽到 service、ViewModel 或独立视图文件。
+
+## WinUI App Rules
+
+- SharpTimer 是现有 WinUI 3 项目，不要按新项目脚手架重建结构；除非会枝明确要求，不运行会改动开发机环境的 WinUI 安装、配置或 `winget configure` 流程。
+- 修改 `SharpTimer.App` 前，先判断任务属于界面设计、实现、排障、性能、可访问性、本地化、打包或启动验证，并按对应范围查最窄的参考资料。
+- 保持当前打包模型和项目文件约束；涉及 MSIX、证书、部署、直接运行路径或启动方式时，先明确 packaged / unpackaged 影响，不要混用两套假设。
+- grouped command surface 优先使用官方 `CommandBar`、`AppBarButton`、`MenuFlyout`、`TeachingTip`、`ContentDialog` 等 WinUI 控件；只有官方控件无法清晰表达时，才考虑组合控件或 CommunityToolkit。
+- 自定义视觉时优先组合、模板化或重设内置控件样式；避免额外套壳的 `Border`、双层卡片、硬编码亮色/暗色、伪 Fluent 颜色系统。
+- 主题相关改动默认同时支持亮色、暗色和当前背景材质，优先使用 `ThemeResource`、系统画刷和 Windows App SDK backdrop 能力。
+- 布局改动要明确宽屏、中等窗口和窄窗口行为，尤其是 `NavigationView`、内容 padding、成绩列表、设置项和底部/侧边操作区。
+- 集合和滚动区域要明确滚动所有权；页面已有垂直滚动时，避免嵌套集合控件抢滚动或导致内容不可见。
+- 键盘输入、可访问性和本地化要随 UI 改动一起检查：空格计时路径不能被普通控件焦点破坏，交互控件应有清楚的 `AutomationProperties.Name`，新增文本需兼顾中英文。
+- 遇到 `MSB3073`、`XamlCompiler.exe`、XAML 生成失败或启动异常时，优先回到当前 WinUI 模板基线比对项目文件、XAML 结构、资源字典和打包配置，再做最小修复。
 
 ## Architecture Boundaries
 
@@ -63,7 +76,9 @@ SharpTimer 是一个支持智能魔方的原生 Windows 桌面魔方计时器。
 
 - 核心规则变更：运行 `dotnet test SharpTimer.slnx`。
 - 存储变更：补充或更新 `SharpTimer.Tests/Storage` 测试。
-- UI/XAML 变更：运行 `dotnet build SharpTimer.slnx`，并尽量手动确认窗口能启动。
+- UI/XAML 变更：运行 `dotnet build SharpTimer.slnx`，并尽量启动 App，确认出现响应式顶层窗口、窗口标题正确且核心页面可见；只看到进程启动不算完整验证。
+- UI 交互变更：除构建和启动外，手动确认空格开始观察、开始复原、停止计时仍可用，并检查改动涉及的亮/暗主题、中英文文本和窄窗口布局。
+- XAML 编译或启动排障：修复后至少重新运行 `dotnet build SharpTimer.slnx`；如果问题发生在启动阶段，还要真实启动验证。
 - 文档或 README 变更：检查链接、图片路径和项目描述是否准确。
 
 常用命令：
