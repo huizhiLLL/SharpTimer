@@ -1089,9 +1089,14 @@ namespace SharpTimer.App
 
             try
             {
-                _smartCubeFacelets = ThreeByThreeFacelets.ApplyMove(_smartCubeFacelets!, move);
+                var currentFacelets = _smartCubeFacelets!;
+                var nextFacelets = ThreeByThreeFacelets.ApplyMove(currentFacelets, move);
+                _smartCubeScrambleTracker.UpdateFacelets(currentFacelets);
+                var scrambleSnapshot = _smartCubeScrambleTracker.ApplyMove(move);
+                _smartCubeFacelets = ThreeByThreeFacelets.IsValidState(scrambleSnapshot.CurrentFacelets ?? string.Empty)
+                    ? scrambleSnapshot.CurrentFacelets!
+                    : nextFacelets;
                 RenderSmartCubePreview(_smartCubeFacelets);
-                _smartCubeScrambleTracker.UpdateFacelets(_smartCubeFacelets);
                 return true;
             }
             catch
