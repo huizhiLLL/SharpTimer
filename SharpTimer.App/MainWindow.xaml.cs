@@ -1202,8 +1202,8 @@ namespace SharpTimer.App
             _scrambleTextRenderKey = null;
             ConnectedCubePanel.Visibility = Visibility.Collapsed;
             SmartCubePreviewCanvas.Visibility = Visibility.Collapsed;
-            BluetoothDevicesList.Visibility = Visibility.Visible;
-            BluetoothFlyoutStatusText.Text = _strings.BluetoothDisconnectedMessage;
+            _bluetoothDeviceItems.Clear();
+            StartSmartCubeScan();
             await connection.DisposeAsync();
         }
 
