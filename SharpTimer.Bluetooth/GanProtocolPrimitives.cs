@@ -38,6 +38,115 @@ internal sealed class GanBitReader
     }
 }
 
+internal static class GanPacketValidator
+{
+    public static bool IsValidGen2Packet(IReadOnlyList<byte> packet)
+    {
+        if (packet.Count < 16)
+        {
+            return false;
+        }
+
+        try
+        {
+            var reader = new GanBitReader(packet);
+            var type = reader.Get(0, 4);
+            if (type is not (1 or 2 or 4 or 5 or 9 or 13))
+            {
+                return false;
+            }
+
+            if (type == 1)
+            {
+                return reader.Get(4, 16) != 0
+                    || reader.Get(20, 16) != 0
+                    || reader.Get(36, 16) != 0
+                    || reader.Get(52, 16) != 0;
+            }
+
+            if (type == 2)
+            {
+                return Enumerable.Range(0, 7).All(index => reader.Get(12 + 5 * index, 4) <= 5);
+            }
+
+            if (type == 4)
+            {
+                var cornerSum = Enumerable.Range(0, 7).Sum(index => reader.Get(12 + 3 * index, 3));
+                var edgeSum = Enumerable.Range(0, 11).Sum(index => reader.Get(47 + 4 * index, 4));
+                return cornerSum <= 28 && edgeSum <= 66;
+            }
+
+            if (type == 9)
+            {
+                return reader.Get(8, 8) <= 100;
+            }
+
+            if (type == 5)
+            {
+                return Enumerable.Range(0, 8)
+                    .Select(index => reader.Get(40 + 8 * index, 8))
+                    .All(value => value == 0 || value is >= 32 and <= 126);
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static bool IsValidGen3Packet(IReadOnlyList<byte> packet)
+    {
+        if (packet.Count < 16)
+        {
+            return false;
+        }
+
+        try
+        {
+            var reader = new GanBitReader(packet);
+            var header = reader.Get(0, 8);
+            var type = reader.Get(8, 8);
+            var length = reader.Get(16, 8);
+            if (header != 0x55 || length == 0 || type is not (1 or 2 or 6 or 7 or 16 or 17))
+            {
+                return false;
+            }
+
+            return type != 1 || Array.IndexOf(new[] { 2, 32, 8, 1, 16, 4 }, reader.Get(74, 6)) >= 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static bool IsValidGen4Packet(IReadOnlyList<byte> packet)
+    {
+        if (packet.Count < 16)
+        {
+            return false;
+        }
+
+        try
+        {
+            var reader = new GanBitReader(packet);
+            var type = reader.Get(0, 8);
+            if (type is not (1 or 209 or 237 or 236 or 239 or 234 or 250 or 251 or 252 or 253 or 254))
+            {
+                return false;
+            }
+
+            return type != 1 || Array.IndexOf(new[] { 2, 32, 8, 1, 16, 4 }, reader.Get(66, 6)) >= 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}
+
 internal static class GanFaceletConverter
 {
     private static readonly int[][] CornerFacelets =

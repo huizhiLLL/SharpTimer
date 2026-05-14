@@ -55,7 +55,14 @@ public sealed class SmartCubeEventTests
         var reader = new GanBitReader(decoded);
         var dataLength = reader.Get(8, 8);
 
+        Assert.True(GanPacketValidator.IsValidGen4Packet(decoded));
         Assert.Equal(0xEF, decoded[0]);
         Assert.Equal(37, reader.Get(8 + dataLength * 8, 8));
+    }
+
+    [Fact]
+    public void GanPacketValidator_RejectsInvalidGen4Payload()
+    {
+        Assert.False(GanPacketValidator.IsValidGen4Packet(new byte[20]));
     }
 }
