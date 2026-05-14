@@ -13,9 +13,9 @@ public static class WindowsBleSmartCubeConnector
         ArgumentNullException.ThrowIfNull(device);
 
         var protocol = SmartCubeKnownProtocols.CreateDefaultRegistry().ResolveByGatt(device);
-        if (protocol?.Info.Id != "moyu32")
+        if (protocol is null)
         {
-            throw new NotSupportedException("当前只实现了 MoYu32 连接链路。");
+            throw new NotSupportedException("无法识别当前智能魔方协议。");
         }
 
         var bluetoothDevice = await BluetoothLEDevice.FromBluetoothAddressAsync(device.BluetoothAddress)
@@ -25,11 +25,30 @@ public static class WindowsBleSmartCubeConnector
             throw new InvalidOperationException("无法打开蓝牙设备。");
         }
 
-        Moyu32SmartCubeConnection? connection = null;
+        ISmartCubeConnection? connection = null;
         try
         {
-            connection = new Moyu32SmartCubeConnection(bluetoothDevice, device);
-            await connection.InitializeAsync(cancellationToken);
+            connection = protocol.Info.Id switch
+            {
+                "moyu32" => new Moyu32SmartCubeConnection(bluetoothDevice, device),
+                "gan" => WindowsBleGanSmartCubeConnection.Create(bluetoothDevice, device),
+                "qiyi" => new WindowsBleQiYiSmartCubeConnection(bluetoothDevice, device),
+                _ => throw new NotSupportedException($"当前尚未实现 {protocol.Info.Name} 连接链路。")
+            };
+
+            if (connection is Moyu32SmartCubeConnection moyu32)
+            {
+                await moyu32.InitializeAsync(cancellationToken);
+            }
+            else if (connection is WindowsBleGanSmartCubeConnection gan)
+            {
+                await gan.InitializeAsync(cancellationToken);
+            }
+            else if (connection is WindowsBleQiYiSmartCubeConnection qiyi)
+            {
+                await qiyi.InitializeAsync(cancellationToken);
+            }
+
             return connection;
         }
         catch

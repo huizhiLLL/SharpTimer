@@ -2,7 +2,7 @@
 
 ## 目标
 
-SharpTimer 是一个支持智能魔方的 Windows 原生魔方计时器。当前重点是保持本地手动计时稳定，并在此基础上继续打磨 MoYu32 系列智能魔方的 BLE 计时体验。
+SharpTimer 是一个支持智能魔方的 Windows 原生魔方计时器。当前重点是保持本地手动计时稳定，并在此基础上继续打磨 MoYu32 系列智能魔方的 BLE 计时体验，同时初步扩展 GAN v2/v3/v4 与 QiYi 系列接入。
 
 ## 项目结构
 
@@ -31,7 +31,7 @@ SharpTimer
 - 观察与判罚：支持 15 秒观察、`+2`、`DNF`。
 - 成绩管理：支持 session、成绩保存、行详情弹窗、罚时修改、删除和基础统计分析区。
 - 设置：支持显示精度、观察开关、亮/暗主题、Mica / Mica Alt / Acrylic 背景材质和中英文界面。
-- 智能魔方：已接入 MoYu32 系列，支持连接、电量/状态/转动事件、智能打乱推进、READY 后首转起表和复原完成保存成绩。
+- 智能魔方：已接入 MoYu32 系列，支持连接、电量/状态/转动事件、智能打乱推进、READY 后首转起表和复原完成保存成绩；GAN v2/v3/v4 与 QiYi 系列已加入第一版 Windows BLE 连接和协议解析，仍需实机验证稳定性。
 
 ## 数据模型
 
@@ -58,8 +58,8 @@ SQLite 当前使用 v1 schema：
 
 ## BLE 边界
 
-`SharpTimer.Bluetooth` 负责和 Windows BLE API 交互，当前重点是 MoYu32。厂商协议差异、加密、通知包解析和连接细节应隔离在该项目中。
+`SharpTimer.Bluetooth` 负责和 Windows BLE API 交互，当前已包含 MoYu32、GAN v2/v3/v4 与 QiYi 的连接入口。厂商协议差异、加密、通知包解析和连接细节应隔离在该项目中。
 
 `SharpTimer.Core` 只保留可测试的智能魔方规则，例如打乱推进、READY 判定和复原判定。App 层只负责把 BLE 事件转成界面状态和计时动作。
 
-后续扩展 GAN、Giiker、GoCube、QiYi 等设备时，应优先新增协议实现和平台无关测试，不把厂商特例散落到 `MainWindow.xaml.cs`。
+后续扩展 Giiker、GoCube 等设备，或继续增强 GAN / QiYi 实机兼容性时，应优先新增协议实现和平台无关测试，不把厂商特例散落到 `MainWindow.xaml.cs`。
