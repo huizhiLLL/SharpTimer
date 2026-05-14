@@ -365,6 +365,9 @@ public static class WindowsBleSmartCubeConnector
             var moveCodes = Enumerable.Range(0, 5)
                 .Select(index => Convert.ToInt32(bits.Substring(96 + index * 5, 5), 2))
                 .ToArray();
+            var moveTimeOffsets = Enumerable.Range(0, 5)
+                .Select(index => Convert.ToInt32(bits.Substring(8 + index * 16, 16), 2))
+                .ToArray();
             if (moveCodes.Any(code => code >= 12))
             {
                 return ParseResult.Dropped;
@@ -377,7 +380,13 @@ public static class WindowsBleSmartCubeConnector
                 var face = code >> 1;
                 var direction = code & 1;
                 var move = "FBUDLR"[face] + (direction == 0 ? string.Empty : "'");
-                EmitSmartCubeEvent(new SmartCubeMoveEvent(timestamp, face, direction, move, CubeTimestamp: TimeSpan.FromMilliseconds(moveDelta)));
+                EmitSmartCubeEvent(new SmartCubeMoveEvent(
+                    timestamp,
+                    face,
+                    direction,
+                    move,
+                    LocalTimestamp: index == 0 ? timestamp : null,
+                    CubeTimestamp: TimeSpan.FromMilliseconds(moveTimeOffsets[index])));
                 emitted = true;
             }
 

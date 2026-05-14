@@ -33,6 +33,7 @@ namespace SharpTimer.App
         private readonly SmartCubeProtocolRegistry _bluetoothProtocolRegistry = SmartCubeKnownProtocols.CreateDefaultRegistry();
         private readonly SmartCubeScrambleTracker _smartCubeScrambleTracker = new();
         private readonly DispatcherTimer _uiTimer = new();
+        private readonly DispatcherTimer _smartCubeKeepAliveTimer = new();
         private readonly AppSettingsService _settingsService = new();
         private TimerAppService? _appService;
         private WindowsBleSmartCubeScanner? _bluetoothScanner;
@@ -81,6 +82,8 @@ namespace SharpTimer.App
 
             _uiTimer.Interval = TimeSpan.FromMilliseconds(33);
             _uiTimer.Tick += UiTimer_Tick;
+            _smartCubeKeepAliveTimer.Interval = TimeSpan.FromSeconds(60);
+            _smartCubeKeepAliveTimer.Tick += SmartCubeKeepAliveTimer_Tick;
         }
 
         private void ApplyInitialWindowPlacement()
@@ -124,6 +127,24 @@ namespace SharpTimer.App
             if (_smartCubeConnection is not null)
             {
                 await _smartCubeConnection.DisposeAsync();
+            }
+        }
+
+        private async void SmartCubeKeepAliveTimer_Tick(object? sender, object e)
+        {
+            var connection = _smartCubeConnection;
+            if (connection is null)
+            {
+                _smartCubeKeepAliveTimer.Stop();
+                return;
+            }
+
+            try
+            {
+                await connection.SendCommandAsync(SmartCubeCommand.RequestBattery);
+            }
+            catch
+            {
             }
         }
 
@@ -391,6 +412,7 @@ namespace SharpTimer.App
             {
                 _smartCubeConnection = await WindowsBleSmartCubeConnector.ConnectAsync(item.Device);
                 _smartCubeConnection.EventReceived += SmartCubeConnection_EventReceived;
+                _smartCubeKeepAliveTimer.Start();
                 RenderSmartCubeConnection();
                 await _smartCubeConnection.SendCommandAsync(SmartCubeCommand.RequestBattery);
                 await _smartCubeConnection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
@@ -985,6 +1007,7 @@ namespace SharpTimer.App
                 case SmartCubeGyroEvent:
                     break;
                 case SmartCubeDisconnectEvent:
+                    _smartCubeKeepAliveTimer.Stop();
                     _smartCubeConnection = null;
                     _smartCubeSolveHasMove = false;
                     _smartCubeReadyToStart = false;
@@ -1001,10 +1024,23 @@ namespace SharpTimer.App
 
         private async System.Threading.Tasks.Task HandleSmartCubeMoveEventAsync(SmartCubeMoveEvent move)
         {
+            var hasLocalFacelets = TryApplySmartCubeLocalMove(move.Move);
+
             if (_lastSnapshot?.Timer.Phase == TimerPhase.Running)
             {
                 _smartCubeSolveHasMove = true;
-                await RequestSmartCubeFaceletsAsync();
+                if (hasLocalFacelets && ThreeByThreeFacelets.IsSolvedIgnoringRotation(_smartCubeFacelets!) && _appService is not null)
+                {
+                    _smartCubeSolveHasMove = false;
+                    _smartCubeReadyToStart = false;
+                    Render(await _appService.StopSmartCubeSolveAsync());
+                    SyncSmartCubeScramble(_lastSnapshot);
+                }
+                else if (!hasLocalFacelets)
+                {
+                    await RequestSmartCubeFaceletsAsync();
+                }
+
                 return;
             }
 
@@ -1017,12 +1053,18 @@ namespace SharpTimer.App
                     Render(await _appService.HandleSmartCubeMoveAsync());
                 }
 
-                await RequestSmartCubeFaceletsAsync();
+                if (!hasLocalFacelets)
+                {
+                    await RequestSmartCubeFaceletsAsync();
+                }
+
                 return;
             }
 
             EnsureSmartCubeScramble(_lastSnapshot);
-            var scrambleSnapshot = _smartCubeScrambleTracker.ApplyMove(move.Move);
+            var scrambleSnapshot = hasLocalFacelets
+                ? _smartCubeScrambleTracker.Current
+                : _smartCubeScrambleTracker.ApplyMove(move.Move);
             _smartCubeHasLocalMoveState = scrambleSnapshot.CurrentFacelets is not null;
             if (ThreeByThreeFacelets.IsValidState(scrambleSnapshot.CurrentFacelets ?? string.Empty))
             {
@@ -1031,7 +1073,30 @@ namespace SharpTimer.App
             }
 
             ApplySmartCubeScrambleSnapshot(scrambleSnapshot);
-            await RequestSmartCubeFaceletsAsync();
+            if (!hasLocalFacelets)
+            {
+                await RequestSmartCubeFaceletsAsync();
+            }
+        }
+
+        private bool TryApplySmartCubeLocalMove(string move)
+        {
+            if (!ThreeByThreeFacelets.IsValidState(_smartCubeFacelets ?? string.Empty))
+            {
+                return false;
+            }
+
+            try
+            {
+                _smartCubeFacelets = ThreeByThreeFacelets.ApplyMove(_smartCubeFacelets!, move);
+                RenderSmartCubePreview(_smartCubeFacelets);
+                _smartCubeScrambleTracker.UpdateFacelets(_smartCubeFacelets);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private async System.Threading.Tasks.Task HandleSmartCubeFaceletsEventAsync(SmartCubeFaceletsEvent facelets)
@@ -1119,6 +1184,7 @@ namespace SharpTimer.App
             }
 
             StopBluetoothScan();
+            _smartCubeKeepAliveTimer.Stop();
             _smartCubeConnection = null;
             connection.EventReceived -= SmartCubeConnection_EventReceived;
             _smartCubeSolveHasMove = false;
