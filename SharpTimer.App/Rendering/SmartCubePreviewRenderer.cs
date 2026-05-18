@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Shapes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Windows.Foundation;
 using Windows.UI;
 
@@ -12,52 +13,123 @@ namespace SharpTimer.App.Rendering;
 internal static class SmartCubePreviewRenderer
 {
     private const double FaceDistance = 1.5;
-    private const double CellHalf = 0.54;
-    private const double StickerHalf = 0.42;
-    private const double YawDegrees = -38;
-    private const double PitchDegrees = 27;
+    private const double CellHalf = 0.515;
+    private const double StickerHalf = 0.445;
+    public const double DefaultYawDegrees = -38;
+    public const double DefaultPitchDegrees = 27;
     private const double CameraDistance = 11.5;
     private const double MinVisibleNormalZ = 0.05;
+    private const double StableProjectionWidth = 5.25;
+    private const double StableProjectionHeight = 5.25;
+    private const double BaseCornerRadius = 0.085;
+    private const double StickerCornerRadius = 0.07;
     private static readonly Facelet[] Facelets = BuildFacelets();
+    private static readonly ConditionalWeakTable<Canvas, RenderCache> RenderCaches = new();
 
-    public static void Render(Canvas canvas, string? facelets)
+    public static void Render(
+        Canvas canvas,
+        string? facelets,
+        double yawDegrees = DefaultYawDegrees,
+        double pitchDegrees = DefaultPitchDegrees,
+        SmartCubeMoveAnimation? animation = null)
     {
-        canvas.Children.Clear();
+        var cache = RenderCaches.GetValue(canvas, _ => new RenderCache());
 
         var state = string.IsNullOrWhiteSpace(facelets) || facelets.Length < 54
             ? null
             : facelets[..54];
-        var batch = BuildRenderBatch(state);
+        var useLightweightShapes = SmartCubeMoveAnimation.IsValid(animation);
+        var batch = BuildRenderBatch(state, yawDegrees, pitchDegrees, animation);
         if (batch.Tiles.Count == 0 || !batch.Bounds.IsValid)
         {
+            cache.HideFrom(0);
             return;
         }
 
         var width = GetCanvasLength(canvas.ActualWidth, canvas.Width, 180);
         var height = GetCanvasLength(canvas.ActualHeight, canvas.Height, 180);
-        var cubeWidth = Math.Max(1, batch.Bounds.Width);
-        var cubeHeight = Math.Max(1, batch.Bounds.Height);
-        var shadowExtra = cubeHeight * 0.18;
-        var scale = Math.Min(width * 0.92 / cubeWidth, height * 0.88 / (cubeHeight + shadowExtra));
-        var offsetX = (width - cubeWidth * scale) / 2 - batch.Bounds.Left * scale;
-        var offsetY = (height - (cubeHeight + shadowExtra) * scale) / 2 - batch.Bounds.Top * scale;
+        var scale = Math.Min(
+            width * 0.92 / StableProjectionWidth,
+            height * 0.88 / StableProjectionHeight);
+        var offsetX = width / 2;
+        var offsetY = height / 2;
         var strokeWidth = Math.Max(1.2, scale * 0.045);
 
-        DrawShadow(canvas, batch.Bounds, scale, offsetX, offsetY, cubeWidth, cubeHeight);
-        foreach (var tile in batch.Tiles)
+        for (var index = 0; index < batch.Tiles.Count; index++)
         {
-            DrawPolygon(canvas, tile.BasePoints, scale, offsetX, offsetY, tile.BaseColor, null, 0);
-            DrawPolygon(canvas, tile.StickerPoints, scale, offsetX, offsetY, tile.StickerColor, Color.FromArgb(0xee, 8, 8, 8), strokeWidth);
+            var tile = batch.Tiles[index];
+            var shapes = cache.GetOrCreate(canvas, index);
+            if (useLightweightShapes)
+            {
+                shapes.Base.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                shapes.Sticker.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                UpdatePolygon(
+                    shapes.BasePolygon,
+                    tile.BasePoints,
+                    scale,
+                    offsetX,
+                    offsetY,
+                    tile.BaseColor,
+                    null,
+                    0,
+                    cache);
+                UpdatePolygon(
+                    shapes.StickerPolygon,
+                    tile.StickerPoints,
+                    scale,
+                    offsetX,
+                    offsetY,
+                    tile.StickerColor,
+                    Color.FromArgb(0xee, 8, 8, 8),
+                    strokeWidth,
+                    cache);
+            }
+            else
+            {
+                shapes.BasePolygon.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                shapes.StickerPolygon.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                UpdatePath(
+                    shapes.Base,
+                    tile.BasePoints,
+                    scale,
+                    offsetX,
+                    offsetY,
+                    tile.BaseColor,
+                    null,
+                    0,
+                    BaseCornerRadius * scale,
+                    cache);
+                UpdatePath(
+                    shapes.Sticker,
+                    tile.StickerPoints,
+                    scale,
+                    offsetX,
+                    offsetY,
+                    tile.StickerColor,
+                    Color.FromArgb(0xee, 8, 8, 8),
+                    strokeWidth,
+                    StickerCornerRadius * scale,
+                    cache);
+            }
         }
+
+        cache.HideFrom(batch.Tiles.Count);
     }
 
-    private static RenderBatch BuildRenderBatch(string? state)
+    private static RenderBatch BuildRenderBatch(
+        string? state,
+        double yawDegrees,
+        double pitchDegrees,
+        SmartCubeMoveAnimation? animation)
     {
+        animation = SmartCubeMoveAnimation.IsValid(animation) ? animation : null;
+        var animatedState = animation?.FromFacelets ?? state;
         var tiles = new List<RenderTile>(54);
         var bounds = new Bounds();
         for (var i = 0; i < Facelets.Length; i++)
         {
-            var transform = BuildTransform(Facelets[i]);
+            var facelet = ApplyMoveAnimation(Facelets[i], animation);
+            var transform = BuildTransform(facelet, yawDegrees, pitchDegrees);
             if (transform.Normal.Z <= MinVisibleNormalZ)
             {
                 continue;
@@ -73,51 +145,58 @@ internal static class SmartCubePreviewRenderer
                 stickerPoints,
                 transform.Center.Z,
                 ShadeBase(transform.Normal),
-                ShadeSticker(FaceColor(state, i), transform.Normal)));
+                ShadeSticker(FaceColor(animatedState, i), transform.Normal)));
         }
 
         return new RenderBatch(tiles.OrderBy(tile => tile.Depth).ToArray(), bounds);
     }
 
-    private static void DrawShadow(
-        Canvas canvas,
-        Bounds bounds,
-        double scale,
-        double offsetX,
-        double offsetY,
-        double cubeWidth,
-        double cubeHeight)
-    {
-        var centerX = bounds.CenterX * scale + offsetX;
-        var bottom = bounds.Bottom * scale + offsetY;
-        var shadowWidth = cubeWidth * scale * 0.54;
-        var shadowHeight = cubeHeight * scale * 0.12;
-        var shadow = new Ellipse
-        {
-            Width = shadowWidth,
-            Height = shadowHeight,
-            Fill = new SolidColorBrush(Color.FromArgb(0x22, 0, 0, 0))
-        };
-        Canvas.SetLeft(shadow, centerX - shadowWidth / 2);
-        Canvas.SetTop(shadow, bottom - shadowHeight * 0.45);
-        canvas.Children.Add(shadow);
-    }
-
-    private static void DrawPolygon(
-        Canvas canvas,
+    private static void UpdatePath(
+        Path path,
         IReadOnlyList<Point> points,
         double scale,
         double offsetX,
         double offsetY,
         Color fill,
         Color? stroke,
-        double strokeWidth)
+        double strokeWidth,
+        double cornerRadius,
+        RenderCache cache)
     {
-        var polygon = new Polygon
-        {
-            Fill = new SolidColorBrush(fill)
-        };
+        var scaledPoints = points
+            .Select(point => new Point(point.X * scale + offsetX, point.Y * scale + offsetY))
+            .ToArray();
 
+        path.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        path.Fill = cache.GetBrush(fill);
+        path.StrokeThickness = strokeWidth;
+        path.Data = BuildRoundedGeometry(scaledPoints, cornerRadius);
+
+        if (stroke is not null && strokeWidth > 0)
+        {
+            path.Stroke = cache.GetBrush(stroke.Value);
+        }
+        else
+        {
+            path.Stroke = null;
+        }
+    }
+
+    private static void UpdatePolygon(
+        Polygon polygon,
+        IReadOnlyList<Point> points,
+        double scale,
+        double offsetX,
+        double offsetY,
+        Color fill,
+        Color? stroke,
+        double strokeWidth,
+        RenderCache cache)
+    {
+        polygon.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+        polygon.Fill = cache.GetBrush(fill);
+        polygon.StrokeThickness = strokeWidth;
+        polygon.Points.Clear();
         foreach (var point in points)
         {
             polygon.Points.Add(new Point(point.X * scale + offsetX, point.Y * scale + offsetY));
@@ -125,20 +204,143 @@ internal static class SmartCubePreviewRenderer
 
         if (stroke is not null && strokeWidth > 0)
         {
-            polygon.Stroke = new SolidColorBrush(stroke.Value);
-            polygon.StrokeThickness = strokeWidth;
+            polygon.Stroke = cache.GetBrush(stroke.Value);
         }
-
-        canvas.Children.Add(polygon);
+        else
+        {
+            polygon.Stroke = null;
+        }
     }
 
-    private static Transform BuildTransform(Facelet facelet)
+    private static Geometry BuildRoundedGeometry(IReadOnlyList<Point> points, double cornerRadius)
     {
-        var center = ApplyViewRotation(facelet.Center);
-        var normal = ApplyViewRotation(facelet.Normal).Normalize();
-        var u = ApplyViewRotation(facelet.U).Normalize();
-        var v = ApplyViewRotation(facelet.V).Normalize();
+        var geometry = new PathGeometry();
+        if (points.Count < 3)
+        {
+            return geometry;
+        }
+
+        var starts = new Point[points.Count];
+        var ends = new Point[points.Count];
+        for (var i = 0; i < points.Count; i++)
+        {
+            var point = points[i];
+            var previous = points[(i - 1 + points.Count) % points.Count];
+            var next = points[(i + 1) % points.Count];
+            var previousLength = Distance(point, previous);
+            var nextLength = Distance(point, next);
+            var radius = Math.Min(cornerRadius, Math.Min(previousLength, nextLength) * 0.38);
+
+            starts[i] = MoveToward(point, previous, radius);
+            ends[i] = MoveToward(point, next, radius);
+        }
+
+        var figure = new PathFigure
+        {
+            StartPoint = ends[0],
+            IsClosed = true
+        };
+
+        for (var i = 1; i < points.Count; i++)
+        {
+            figure.Segments.Add(new LineSegment { Point = starts[i] });
+            figure.Segments.Add(new QuadraticBezierSegment
+            {
+                Point1 = points[i],
+                Point2 = ends[i]
+            });
+        }
+
+        figure.Segments.Add(new LineSegment { Point = starts[0] });
+        figure.Segments.Add(new QuadraticBezierSegment
+        {
+            Point1 = points[0],
+            Point2 = ends[0]
+        });
+        geometry.Figures.Add(figure);
+        return geometry;
+    }
+
+    private static double Distance(Point first, Point second)
+    {
+        var deltaX = second.X - first.X;
+        var deltaY = second.Y - first.Y;
+        return Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+    }
+
+    private static Point MoveToward(Point from, Point to, double distance)
+    {
+        var length = Distance(from, to);
+        if (length <= 0)
+        {
+            return from;
+        }
+
+        var ratio = distance / length;
+        return new Point(
+            from.X + (to.X - from.X) * ratio,
+            from.Y + (to.Y - from.Y) * ratio);
+    }
+
+    private static Transform BuildTransform(Facelet facelet, double yawDegrees, double pitchDegrees)
+    {
+        var center = ApplyViewRotation(facelet.Center, yawDegrees, pitchDegrees);
+        var normal = ApplyViewRotation(facelet.Normal, yawDegrees, pitchDegrees).Normalize();
+        var u = ApplyViewRotation(facelet.U, yawDegrees, pitchDegrees).Normalize();
+        var v = ApplyViewRotation(facelet.V, yawDegrees, pitchDegrees).Normalize();
         return new Transform(center, normal, u, v);
+    }
+
+    private static Facelet ApplyMoveAnimation(Facelet facelet, SmartCubeMoveAnimation? animation)
+    {
+        if (animation is null || !IsInAnimatedLayer(facelet.Center, animation.Face))
+        {
+            return facelet;
+        }
+
+        var angle = GetMoveAnimationAngle(animation.Face, animation.Power) * Clamp(animation.Progress, 0, 1);
+        var axis = animation.Face switch
+        {
+            'R' or 'L' => 0,
+            'U' or 'D' => 1,
+            _ => 2
+        };
+
+        return new Facelet(
+            RotateAroundAxis(facelet.Center, axis, angle),
+            RotateAroundAxis(facelet.Normal, axis, angle),
+            RotateAroundAxis(facelet.U, axis, angle),
+            RotateAroundAxis(facelet.V, axis, angle));
+    }
+
+    private static bool IsInAnimatedLayer(Vec3 center, char face)
+    {
+        return face switch
+        {
+            'U' => center.Y > 0.5,
+            'D' => center.Y < -0.5,
+            'R' => center.X > 0.5,
+            'L' => center.X < -0.5,
+            'F' => center.Z > 0.5,
+            'B' => center.Z < -0.5,
+            _ => false
+        };
+    }
+
+    private static double GetMoveAnimationAngle(char face, int power)
+    {
+        var quarterTurn = face switch
+        {
+            'U' => -90,
+            'D' => 90,
+            'R' => -90,
+            'L' => 90,
+            'F' => 90,
+            'B' => -90,
+            _ => 0
+        };
+
+        return quarterTurn * power;
     }
 
     private static Point[] ProjectQuad(Vec3 center, Vec3 u, Vec3 v, double halfSize)
@@ -158,10 +360,10 @@ internal static class SmartCubePreviewRenderer
         return new Point(point.X * perspective, -point.Y * perspective);
     }
 
-    private static Vec3 ApplyViewRotation(Vec3 point)
+    private static Vec3 ApplyViewRotation(Vec3 point, double yawDegrees, double pitchDegrees)
     {
-        var rotated = RotateAroundAxis(point, axis: 1, YawDegrees);
-        return RotateAroundAxis(rotated, axis: 0, PitchDegrees);
+        var rotated = RotateAroundAxis(point, axis: 1, yawDegrees);
+        return RotateAroundAxis(rotated, axis: 0, pitchDegrees);
     }
 
     private static Vec3 RotateAroundAxis(Vec3 point, int axis, double angleDegrees)
@@ -291,6 +493,56 @@ internal static class SmartCubePreviewRenderer
 
     private sealed record RenderBatch(IReadOnlyList<RenderTile> Tiles, Bounds Bounds);
 
+    private sealed class RenderCache
+    {
+        private readonly List<RenderShapePair> _shapePairs = new();
+        private readonly Dictionary<uint, SolidColorBrush> _brushes = new();
+
+        public RenderShapePair GetOrCreate(Canvas canvas, int index)
+        {
+            while (_shapePairs.Count <= index)
+            {
+                var pair = new RenderShapePair(new Path(), new Path(), new Polygon(), new Polygon());
+                _shapePairs.Add(pair);
+                canvas.Children.Add(pair.Base);
+                canvas.Children.Add(pair.Sticker);
+                canvas.Children.Add(pair.BasePolygon);
+                canvas.Children.Add(pair.StickerPolygon);
+            }
+
+            return _shapePairs[index];
+        }
+
+        public SolidColorBrush GetBrush(Color color)
+        {
+            var key = ((uint)color.A << 24)
+                | ((uint)color.R << 16)
+                | ((uint)color.G << 8)
+                | color.B;
+            if (_brushes.TryGetValue(key, out var brush))
+            {
+                return brush;
+            }
+
+            brush = new SolidColorBrush(color);
+            _brushes[key] = brush;
+            return brush;
+        }
+
+        public void HideFrom(int index)
+        {
+            for (var i = index; i < _shapePairs.Count; i++)
+            {
+                _shapePairs[i].Base.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                _shapePairs[i].Sticker.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                _shapePairs[i].BasePolygon.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+                _shapePairs[i].StickerPolygon.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+            }
+        }
+    }
+
+    private sealed record RenderShapePair(Path Base, Path Sticker, Polygon BasePolygon, Polygon StickerPolygon);
+
     private sealed class Bounds
     {
         public double Left { get; private set; } = double.PositiveInfinity;
@@ -334,5 +586,25 @@ internal static class SmartCubePreviewRenderer
                 ? this
                 : new Vec3(X / length, Y / length, Z / length);
         }
+    }
+}
+
+internal sealed record SmartCubeMoveAnimation(string FromFacelets, string Move, double Progress)
+{
+    public char Face => Move[0];
+
+    public int Power => Move.Length == 1
+        ? 1
+        : Move[1] == '2'
+            ? 2
+            : -1;
+
+    public static bool IsValid(SmartCubeMoveAnimation? animation)
+    {
+        return animation is not null
+            && animation.FromFacelets.Length == 54
+            && animation.Move.Length is 1 or 2
+            && "URFDLB".Contains(animation.Move[0], StringComparison.Ordinal)
+            && (animation.Move.Length == 1 || animation.Move[1] is '2' or '\'');
     }
 }

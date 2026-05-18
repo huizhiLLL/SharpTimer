@@ -75,6 +75,8 @@ namespace SharpTimer.App
             SolvesList.ItemsSource = _solveItems;
             SessionComboBox.ItemsSource = _sessionItems;
             BluetoothDevicesList.ItemsSource = _bluetoothDeviceItems;
+            SmartCubePreview.OpenRequested += SmartCubePreview_OpenRequested;
+            SmartCubePreview.InteractionCompleted += SmartCubePreview_InteractionCompleted;
             AppRoot.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(RootGrid_KeyDown), true);
             AppRoot.AddHandler(UIElement.KeyUpEvent, new KeyEventHandler(RootGrid_KeyUp), true);
             RootGrid.Loaded += RootGrid_Loaded;
@@ -124,6 +126,7 @@ namespace SharpTimer.App
         {
             _bluetoothScanner?.Dispose();
             _bluetoothScanner = null;
+            SmartCubePreview.StopAnimation();
             if (_smartCubeConnection is not null)
             {
                 await _smartCubeConnection.DisposeAsync();
@@ -1016,7 +1019,7 @@ namespace SharpTimer.App
                     _smartCubeFacelets = null;
                     _smartCubeScrambleTracker.Reset();
                     _scrambleTextRenderKey = null;
-                    SmartCubePreviewCanvas.Visibility = Visibility.Collapsed;
+                    SmartCubePreview.Visibility = Visibility.Collapsed;
                     ConnectedCubePanel.Visibility = Visibility.Collapsed;
                     BluetoothFlyoutStatusText.Text = _strings.BluetoothDisconnectedMessage;
                     break;
@@ -1096,7 +1099,7 @@ namespace SharpTimer.App
                 _smartCubeFacelets = ThreeByThreeFacelets.IsValidState(scrambleSnapshot.CurrentFacelets ?? string.Empty)
                     ? scrambleSnapshot.CurrentFacelets!
                     : nextFacelets;
-                RenderSmartCubePreview(_smartCubeFacelets);
+                SmartCubePreview.PlayMove(currentFacelets, _smartCubeFacelets, move);
                 return true;
             }
             catch
@@ -1107,7 +1110,7 @@ namespace SharpTimer.App
 
         private async System.Threading.Tasks.Task HandleSmartCubeFaceletsEventAsync(SmartCubeFaceletsEvent facelets)
         {
-            SmartCubePreviewCanvas.Visibility = Visibility.Visible;
+            SmartCubePreview.Visibility = Visibility.Visible;
             var shouldUseFaceletsState = facelets.IsAuthoritative
                 || !_smartCubeHasLocalMoveState
                 || _lastSnapshot?.Timer.Phase == TimerPhase.Running;
@@ -1172,7 +1175,7 @@ namespace SharpTimer.App
             BluetoothDevicesList.Visibility = Visibility.Collapsed;
             BluetoothScanProgress.IsIndeterminate = false;
             ConnectedCubePanel.Visibility = Visibility.Visible;
-            SmartCubePreviewCanvas.Visibility = Visibility.Visible;
+            SmartCubePreview.Visibility = Visibility.Visible;
             ConnectedCubeNameText.Text = _smartCubeConnection.DeviceName;
             ConnectedCubeBatteryText.Text = _strings.BluetoothBatteryUnknown;
             SyncSmartCubeScramble(_lastSnapshot);
@@ -1180,7 +1183,7 @@ namespace SharpTimer.App
             {
                 RenderSmartCubePreview(_smartCubeFacelets);
             }
-            else if (SmartCubePreviewCanvas.Children.Count == 0)
+            else
             {
                 RenderSmartCubePreview(null);
             }
@@ -1203,10 +1206,11 @@ namespace SharpTimer.App
             _smartCubeReadyToStart = false;
             _smartCubeHasLocalMoveState = false;
             _smartCubeFacelets = null;
+            SmartCubePreview.StopAnimation();
             _smartCubeScrambleTracker.Reset();
             _scrambleTextRenderKey = null;
             ConnectedCubePanel.Visibility = Visibility.Collapsed;
-            SmartCubePreviewCanvas.Visibility = Visibility.Collapsed;
+            SmartCubePreview.Visibility = Visibility.Collapsed;
             _bluetoothDeviceItems.Clear();
             StartSmartCubeScan();
             await connection.DisposeAsync();
@@ -1218,6 +1222,7 @@ namespace SharpTimer.App
             _smartCubeSolveHasMove = false;
             _smartCubeReadyToStart = false;
             _smartCubeHasLocalMoveState = false;
+            SmartCubePreview.ResetView();
             RenderSmartCubePreview(_smartCubeFacelets);
             SyncSmartCubeScramble(_lastSnapshot);
         }
@@ -1459,9 +1464,19 @@ namespace SharpTimer.App
             return new SolidColorBrush(Microsoft.UI.Colors.OrangeRed);
         }
 
+        private void SmartCubePreview_OpenRequested(object? sender, EventArgs e)
+        {
+            BluetoothFlyout.ShowAt(BluetoothButton);
+        }
+
+        private void SmartCubePreview_InteractionCompleted(object? sender, EventArgs e)
+        {
+            FocusTimerInput();
+        }
+
         private void RenderSmartCubePreview(string? facelets)
         {
-            SmartCubePreviewRenderer.Render(SmartCubePreviewCanvas, facelets);
+            SmartCubePreview.SetFacelets(facelets);
         }
 
         private static string FormatSolveTime(Solve solve, int decimalPlaces)

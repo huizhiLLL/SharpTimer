@@ -25,6 +25,16 @@ SharpTimer
 - `SharpTimer.App` 放 WinUI 事件、界面渲染、本地设置和跨层编排。
 - `SharpTimer.Tests` 优先覆盖 Core、Storage，以及不依赖真实蓝牙设备的智能魔方规则。
 
+## 智能魔方预览
+
+智能魔方实时预览位于 `SharpTimer.App/Rendering`：
+
+- `SmartCubePreviewControl` 封装预览 Canvas、拖动视角、点击入口事件、动画节拍和渲染调用。
+- `SmartCubePreviewRenderer` 根据 `facelets`、视角和可选转动动画生成 Canvas 图形。
+- `MainWindow.xaml.cs` 只负责把 BLE / Core 事件转成 `SetFacelets(...)`、`PlayMove(...)`、`ResetView()` 等控件调用，并处理点击预览后打开蓝牙 Flyout。
+
+当前预览使用 WinUI `Canvas`、`Path` 和 `Polygon` 实现伪 3D 投影。静止状态保留圆角视觉，转动动画期间使用轻量 `Polygon` 并跟随 `CompositionTarget.Rendering` 更新，避免每帧重建大量 XAML 元素。后续如需真实 3D，应优先保持控件外部接口不变，在控件内部替换为 `SwapChainPanel + Direct3D` 或其他渲染实现。
+
 ## 数据模型
 
 核心模型：
@@ -44,6 +54,7 @@ SQLite 当前使用 v1 schema：
 ## UI 与 WinUI 约束
 
 - 主界面使用官方 `NavigationView`，包含主计时、成绩列表、成绩分析区和设置区域。
+- 智能魔方预览作为独立 `UserControl` 接入主计时页，避免把预览交互和动画状态继续堆在主窗口 code-behind。
 - 常规操作优先使用 WinUI 官方控件，如 `Button`、`ListView`、`ContentDialog`、`ToggleSwitch`、`ComboBox`。
 - 样式优先使用 `ThemeResource` 和 Windows App SDK 能力，避免硬编码整套伪 Fluent 视觉系统。
 - UI 控件、窗口 API 或样式资源不确定时，优先查 `ref/WinUI-Gallery`。
