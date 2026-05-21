@@ -70,6 +70,7 @@ public static class WindowsBleSmartCubeConnector
     {
         private static readonly byte[] BaseKey = { 21, 119, 58, 92, 103, 14, 45, 31, 23, 103, 42, 19, 155, 103, 82, 87 };
         private static readonly byte[] BaseIv = { 17, 35, 38, 37, 134, 42, 44, 59, 85, 6, 127, 49, 126, 103, 33, 87 };
+        private static readonly byte[] EnableGyroPayload = { 172, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
         private readonly BluetoothLEDevice _device;
         private readonly IReadOnlyList<byte[]> _macCandidates;
@@ -153,6 +154,8 @@ public static class WindowsBleSmartCubeConnector
             }
 
             await ProbeKeyAsync(cancellationToken);
+            await SendRequestAsync(EnableGyroPayload.ToArray(), cancellationToken);
+            await SendSimpleRequestAsync(163, cancellationToken);
         }
 
         public Task SendCommandAsync(SmartCubeCommand command, CancellationToken cancellationToken = default)
@@ -357,7 +360,13 @@ public static class WindowsBleSmartCubeConnector
                 case 165:
                     return EmitMoveEvents(decoded, timestamp);
                 case 171:
-                    return ParseResult.Ignored;
+                    if (decoded.Length < 17)
+                    {
+                        return ParseResult.Dropped;
+                    }
+
+                    EmitSmartCubeEvent(new SmartCubeGyroEvent(timestamp, ParseQuaternion(decoded)));
+                    return ParseResult.Handled;
                 default:
                     return ParseResult.Dropped;
             }

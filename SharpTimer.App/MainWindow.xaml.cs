@@ -413,6 +413,7 @@ namespace SharpTimer.App
             BluetoothScanProgress.IsIndeterminate = true;
             try
             {
+                SmartCubePreview.ResetView();
                 _smartCubeConnection = await WindowsBleSmartCubeConnector.ConnectAsync(item.Device);
                 _smartCubeConnection.EventReceived += SmartCubeConnection_EventReceived;
                 _smartCubeKeepAliveTimer.Start();
@@ -435,6 +436,12 @@ namespace SharpTimer.App
         private void ResetCubeStateButton_Click(object sender, RoutedEventArgs e)
         {
             ResetSmartCubeLocalState();
+            RootGrid.Focus(FocusState.Programmatic);
+        }
+
+        private void ResetCubeOrientationButton_Click(object sender, RoutedEventArgs e)
+        {
+            SmartCubePreview.ResetOrientationToDefault();
             RootGrid.Focus(FocusState.Programmatic);
         }
 
@@ -1008,7 +1015,12 @@ namespace SharpTimer.App
                 case SmartCubeMoveEvent move:
                     await HandleSmartCubeMoveEventAsync(move);
                     break;
-                case SmartCubeGyroEvent:
+                case SmartCubeGyroEvent gyro:
+                    SmartCubePreview.SetOrientation(
+                        gyro.Quaternion.X,
+                        gyro.Quaternion.Y,
+                        gyro.Quaternion.Z,
+                        gyro.Quaternion.W);
                     break;
                 case SmartCubeDisconnectEvent:
                     _smartCubeKeepAliveTimer.Stop();
@@ -1019,6 +1031,7 @@ namespace SharpTimer.App
                     _smartCubeFacelets = null;
                     _smartCubeScrambleTracker.Reset();
                     _scrambleTextRenderKey = null;
+                    SmartCubePreview.ResetView();
                     SmartCubePreview.Visibility = Visibility.Collapsed;
                     ConnectedCubePanel.Visibility = Visibility.Collapsed;
                     BluetoothFlyoutStatusText.Text = _strings.BluetoothDisconnectedMessage;
@@ -1207,6 +1220,7 @@ namespace SharpTimer.App
             _smartCubeHasLocalMoveState = false;
             _smartCubeFacelets = null;
             SmartCubePreview.StopAnimation();
+            SmartCubePreview.ResetView();
             _smartCubeScrambleTracker.Reset();
             _scrambleTextRenderKey = null;
             ConnectedCubePanel.Visibility = Visibility.Collapsed;
@@ -1222,7 +1236,7 @@ namespace SharpTimer.App
             _smartCubeSolveHasMove = false;
             _smartCubeReadyToStart = false;
             _smartCubeHasLocalMoveState = false;
-            SmartCubePreview.ResetView();
+            SmartCubePreview.ResetViewAngles();
             RenderSmartCubePreview(_smartCubeFacelets);
             SyncSmartCubeScramble(_lastSnapshot);
         }
@@ -1562,6 +1576,7 @@ namespace SharpTimer.App
             AnalysisCountLabelText.Text = _strings.AnalysisCountLabel;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
             ResetCubeStateButton.Content = _strings.BluetoothResetCubeState;
+            ResetCubeOrientationButton.Content = _strings.BluetoothResetCubeOrientation;
             DisconnectCubeButton.Content = _strings.BluetoothDisconnect;
             SettingsTitleText.Text = _strings.SettingsTitle;
             InspectionSwitch.Header = _strings.InspectionHeader;

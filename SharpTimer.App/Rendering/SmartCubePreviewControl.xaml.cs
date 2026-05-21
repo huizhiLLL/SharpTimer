@@ -14,14 +14,22 @@ public sealed partial class SmartCubePreviewControl : UserControl
     private const double DragThreshold = 4;
     private const double DragSensitivity = 0.45;
     private const double AnimationMilliseconds = 150;
+    private const double GyroDefaultYawDegrees = 0;
+    private const double GyroDefaultPitchDegrees = 18;
+    private const double OrientationFrameBlend = 0.22;
 
     private bool _isPointerDown;
     private bool _didDrag;
-    private bool _isAnimationRunning;
+    private bool _isFrameRendering;
     private string? _facelets;
     private string? _animationFrom;
     private string? _animationTo;
     private string? _animationMove;
+    private SmartCubePreviewOrientation? _orientation;
+    private SmartCubePreviewOrientation? _targetOrientation;
+    private SmartCubePreviewOrientation? _rawOrientation;
+    private SmartCubePreviewOrientation? _orientationCalibration;
+    private bool _hasOrientationCalibration;
     private DateTimeOffset _animationStartedAt;
     private double _yaw = SmartCubePreviewRenderer.DefaultYawDegrees;
     private double _pitch = SmartCubePreviewRenderer.DefaultPitchDegrees;
@@ -78,31 +86,91 @@ public sealed partial class SmartCubePreviewControl : UserControl
     {
         _yaw = SmartCubePreviewRenderer.DefaultYawDegrees;
         _pitch = SmartCubePreviewRenderer.DefaultPitchDegrees;
+        _orientation = null;
+        _targetOrientation = null;
+        _rawOrientation = null;
+        _orientationCalibration = null;
+        _hasOrientationCalibration = false;
+        Render();
+    }
+
+    public void SetOrientation(double x, double y, double z, double w)
+    {
+        _rawOrientation = SmartCubePreviewOrientation.Create(x, y, z, w);
+        if (_rawOrientation is not null && !_hasOrientationCalibration)
+        {
+            _yaw = GyroDefaultYawDegrees;
+            _pitch = GyroDefaultPitchDegrees;
+            _orientationCalibration = _rawOrientation.Inverse();
+            _hasOrientationCalibration = true;
+        }
+
+        var nextOrientation = _rawOrientation is null
+            ? null
+            : _orientationCalibration?.Multiply(_rawOrientation) ?? _rawOrientation;
+        if (_orientation is null || nextOrientation is null)
+        {
+            _orientation = nextOrientation;
+            _targetOrientation = null;
+            Render();
+            return;
+        }
+
+        _targetOrientation = nextOrientation;
+        StartFrameRendering();
+    }
+
+    public void ResetViewAngles()
+    {
+        _yaw = SmartCubePreviewRenderer.DefaultYawDegrees;
+        _pitch = SmartCubePreviewRenderer.DefaultPitchDegrees;
+        Render();
+    }
+
+    public void ResetOrientationToDefault()
+    {
+        _yaw = GyroDefaultYawDegrees;
+        _pitch = GyroDefaultPitchDegrees;
+        _orientationCalibration = _rawOrientation?.Inverse();
+        _hasOrientationCalibration = _rawOrientation is not null;
+        _orientation = _rawOrientation is null
+            ? null
+            : _orientationCalibration?.Multiply(_rawOrientation);
+        _targetOrientation = null;
         Render();
     }
 
     public void StopAnimation()
     {
-        if (_isAnimationRunning)
-        {
-            CompositionTarget.Rendering -= CompositionTarget_Rendering;
-            _isAnimationRunning = false;
-        }
-
         _animationFrom = null;
         _animationTo = null;
         _animationMove = null;
+        StopFrameRenderingIfIdle();
     }
 
     private void StartAnimation()
     {
-        if (_isAnimationRunning)
+        StartFrameRendering();
+    }
+
+    private void StartFrameRendering()
+    {
+        if (_isFrameRendering)
         {
             return;
         }
 
         CompositionTarget.Rendering += CompositionTarget_Rendering;
-        _isAnimationRunning = true;
+        _isFrameRendering = true;
+    }
+
+    private void StopFrameRenderingIfIdle()
+    {
+        if (_isFrameRendering && !HasMoveAnimation() && !HasOrientationTransition())
+        {
+            CompositionTarget.Rendering -= CompositionTarget_Rendering;
+            _isFrameRendering = false;
+        }
     }
 
     private void SmartCubePreviewControl_Unloaded(object sender, RoutedEventArgs e)
@@ -119,22 +187,40 @@ public sealed partial class SmartCubePreviewControl : UserControl
 
     private void CompositionTarget_Rendering(object? sender, object e)
     {
-        if (_animationFrom is null || _animationTo is null || _animationMove is null)
+        var shouldRender = false;
+
+        if (HasMoveAnimation())
         {
-            StopAnimation();
-            Render();
-            return;
+            if (GetAnimationProgress() >= 1)
+            {
+                _facelets = _animationTo;
+                _animationFrom = null;
+                _animationTo = null;
+                _animationMove = null;
+            }
+
+            shouldRender = true;
         }
 
-        if (GetAnimationProgress() >= 1)
+        if (_targetOrientation is not null)
         {
-            _facelets = _animationTo;
-            StopAnimation();
-            Render();
-            return;
+            _orientation = _orientation?.BlendToward(_targetOrientation, OrientationFrameBlend)
+                ?? _targetOrientation;
+            if (_orientation.IsCloseTo(_targetOrientation))
+            {
+                _orientation = _targetOrientation;
+                _targetOrientation = null;
+            }
+
+            shouldRender = true;
         }
 
-        Render();
+        if (shouldRender)
+        {
+            Render();
+        }
+
+        StopFrameRenderingIfIdle();
     }
 
     private void PreviewCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -215,6 +301,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
             _animationTo ?? _facelets,
             _yaw,
             _pitch,
+            _orientation,
             CreateAnimation());
     }
 
@@ -229,6 +316,16 @@ public sealed partial class SmartCubePreviewControl : UserControl
             _animationFrom,
             _animationMove,
             EaseAnimationProgress(GetAnimationProgress()));
+    }
+
+    private bool HasMoveAnimation()
+    {
+        return _animationFrom is not null && _animationTo is not null && _animationMove is not null;
+    }
+
+    private bool HasOrientationTransition()
+    {
+        return _targetOrientation is not null;
     }
 
     private double GetAnimationProgress()

@@ -219,6 +219,10 @@
                                                     Content="重置状态"
                                                     Click="ResetCubeStateButton_Click" />
                                                 <Button
+                                                    x:Name="ResetCubeOrientationButton"
+                                                    Content="重置姿态"
+                                                    Click="ResetCubeOrientationButton_Click" />
+                                                <Button
                                                     x:Name="DisconnectCubeButton"
                                                     Content="断开连接"
                                                     Click="DisconnectCubeButton_Click" />

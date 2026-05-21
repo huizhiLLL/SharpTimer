@@ -30,10 +30,10 @@ SharpTimer
 智能魔方实时预览位于 `SharpTimer.App/Rendering`：
 
 - `SmartCubePreviewControl` 封装预览 Canvas、拖动视角、点击入口事件、动画节拍和渲染调用。
-- `SmartCubePreviewRenderer` 根据 `facelets`、视角和可选转动动画生成 Canvas 图形。
+- `SmartCubePreviewRenderer` 根据 `facelets`、拖动视角、可选 gyro 姿态和可选转动动画生成 Canvas 图形。
 - `MainWindow.xaml.cs` 只负责把 BLE / Core 事件转成 `SetFacelets(...)`、`PlayMove(...)`、`ResetView()` 等控件调用，并处理点击预览后打开蓝牙 Flyout。
 
-当前预览使用 WinUI `Canvas`、`Path` 和 `Polygon` 实现伪 3D 投影。静止状态保留圆角视觉，转动动画期间使用轻量 `Polygon` 并跟随 `CompositionTarget.Rendering` 更新，避免每帧重建大量 XAML 元素。后续如需真实 3D，应优先保持控件外部接口不变，在控件内部替换为 `SwapChainPanel + Direct3D` 或其他渲染实现。
+当前预览使用 WinUI `Canvas`、`Path` 和 `Polygon` 实现伪 3D 投影。静止状态保留圆角视觉，转动动画期间使用轻量 `Polygon` 并跟随 `CompositionTarget.Rendering` 更新，避免每帧重建大量 XAML 元素。gyro 姿态作为魔方本体旋转输入，拖动视角继续作为观察偏移。后续如需真实 3D，应优先保持控件外部接口不变，在控件内部替换为 `SwapChainPanel + Direct3D` 或其他渲染实现。
 
 ## 数据模型
 

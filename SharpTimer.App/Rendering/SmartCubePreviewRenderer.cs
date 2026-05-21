@@ -21,8 +21,8 @@ internal static class SmartCubePreviewRenderer
     private const double MinVisibleNormalZ = 0.05;
     private const double StableProjectionWidth = 5.25;
     private const double StableProjectionHeight = 5.25;
-    private const double BaseCornerRadius = 0.085;
-    private const double StickerCornerRadius = 0.07;
+    private const double BaseCornerRadius = 0.105;
+    private const double StickerCornerRadius = 0.115;
     private static readonly Facelet[] Facelets = BuildFacelets();
     private static readonly ConditionalWeakTable<Canvas, RenderCache> RenderCaches = new();
 
@@ -31,6 +31,7 @@ internal static class SmartCubePreviewRenderer
         string? facelets,
         double yawDegrees = DefaultYawDegrees,
         double pitchDegrees = DefaultPitchDegrees,
+        SmartCubePreviewOrientation? orientation = null,
         SmartCubeMoveAnimation? animation = null)
     {
         var cache = RenderCaches.GetValue(canvas, _ => new RenderCache());
@@ -39,7 +40,7 @@ internal static class SmartCubePreviewRenderer
             ? null
             : facelets[..54];
         var useLightweightShapes = SmartCubeMoveAnimation.IsValid(animation);
-        var batch = BuildRenderBatch(state, yawDegrees, pitchDegrees, animation);
+        var batch = BuildRenderBatch(state, yawDegrees, pitchDegrees, orientation, animation);
         if (batch.Tiles.Count == 0 || !batch.Bounds.IsValid)
         {
             cache.HideFrom(0);
@@ -120,6 +121,7 @@ internal static class SmartCubePreviewRenderer
         string? state,
         double yawDegrees,
         double pitchDegrees,
+        SmartCubePreviewOrientation? orientation,
         SmartCubeMoveAnimation? animation)
     {
         animation = SmartCubeMoveAnimation.IsValid(animation) ? animation : null;
@@ -129,7 +131,7 @@ internal static class SmartCubePreviewRenderer
         for (var i = 0; i < Facelets.Length; i++)
         {
             var facelet = ApplyMoveAnimation(Facelets[i], animation);
-            var transform = BuildTransform(facelet, yawDegrees, pitchDegrees);
+            var transform = BuildTransform(facelet, yawDegrees, pitchDegrees, orientation);
             if (transform.Normal.Z <= MinVisibleNormalZ)
             {
                 continue;
@@ -282,13 +284,26 @@ internal static class SmartCubePreviewRenderer
             from.Y + (to.Y - from.Y) * ratio);
     }
 
-    private static Transform BuildTransform(Facelet facelet, double yawDegrees, double pitchDegrees)
+    private static Transform BuildTransform(
+        Facelet facelet,
+        double yawDegrees,
+        double pitchDegrees,
+        SmartCubePreviewOrientation? orientation)
     {
-        var center = ApplyViewRotation(facelet.Center, yawDegrees, pitchDegrees);
-        var normal = ApplyViewRotation(facelet.Normal, yawDegrees, pitchDegrees).Normalize();
-        var u = ApplyViewRotation(facelet.U, yawDegrees, pitchDegrees).Normalize();
-        var v = ApplyViewRotation(facelet.V, yawDegrees, pitchDegrees).Normalize();
+        var center = ApplyOrientation(facelet.Center, orientation);
+        var normal = ApplyOrientation(facelet.Normal, orientation);
+        var u = ApplyOrientation(facelet.U, orientation);
+        var v = ApplyOrientation(facelet.V, orientation);
+        center = ApplyViewRotation(center, yawDegrees, pitchDegrees);
+        normal = ApplyViewRotation(normal, yawDegrees, pitchDegrees).Normalize();
+        u = ApplyViewRotation(u, yawDegrees, pitchDegrees).Normalize();
+        v = ApplyViewRotation(v, yawDegrees, pitchDegrees).Normalize();
         return new Transform(center, normal, u, v);
+    }
+
+    private static Vec3 ApplyOrientation(Vec3 point, SmartCubePreviewOrientation? orientation)
+    {
+        return orientation?.Rotate(point) ?? point;
     }
 
     private static Facelet ApplyMoveAnimation(Facelet facelet, SmartCubeMoveAnimation? animation)
@@ -567,7 +582,7 @@ internal static class SmartCubePreviewRenderer
         }
     }
 
-    private readonly record struct Vec3(double X, double Y, double Z)
+    internal readonly record struct Vec3(double X, double Y, double Z)
     {
         public Vec3 Add(Vec3 other)
         {
@@ -606,5 +621,86 @@ internal sealed record SmartCubeMoveAnimation(string FromFacelets, string Move, 
             && animation.Move.Length is 1 or 2
             && "URFDLB".Contains(animation.Move[0], StringComparison.Ordinal)
             && (animation.Move.Length == 1 || animation.Move[1] is '2' or '\'');
+    }
+}
+
+internal sealed record SmartCubePreviewOrientation(double X, double Y, double Z, double W)
+{
+    public static SmartCubePreviewOrientation? Create(double x, double y, double z, double w)
+    {
+        var length = Math.Sqrt(x * x + y * y + z * z + w * w);
+        if (length <= 0)
+        {
+            return null;
+        }
+
+        return new SmartCubePreviewOrientation(x / length, y / length, z / length, w / length);
+    }
+
+    public SmartCubePreviewRenderer.Vec3 Rotate(SmartCubePreviewRenderer.Vec3 point)
+    {
+        var source = new SmartCubePreviewRenderer.Vec3(point.X, -point.Z, point.Y);
+        var rotated = RotateSource(source);
+        return new SmartCubePreviewRenderer.Vec3(rotated.X, rotated.Z, -rotated.Y);
+    }
+
+    public SmartCubePreviewOrientation Inverse()
+    {
+        return new SmartCubePreviewOrientation(-X, -Y, -Z, W);
+    }
+
+    public SmartCubePreviewOrientation Multiply(SmartCubePreviewOrientation other)
+    {
+        return Create(
+            W * other.X + X * other.W + Y * other.Z - Z * other.Y,
+            W * other.Y - X * other.Z + Y * other.W + Z * other.X,
+            W * other.Z + X * other.Y - Y * other.X + Z * other.W,
+            W * other.W - X * other.X - Y * other.Y - Z * other.Z)
+            ?? new SmartCubePreviewOrientation(0, 0, 0, 1);
+    }
+
+    public SmartCubePreviewOrientation BlendToward(SmartCubePreviewOrientation target, double amount)
+    {
+        var dot = X * target.X + Y * target.Y + Z * target.Z + W * target.W;
+        var targetX = target.X;
+        var targetY = target.Y;
+        var targetZ = target.Z;
+        var targetW = target.W;
+        if (dot < 0)
+        {
+            targetX = -targetX;
+            targetY = -targetY;
+            targetZ = -targetZ;
+            targetW = -targetW;
+        }
+
+        var clamped = Math.Max(0, Math.Min(1, amount));
+        return Create(
+            X + (targetX - X) * clamped,
+            Y + (targetY - Y) * clamped,
+            Z + (targetZ - Z) * clamped,
+            W + (targetW - W) * clamped)
+            ?? target;
+    }
+
+    public bool IsCloseTo(SmartCubePreviewOrientation target)
+    {
+        var dot = Math.Abs(X * target.X + Y * target.Y + Z * target.Z + W * target.W);
+        return dot > 0.9995;
+    }
+
+    private SmartCubePreviewRenderer.Vec3 RotateSource(SmartCubePreviewRenderer.Vec3 point)
+    {
+        var qx = X;
+        var qy = Y;
+        var qz = Z;
+        var qw = W;
+        var tx = 2 * (qy * point.Z - qz * point.Y);
+        var ty = 2 * (qz * point.X - qx * point.Z);
+        var tz = 2 * (qx * point.Y - qy * point.X);
+        return new SmartCubePreviewRenderer.Vec3(
+            point.X + qw * tx + qy * tz - qz * ty,
+            point.Y + qw * ty + qz * tx - qx * tz,
+            point.Z + qw * tz + qx * ty - qy * tx);
     }
 }

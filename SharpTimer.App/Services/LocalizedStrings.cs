@@ -56,6 +56,7 @@ public sealed record LocalizedStrings
     public required string BluetoothDisconnectedMessage { get; init; }
     public required string BluetoothDisconnect { get; init; }
     public required string BluetoothResetCubeState { get; init; }
+    public required string BluetoothResetCubeOrientation { get; init; }
     public required string BluetoothBatteryFormat { get; init; }
     public required string BluetoothBatteryUnknown { get; init; }
     public required string BluetoothScrambleReady { get; init; }
@@ -122,6 +123,7 @@ public sealed record LocalizedStrings
         BluetoothDisconnectedMessage = "智能魔方已断开",
         BluetoothDisconnect = "断开连接",
         BluetoothResetCubeState = "重置状态",
+        BluetoothResetCubeOrientation = "重置姿态",
         BluetoothBatteryFormat = "电量：{0}%",
         BluetoothBatteryUnknown = "电量：--",
         BluetoothScrambleReady = "READY",
@@ -184,6 +186,7 @@ public sealed record LocalizedStrings
         BluetoothDisconnectedMessage = "Bluetooth cube disconnected",
         BluetoothDisconnect = "Disconnect",
         BluetoothResetCubeState = "Reset state",
+        BluetoothResetCubeOrientation = "Reset posture",
         BluetoothBatteryFormat = "Battery: {0}%",
         BluetoothBatteryUnknown = "Battery: --",
         BluetoothScrambleReady = "READY",
