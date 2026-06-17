@@ -317,7 +317,7 @@
                                         x:Name="ConnectedCubePanel"
                                         Grid.Row="3"
                                         Padding="12"
-                                        CornerRadius="8"
+                                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
                                         Visibility="Collapsed"
                                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                                         <StackPanel Spacing="6">
@@ -413,7 +413,7 @@
 
                     <Border
                         Padding="16"
-                        CornerRadius="8"
+                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                         <StackPanel Spacing="4">
                             <TextBlock
@@ -429,7 +429,7 @@
                     <Border
                         Grid.Column="1"
                         Padding="16"
-                        CornerRadius="8"
+                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                         <StackPanel Spacing="4">
                             <TextBlock Text="Ao5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -440,7 +440,7 @@
                         x:Name="Ao12StatCard"
                         Grid.Column="2"
                         Padding="16"
-                        CornerRadius="8"
+                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                         <StackPanel Spacing="4">
                             <TextBlock Text="Ao12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -451,7 +451,7 @@
                         x:Name="TimerCountStatCard"
                         Grid.Column="3"
                         Padding="16"
-                        CornerRadius="8"
+                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                         <StackPanel Spacing="4">
                             <TextBlock
@@ -747,7 +747,7 @@
                         Spacing="14">
                         <Border
                             Padding="18"
-                            CornerRadius="8"
+                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                             <Grid ColumnSpacing="18">
                                 <Grid.ColumnDefinitions>
@@ -786,7 +786,7 @@
 
                         <Border
                             Padding="18"
-                            CornerRadius="8"
+                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                             <Grid ColumnSpacing="18">
                                 <Grid.ColumnDefinitions>
@@ -831,7 +831,7 @@
 
                         <Border
                             Padding="18"
-                            CornerRadius="8"
+                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                             <Grid ColumnSpacing="18">
                                 <Grid.ColumnDefinitions>

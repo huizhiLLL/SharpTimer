@@ -12,16 +12,19 @@
             </ResourceDictionary.MergedDictionaries>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
+                    <CornerRadius x:Key="SharpTimerCardCornerRadius">8</CornerRadius>
                     <SolidColorBrush x:Key="PersonalBestBrush" Color="#D13438" />
                     <SolidColorBrush x:Key="ScrambleNextBrush" Color="#107C10" />
                     <SolidColorBrush x:Key="ScrambleCorrectionBrush" Color="#C50F1F" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
+                    <CornerRadius x:Key="SharpTimerCardCornerRadius">8</CornerRadius>
                     <SolidColorBrush x:Key="PersonalBestBrush" Color="#FF6B6B" />
                     <SolidColorBrush x:Key="ScrambleNextBrush" Color="#6CCB5F" />
                     <SolidColorBrush x:Key="ScrambleCorrectionBrush" Color="#FF8A80" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Default">
+                    <CornerRadius x:Key="SharpTimerCardCornerRadius">8</CornerRadius>
                     <SolidColorBrush x:Key="PersonalBestBrush" Color="#D13438" />
                     <SolidColorBrush x:Key="ScrambleNextBrush" Color="#107C10" />
                     <SolidColorBrush x:Key="ScrambleCorrectionBrush" Color="#C50F1F" />
