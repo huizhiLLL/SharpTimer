@@ -4,10 +4,10 @@
 
 ## 近期重点
 
-- 继续收集 MoYu32、GAN v2/v3/v4 与 QiYi 的不同批次设备表现，打磨断开重连、状态同步延迟和成绩保存体验。
+- 打磨智能魔方断开重连、状态同步延迟和成绩保存体验；`docs/bluetooth-link-analysis.md` 已明确静默断连、保活失败和零重连三大问题，优先补「断链可感知」。
 - 优化智能打乱推进的纠错提示，让用户更容易理解下一步操作。
 - 补充智能魔方相关平台无关测试，尤其是打乱推进、READY 判定和复原判定。
-- 继续整理 `MainWindow.xaml.cs` 中较重的界面编排；智能魔方 3D 预览已抽成独立控件，后续优先处理其它复杂 UI 状态。
+- 继续整理 `MainWindow.xaml.cs` 中较重的界面编排；三页已拆为独立 View，智能魔方连接控制器已抽离，后续可继续拆分智能打乱推进、READY 起表和预览渲染联动。
 
 ## 后续计划
 
@@ -15,8 +15,9 @@
 
 - 增加导入导出。
 - 增强成绩编辑：备注、打乱文本修改、批量操作。
-- 完善成绩分析区：趋势图、分布图、ao50、ao100、session trend。
+- 完善成绩分析区：ao50、ao100、session trend。
 - 优化设置项和启动行为。
+- 系统统一 UI padding、spacing 等设计 token（当前已完成语义画刷 token 化和圆角统一，散落字面量可按需收敛）。
 
 ### 智能魔方扩展
 
@@ -27,7 +28,7 @@
 
 ### 架构整理
 
-- 逐步减轻 `MainWindow.xaml.cs`。
+- 继续减轻 `MainWindow.xaml.cs`；当前三页已拆为独立 View（`TimerView`、`SolvesView`、`SettingsView`），智能魔方连接控制器已抽到 `SmartCubeSessionController`，智能打乱文本着色已抽到 `ScrambleTextPresenter`，蓝牙设备列表项构建已抽到 `BluetoothDeviceListItemFactory`。后续可继续拆分智能打乱推进、READY 起表和预览渲染联动。
 - 对复杂 UI 状态引入更清晰的 service 或 ViewModel 边界。
 - 保持 `SmartCubePreviewControl` 的外部接口稳定，后续渲染实现升级不应影响 BLE、Core 或主计时流程。
 - 保持 Core / Storage / Bluetooth 的测试覆盖优先级高于 UI 细节。
