@@ -110,6 +110,15 @@
                             <Setter Target="PageHost.Padding" Value="16" />
                             <Setter Target="TimerText.FontSize" Value="72" />
                             <Setter Target="ScrambleText.Margin" Value="0,16,0,0" />
+                            <Setter Target="StatsPanel.RowSpacing" Value="12" />
+                            <Setter Target="StatsColumn0.Width" Value="*" />
+                            <Setter Target="StatsColumn1.Width" Value="*" />
+                            <Setter Target="StatsColumn2.Width" Value="0" />
+                            <Setter Target="StatsColumn3.Width" Value="0" />
+                            <Setter Target="Ao12StatCard.(Grid.Row)" Value="1" />
+                            <Setter Target="Ao12StatCard.(Grid.Column)" Value="0" />
+                            <Setter Target="TimerCountStatCard.(Grid.Row)" Value="1" />
+                            <Setter Target="TimerCountStatCard.(Grid.Column)" Value="1" />
                             <Setter Target="SolvesPage.RowSpacing" Value="18" />
                             <Setter Target="SolvesListColumn.Width" Value="*" />
                             <Setter Target="SolvesDividerColumn.Width" Value="0" />
@@ -127,7 +136,16 @@
                         <VisualState.Setters>
                             <Setter Target="PageHost.Padding" Value="24" />
                             <Setter Target="TimerText.FontSize" Value="96" />
-                            <Setter Target="ScrambleText.Margin" Value="0,20,56,0" />
+                            <Setter Target="ScrambleText.Margin" Value="0,20,0,0" />
+                            <Setter Target="StatsPanel.RowSpacing" Value="0" />
+                            <Setter Target="StatsColumn0.Width" Value="*" />
+                            <Setter Target="StatsColumn1.Width" Value="*" />
+                            <Setter Target="StatsColumn2.Width" Value="*" />
+                            <Setter Target="StatsColumn3.Width" Value="*" />
+                            <Setter Target="Ao12StatCard.(Grid.Row)" Value="0" />
+                            <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
+                            <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
+                            <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
                             <Setter Target="SolvesPage.RowSpacing" Value="18" />
                             <Setter Target="SolvesListColumn.Width" Value="*" />
                             <Setter Target="SolvesDividerColumn.Width" Value="0" />
@@ -145,7 +163,16 @@
                         <VisualState.Setters>
                             <Setter Target="PageHost.Padding" Value="32" />
                             <Setter Target="TimerText.FontSize" Value="112" />
-                            <Setter Target="ScrambleText.Margin" Value="0,24,72,0" />
+                            <Setter Target="ScrambleText.Margin" Value="0,24,0,0" />
+                            <Setter Target="StatsPanel.RowSpacing" Value="0" />
+                            <Setter Target="StatsColumn0.Width" Value="*" />
+                            <Setter Target="StatsColumn1.Width" Value="*" />
+                            <Setter Target="StatsColumn2.Width" Value="*" />
+                            <Setter Target="StatsColumn3.Width" Value="*" />
+                            <Setter Target="Ao12StatCard.(Grid.Row)" Value="0" />
+                            <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
+                            <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
+                            <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
                             <Setter Target="SolvesPage.RowSpacing" Value="0" />
                             <Setter Target="SolvesListColumn.Width" Value="2*" />
                             <Setter Target="SolvesDividerColumn.Width" Value="Auto" />
@@ -168,11 +195,17 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Grid>
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="44" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="44" />
+                    </Grid.ColumnDefinitions>
                     <TextBlock
                         x:Name="ScrambleText"
+                        Grid.Column="1"
                         MaxWidth="900"
-                        Margin="0,24,72,0"
+                        Margin="0,24,0,0"
                         HorizontalAlignment="Center"
                         TextAlignment="Center"
                         TextWrapping="Wrap"
@@ -182,6 +215,7 @@
 
                     <Button
                         x:Name="BluetoothButton"
+                        Grid.Column="2"
                         Width="44"
                         Height="44"
                         Padding="0"
@@ -344,14 +378,34 @@
                     x:Name="StatsPanel"
                     Grid.Row="2"
                     ColumnSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition x:Name="StatsColumn0" Width="*" />
+                        <ColumnDefinition x:Name="StatsColumn1" Width="*" />
+                        <ColumnDefinition x:Name="StatsColumn2" Width="*" />
+                        <ColumnDefinition x:Name="StatsColumn3" Width="*" />
                     </Grid.ColumnDefinitions>
 
                     <Border
+                        Padding="16"
+                        CornerRadius="8"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <StackPanel Spacing="4">
+                            <TextBlock
+                                x:Name="BestLabelText"
+                                Text="Best"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock
+                                x:Name="BestText"
+                                FontSize="24"
+                                FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border
+                        Grid.Column="1"
                         Padding="16"
                         CornerRadius="8"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
@@ -361,13 +415,31 @@
                         </StackPanel>
                     </Border>
                     <Border
-                        Grid.Column="1"
+                        x:Name="Ao12StatCard"
+                        Grid.Column="2"
                         Padding="16"
                         CornerRadius="8"
                         Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                         <StackPanel Spacing="4">
                             <TextBlock Text="Ao12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             <TextBlock x:Name="Ao12Text" FontSize="24" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                    <Border
+                        x:Name="TimerCountStatCard"
+                        Grid.Column="3"
+                        Padding="16"
+                        CornerRadius="8"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <StackPanel Spacing="4">
+                            <TextBlock
+                                x:Name="TimerCountLabelText"
+                                Text="次数"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock
+                                x:Name="TimerCountText"
+                                FontSize="24"
+                                FontWeight="SemiBold" />
                         </StackPanel>
                     </Border>
                 </Grid>

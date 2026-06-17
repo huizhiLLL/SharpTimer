@@ -483,8 +483,10 @@ namespace SharpTimer.App
             ApplyTimerVisualState(snapshot.Timer);
             ApplyImmersiveTimerLayout(snapshot.Timer);
 
+            BestText.Text = FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces);
             Ao5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
             Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
+            TimerCountText.Text = snapshot.Statistics.Count.ToString();
             CountText.Text = string.Format(_strings.CountFormat, snapshot.Statistics.Count);
             AnalysisAo5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
             AnalysisAo12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
@@ -1623,6 +1625,8 @@ namespace SharpTimer.App
             AutomationProperties.SetName(NewSessionButton, _strings.NewSession);
             AutomationProperties.SetName(ArchiveSessionButton, _strings.Delete);
             TimeColumnText.Text = _strings.TimeColumn;
+            BestLabelText.Text = _strings.BestLabel;
+            TimerCountLabelText.Text = _strings.AnalysisCountLabel;
             AnalysisCountLabelText.Text = _strings.AnalysisCountLabel;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
             ResetCubeStateButton.Content = _strings.BluetoothResetCubeState;
