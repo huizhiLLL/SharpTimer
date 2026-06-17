@@ -281,19 +281,27 @@
         </Grid>
 
         <Grid
-            x:Name="StatsPanel"
-            x:FieldModifier="public"
             Grid.Row="2"
             ColumnSpacing="12">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="StatsColumn0" Width="*" />
-                <ColumnDefinition x:Name="StatsColumn1" Width="*" />
-                <ColumnDefinition x:Name="StatsColumn2" Width="*" />
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
+
+            <Grid
+                x:Name="StatsPanel"
+                x:FieldModifier="public"
+                Grid.Column="0"
+                ColumnSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="StatsColumn0" Width="*" />
+                    <ColumnDefinition x:Name="StatsColumn1" Width="*" />
+                    <ColumnDefinition x:Name="StatsColumn2" Width="*" />
+                </Grid.ColumnDefinitions>
 
             <Border
                 Padding="16"
@@ -331,6 +339,7 @@
                     <TextBlock x:Name="Ao12Text" x:FieldModifier="public" FontSize="24" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>
