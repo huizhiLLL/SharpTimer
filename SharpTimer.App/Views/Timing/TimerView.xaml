@@ -200,10 +200,6 @@
                                         x:Name="ConnectedCubeNameText"
                                         x:FieldModifier="public"
                                         FontWeight="SemiBold" />
-                                    <TextBlock
-                                        x:Name="ConnectedCubeBatteryText"
-                                        x:FieldModifier="public"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     <StackPanel
                                         HorizontalAlignment="Right"
                                         Orientation="Horizontal"

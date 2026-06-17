@@ -63,7 +63,6 @@ namespace SharpTimer.App
         private ListView BluetoothDevicesList => TimerPage.BluetoothDevicesList;
         private Border ConnectedCubePanel => TimerPage.ConnectedCubePanel;
         private TextBlock ConnectedCubeNameText => TimerPage.ConnectedCubeNameText;
-        private TextBlock ConnectedCubeBatteryText => TimerPage.ConnectedCubeBatteryText;
         private Button ResetCubeStateButton => TimerPage.ResetCubeStateButton;
         private Button ResetCubeOrientationButton => TimerPage.ResetCubeOrientationButton;
         private Button DisconnectCubeButton => TimerPage.DisconnectCubeButton;
@@ -999,9 +998,6 @@ namespace SharpTimer.App
         {
             switch (e)
             {
-                case SmartCubeBatteryEvent battery:
-                    ConnectedCubeBatteryText.Text = string.Format(_strings.BluetoothBatteryFormat, battery.BatteryLevel);
-                    break;
                 case SmartCubeFaceletsEvent facelets:
                     await HandleSmartCubeFaceletsEventAsync(facelets);
                     break;
@@ -1173,7 +1169,6 @@ namespace SharpTimer.App
             ConnectedCubePanel.Visibility = Visibility.Visible;
             SmartCubePreview.Visibility = Visibility.Visible;
             ConnectedCubeNameText.Text = _smartCubeSessionController.Connection.DeviceName;
-            ConnectedCubeBatteryText.Text = _strings.BluetoothBatteryUnknown;
             SyncSmartCubeScramble(_lastSnapshot);
             if (ThreeByThreeFacelets.IsValidState(_smartCubeFacelets ?? string.Empty))
             {
