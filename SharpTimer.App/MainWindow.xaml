@@ -240,10 +240,22 @@
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock
-                                        x:Name="BluetoothFlyoutStatusText"
-                                        Text="正在扫描附近魔方..."
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock
+                                            x:Name="BluetoothFlyoutStatusText"
+                                            Text="正在扫描附近魔方..."
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            TextWrapping="Wrap" />
+                                        <Button
+                                            x:Name="BluetoothRetryScanButton"
+                                            Grid.Column="1"
+                                            Visibility="Collapsed"
+                                            Click="BluetoothRetryScanButton_Click" />
+                                    </Grid>
 
                                     <ProgressBar
                                         x:Name="BluetoothScanProgress"

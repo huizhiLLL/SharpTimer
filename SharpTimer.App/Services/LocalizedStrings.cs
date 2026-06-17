@@ -67,6 +67,7 @@ public sealed record LocalizedStrings
     public required string BluetoothServicesSummaryFormat { get; init; }
     public required string BluetoothConnectingMessage { get; init; }
     public required string BluetoothConnectFailedFormat { get; init; }
+    public required string BluetoothRetryScan { get; init; }
     public required string BluetoothConnectedMessage { get; init; }
     public required string BluetoothDisconnectedMessage { get; init; }
     public required string BluetoothDisconnect { get; init; }
@@ -149,6 +150,7 @@ public sealed record LocalizedStrings
         BluetoothServicesSummaryFormat = "{0} 个服务",
         BluetoothConnectingMessage = "正在连接魔方...",
         BluetoothConnectFailedFormat = "连接失败：{0}",
+        BluetoothRetryScan = "重新扫描",
         BluetoothConnectedMessage = "已连接智能魔方",
         BluetoothDisconnectedMessage = "智能魔方已断开",
         BluetoothDisconnect = "断开连接",
@@ -227,6 +229,7 @@ public sealed record LocalizedStrings
         BluetoothServicesSummaryFormat = "{0} services",
         BluetoothConnectingMessage = "Connecting cube...",
         BluetoothConnectFailedFormat = "Connection failed: {0}",
+        BluetoothRetryScan = "Scan again",
         BluetoothConnectedMessage = "Smart cube connected",
         BluetoothDisconnectedMessage = "Bluetooth cube disconnected",
         BluetoothDisconnect = "Disconnect",

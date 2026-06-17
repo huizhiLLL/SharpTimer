@@ -405,6 +405,7 @@ namespace SharpTimer.App
             BluetoothFlyoutStatusText.Text = _strings.BluetoothConnectingMessage;
             BluetoothScanProgress.IsIndeterminate = true;
             BluetoothDevicesList.IsEnabled = false;
+            BluetoothRetryScanButton.Visibility = Visibility.Collapsed;
             try
             {
                 SmartCubePreview.ResetView();
@@ -420,7 +421,15 @@ namespace SharpTimer.App
                 BluetoothFlyoutStatusText.Text = string.Format(_strings.BluetoothConnectFailedFormat, ex.Message);
                 BluetoothScanProgress.IsIndeterminate = false;
                 BluetoothDevicesList.IsEnabled = true;
+                BluetoothRetryScanButton.Visibility = Visibility.Visible;
             }
+        }
+
+        private void BluetoothRetryScanButton_Click(object sender, RoutedEventArgs e)
+        {
+            _bluetoothDeviceItems.Clear();
+            StartSmartCubeScan();
+            RootGrid.Focus(FocusState.Programmatic);
         }
 
         private async void DisconnectCubeButton_Click(object sender, RoutedEventArgs e)
@@ -954,6 +963,7 @@ namespace SharpTimer.App
                 BluetoothScanProgress.IsIndeterminate = true;
                 BluetoothDevicesList.IsEnabled = true;
                 BluetoothDevicesList.Visibility = Visibility.Visible;
+                BluetoothRetryScanButton.Visibility = Visibility.Collapsed;
                 ConnectedCubePanel.Visibility = Visibility.Collapsed;
             }
             catch (Exception ex)
@@ -1200,12 +1210,14 @@ namespace SharpTimer.App
                 ConnectedCubePanel.Visibility = Visibility.Collapsed;
                 BluetoothDevicesList.IsEnabled = true;
                 BluetoothDevicesList.Visibility = Visibility.Visible;
+                BluetoothRetryScanButton.Visibility = Visibility.Collapsed;
                 BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
                 return;
             }
 
             BluetoothDevicesList.IsEnabled = true;
             BluetoothDevicesList.Visibility = Visibility.Collapsed;
+            BluetoothRetryScanButton.Visibility = Visibility.Collapsed;
             BluetoothScanProgress.IsIndeterminate = false;
             ConnectedCubePanel.Visibility = Visibility.Visible;
             SmartCubePreview.Visibility = Visibility.Visible;
@@ -1506,6 +1518,7 @@ namespace SharpTimer.App
             EmptySolvesTitleText.Text = _strings.EmptySolvesTitle;
             EmptySolvesDescriptionText.Text = _strings.EmptySolvesDescription;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
+            BluetoothRetryScanButton.Content = _strings.BluetoothRetryScan;
             ResetCubeStateButton.Content = _strings.BluetoothResetCubeState;
             ResetCubeOrientationButton.Content = _strings.BluetoothResetCubeOrientation;
             DisconnectCubeButton.Content = _strings.BluetoothDisconnect;
