@@ -276,6 +276,11 @@
                                                             FontFamily="Consolas"
                                                             FontSize="12"
                                                             TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock
+                                                            Text="{Binding Services}"
+                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                            FontSize="12"
+                                                            TextTrimming="CharacterEllipsis" />
                                                     </StackPanel>
                                                     <StackPanel
                                                         Grid.Column="1"
@@ -285,6 +290,11 @@
                                                             Text="{Binding Protocol}"
                                                             HorizontalAlignment="Right"
                                                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock
+                                                            Text="{Binding LastSeen}"
+                                                            HorizontalAlignment="Right"
+                                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                            FontSize="12" />
                                                     </StackPanel>
                                                 </Grid>
                                             </DataTemplate>
