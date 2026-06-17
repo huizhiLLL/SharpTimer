@@ -43,7 +43,6 @@ namespace SharpTimer.App
         private AppSettings _settings = new();
         private LocalizedStrings _strings = LocalizedStrings.For(AppLanguagePreference.Chinese);
         private bool _isRendering;
-        private bool _isApplyingSettings;
         private bool _isSpaceDown;
         private bool _isReadyToStart;
         private bool _smartCubeSolveHasMove;
@@ -333,11 +332,6 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private void InspectionSwitch_Toggled(object sender, RoutedEventArgs e)
-        {
-            ApplySettingsFromControls();
-        }
-
         private async void SolvesList_ItemClick(object sender, ItemClickEventArgs e)
         {
             if (e.ClickedItem is SolveListItem item)
@@ -345,26 +339,6 @@ namespace SharpTimer.App
                 SolvesList.SelectedItem = item;
                 await ShowSolveDetailsAsync(item);
             }
-        }
-
-        private void PrecisionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            ApplySettingsFromControls();
-        }
-
-        private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            ApplySettingsFromControls();
-        }
-
-        private void BackdropMaterialComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            ApplySettingsFromControls();
-        }
-
-        private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            ApplySettingsFromControls();
         }
 
         private void BluetoothButton_Click(object sender, RoutedEventArgs e)
@@ -1477,29 +1451,7 @@ namespace SharpTimer.App
 
         private void RenderSettings()
         {
-            _isApplyingSettings = true;
-            try
-            {
-                InspectionSwitch.IsOn = _settings.UseInspection;
-                SetSelectedIndex(PrecisionComboBox, _settings.DecimalPlaces == 3 ? 1 : 0);
-                SetSelectedIndex(ThemeComboBox, _settings.Theme switch
-                {
-                    AppThemePreference.Light => 1,
-                    AppThemePreference.Dark => 2,
-                    _ => 0
-                });
-                SetSelectedIndex(BackdropMaterialComboBox, _settings.BackdropMaterial switch
-                {
-                    AppBackdropMaterialPreference.MicaAlt => 1,
-                    AppBackdropMaterialPreference.Acrylic => 2,
-                    _ => 0
-                });
-                SetSelectedIndex(LanguageComboBox, _settings.Language == AppLanguagePreference.English ? 1 : 0);
-            }
-            finally
-            {
-                _isApplyingSettings = false;
-            }
+            SettingsPage.Render(_settings);
         }
 
         private void ApplyLanguage()
@@ -1535,29 +1487,7 @@ namespace SharpTimer.App
             ResetCubeStateButton.Content = _strings.BluetoothResetCubeState;
             ResetCubeOrientationButton.Content = _strings.BluetoothResetCubeOrientation;
             DisconnectCubeButton.Content = _strings.BluetoothDisconnect;
-            SettingsTitleText.Text = _strings.SettingsTitle;
-            SettingsDescriptionText.Text = _strings.SettingsDescription;
-            SettingsTimingSectionTitleText.Text = _strings.SettingsTimingSectionTitle;
-            SettingsTimingSectionDescriptionText.Text = _strings.SettingsTimingSectionDescription;
-            SettingsAppearanceSectionTitleText.Text = _strings.SettingsAppearanceSectionTitle;
-            SettingsAppearanceSectionDescriptionText.Text = _strings.SettingsAppearanceSectionDescription;
-            SettingsLanguageSectionTitleText.Text = _strings.SettingsLanguageSectionTitle;
-            SettingsLanguageSectionDescriptionText.Text = _strings.SettingsLanguageSectionDescription;
-            InspectionSwitch.Header = _strings.InspectionHeader;
-            PrecisionComboBox.Header = _strings.PrecisionHeader;
-            CentisecondsItem.Content = _strings.Centiseconds;
-            MillisecondsItem.Content = _strings.Milliseconds;
-            ThemeComboBox.Header = _strings.ThemeHeader;
-            SystemThemeItem.Content = _strings.SystemTheme;
-            LightThemeItem.Content = _strings.LightTheme;
-            DarkThemeItem.Content = _strings.DarkTheme;
-            BackdropMaterialComboBox.Header = _strings.BackdropMaterialHeader;
-            MicaMaterialItem.Content = _strings.MicaMaterial;
-            MicaAltMaterialItem.Content = _strings.MicaAltMaterial;
-            AcrylicMaterialItem.Content = _strings.AcrylicMaterial;
-            LanguageComboBox.Header = _strings.LanguageHeader;
-            ChineseLanguageItem.Content = _strings.ChineseLanguage;
-            EnglishLanguageItem.Content = _strings.EnglishLanguage;
+            SettingsPage.ApplyLanguage(_strings);
 
             if (_lastSnapshot is not null)
             {
@@ -1565,36 +1495,12 @@ namespace SharpTimer.App
             }
         }
 
-        private void ApplySettingsFromControls()
+        private void SettingsPage_SettingsChanged(object sender, AppSettings nextSettings)
         {
-            if (_isApplyingSettings)
-            {
-                return;
-            }
-
             var previousTheme = _settings.Theme;
             var previousBackdropMaterial = _settings.BackdropMaterial;
             var previousLanguage = _settings.Language;
-            _settings = new AppSettings
-            {
-                UseInspection = InspectionSwitch.IsOn,
-                DecimalPlaces = PrecisionComboBox.SelectedIndex == 1 ? 3 : 2,
-                Theme = ThemeComboBox.SelectedIndex switch
-                {
-                    1 => AppThemePreference.Light,
-                    2 => AppThemePreference.Dark,
-                    _ => AppThemePreference.System
-                },
-                BackdropMaterial = BackdropMaterialComboBox.SelectedIndex switch
-                {
-                    1 => AppBackdropMaterialPreference.MicaAlt,
-                    2 => AppBackdropMaterialPreference.Acrylic,
-                    _ => AppBackdropMaterialPreference.Mica
-                },
-                Language = LanguageComboBox.SelectedIndex == 1
-                    ? AppLanguagePreference.English
-                    : AppLanguagePreference.Chinese
-            };
+            _settings = nextSettings;
 
             _settingsService.Save(_settings);
             if (_settings.Language != previousLanguage)
@@ -1657,16 +1563,6 @@ namespace SharpTimer.App
                 AppThemePreference.Dark => ElementTheme.Dark,
                 _ => ElementTheme.Default
             };
-        }
-
-        private static void SetSelectedIndex(ComboBox comboBox, int selectedIndex)
-        {
-            if (comboBox.SelectedIndex == selectedIndex)
-            {
-                comboBox.SelectedIndex = -1;
-            }
-
-            comboBox.SelectedIndex = selectedIndex;
         }
 
         private void ApplyBackdropMaterial(AppBackdropMaterialPreference material)

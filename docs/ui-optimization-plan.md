@@ -29,11 +29,12 @@
 - 智能魔方预览平移：沉浸态下的预览偏移已改由 VisualState 管理。
 - 成绩分析区指标和图表：占位文本已替换为 Best / Worst / Mean / Completed 指标卡，并补齐趋势线 / 分布柱状图。
 - session 操作区：重命名 / 新建 / 删除已收进官方 `MenuFlyout`。
+- 设置页拆分：`SettingsPage` 已抽成独立 `SettingsView`，主窗口仅保留设置持久化、主题和语言切换编排。
 
 部分完成 / 待继续：
 
 - padding、spacing 等设计 token 仍未系统统一。
-- 三页尚未拆为 `TimerView`、`SolvesView`、`SettingsView`。
+- 计时页、成绩页尚未拆为 `TimerView`、`SolvesView`。
 - 蓝牙 / 智能魔方编排尚未抽到 `SmartCubeSessionController`。
 
 ### 1. 响应式布局（最高优先，违反 AGENTS.md 明文约束）
@@ -153,7 +154,7 @@
 
 ### 第三阶段（架构整理，中型重构，分多次）
 
-7. `[待推进]` 三页拆为独立 `UserControl`；保留窗口级空格监听。
+7. `[部分完成]` 三页拆为独立 `UserControl`；当前已完成 `SettingsView`，仍需拆 `TimerView`、`SolvesView`；保留窗口级空格监听。
 8. `[部分完成]` 蓝牙 / 智能魔方编排抽 `SmartCubeSessionController`；打乱着色抽 presenter。
 
 ### 第四阶段（功能补齐）

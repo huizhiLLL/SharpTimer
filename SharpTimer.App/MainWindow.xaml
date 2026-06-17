@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:SharpTimer.App.Controls"
     xmlns:rendering="using:SharpTimer.App.Rendering"
+    xmlns:views="using:SharpTimer.App.Views"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
@@ -779,153 +780,10 @@
                 </Grid>
             </Grid>
 
-            <Grid
+            <views:SettingsView
                 x:Name="SettingsPage"
                 Visibility="Collapsed"
-                RowSpacing="18">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <StackPanel Spacing="4">
-                    <TextBlock
-                        x:Name="SettingsTitleText"
-                        Text="设置"
-                        FontSize="28"
-                        FontWeight="SemiBold" />
-                    <TextBlock
-                        x:Name="SettingsDescriptionText"
-                        MaxWidth="720"
-                        TextWrapping="Wrap"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-
-                <ScrollViewer
-                    Grid.Row="1"
-                    Grid.RowSpan="2"
-                    VerticalScrollBarVisibility="Auto">
-                    <StackPanel
-                        MaxWidth="720"
-                        HorizontalAlignment="Left"
-                        Spacing="14">
-                        <Border
-                            Padding="18"
-                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                            <Grid ColumnSpacing="18">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Spacing="4">
-                                    <TextBlock
-                                        x:Name="SettingsTimingSectionTitleText"
-                                        FontWeight="SemiBold" />
-                                    <TextBlock
-                                        x:Name="SettingsTimingSectionDescriptionText"
-                                        TextWrapping="Wrap"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
-                                <StackPanel
-                                    Grid.Column="1"
-                                    MinWidth="260"
-                                    Spacing="14">
-                                    <ToggleSwitch
-                                        x:Name="InspectionSwitch"
-                                        Header="15 秒观察"
-                                        Toggled="InspectionSwitch_Toggled" />
-
-                                    <ComboBox
-                                        x:Name="PrecisionComboBox"
-                                        Header="显示精度"
-                                        MinWidth="240"
-                                        SelectionChanged="PrecisionComboBox_SelectionChanged">
-                                        <ComboBoxItem x:Name="CentisecondsItem" Content="百分秒" />
-                                        <ComboBoxItem x:Name="MillisecondsItem" Content="毫秒" />
-                                    </ComboBox>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <Border
-                            Padding="18"
-                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                            <Grid ColumnSpacing="18">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Spacing="4">
-                                    <TextBlock
-                                        x:Name="SettingsAppearanceSectionTitleText"
-                                        FontWeight="SemiBold" />
-                                    <TextBlock
-                                        x:Name="SettingsAppearanceSectionDescriptionText"
-                                        TextWrapping="Wrap"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
-                                <StackPanel
-                                    Grid.Column="1"
-                                    MinWidth="260"
-                                    Spacing="14">
-                                    <ComboBox
-                                        x:Name="ThemeComboBox"
-                                        Header="主题"
-                                        MinWidth="240"
-                                        SelectionChanged="ThemeComboBox_SelectionChanged">
-                                        <ComboBoxItem x:Name="SystemThemeItem" Content="跟随系统" />
-                                        <ComboBoxItem x:Name="LightThemeItem" Content="亮色" />
-                                        <ComboBoxItem x:Name="DarkThemeItem" Content="暗色" />
-                                    </ComboBox>
-
-                                    <ComboBox
-                                        x:Name="BackdropMaterialComboBox"
-                                        Header="背景材质"
-                                        MinWidth="240"
-                                        SelectionChanged="BackdropMaterialComboBox_SelectionChanged">
-                                        <ComboBoxItem x:Name="MicaMaterialItem" Content="Mica" />
-                                        <ComboBoxItem x:Name="MicaAltMaterialItem" Content="Mica Alt" />
-                                        <ComboBoxItem x:Name="AcrylicMaterialItem" Content="Acrylic" />
-                                    </ComboBox>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <Border
-                            Padding="18"
-                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                            <Grid ColumnSpacing="18">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Spacing="4">
-                                    <TextBlock
-                                        x:Name="SettingsLanguageSectionTitleText"
-                                        FontWeight="SemiBold" />
-                                    <TextBlock
-                                        x:Name="SettingsLanguageSectionDescriptionText"
-                                        TextWrapping="Wrap"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
-                                <ComboBox
-                                    x:Name="LanguageComboBox"
-                                    Grid.Column="1"
-                                    Header="语言"
-                                    MinWidth="240"
-                                    SelectionChanged="LanguageComboBox_SelectionChanged">
-                                    <ComboBoxItem x:Name="ChineseLanguageItem" Content="中文" />
-                                    <ComboBoxItem x:Name="EnglishLanguageItem" Content="English" />
-                                </ComboBox>
-                            </Grid>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-            </Grid>
+                SettingsChanged="SettingsPage_SettingsChanged" />
         </Grid>
         </NavigationView>
 
