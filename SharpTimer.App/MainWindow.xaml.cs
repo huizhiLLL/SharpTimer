@@ -31,6 +31,7 @@ namespace SharpTimer.App
         private readonly ObservableCollection<SessionListItem> _sessionItems = new();
         private readonly ObservableCollection<BluetoothDeviceListItem> _bluetoothDeviceItems = new();
         private readonly SmartCubeProtocolRegistry _bluetoothProtocolRegistry = SmartCubeKnownProtocols.CreateDefaultRegistry();
+        private readonly BluetoothDeviceListItemFactory _bluetoothDeviceListItemFactory;
         private readonly SmartCubeScrambleTracker _smartCubeScrambleTracker = new();
         private readonly DispatcherTimer _uiTimer = new();
         private readonly DispatcherTimer _smartCubeKeepAliveTimer = new();
@@ -59,6 +60,7 @@ namespace SharpTimer.App
 
         public MainWindow()
         {
+            _bluetoothDeviceListItemFactory = new BluetoothDeviceListItemFactory(_bluetoothProtocolRegistry);
             InitializeComponent();
             ConfigureTitleBar();
             ApplyInitialWindowPlacement();
@@ -989,41 +991,13 @@ namespace SharpTimer.App
 
         private BluetoothDeviceListItem CreateBluetoothDeviceListItem(SmartCubeDeviceInfo device)
         {
-            var protocol = _bluetoothProtocolRegistry.ResolveByGatt(device);
-            var services = device.ServiceUuids.Count == 0
-                ? _strings.BluetoothNoServices
-                : string.Join(", ", device.ServiceUuids.Take(3).Select(FormatUuid));
-            if (device.ServiceUuids.Count > 3)
-            {
-                services = string.Format(_strings.BluetoothServicesSummaryFormat, device.ServiceUuids.Count);
-            }
-
-            return new BluetoothDeviceListItem
-            {
-                Device = device,
-                Address = FormatBluetoothAddress(device.BluetoothAddress),
-                Name = string.IsNullOrWhiteSpace(device.Name) ? _strings.BluetoothUnknownDevice : device.Name,
-                Protocol = protocol?.Info.Name ?? _strings.BluetoothUnknownProtocol,
-                Services = services,
-                LastSeen = device.SeenAt.ToLocalTime().ToString("HH:mm:ss")
-            };
+            return _bluetoothDeviceListItemFactory.Create(device, _strings);
         }
 
         private bool IsSmartCubeNameMatch(SmartCubeDeviceInfo device)
         {
             return _bluetoothProtocolRegistry.Protocols
                 .Any(protocol => protocol.NameFilters.Any(filter => filter.Matches(device.Name)));
-        }
-
-        private static string FormatBluetoothAddress(ulong address)
-        {
-            var text = address.ToString("X12");
-            return string.Join(":", Enumerable.Range(0, 6).Select(index => text.Substring(index * 2, 2)));
-        }
-
-        private static string FormatUuid(Guid uuid)
-        {
-            return uuid.ToString("D");
         }
 
         private void SmartCubeConnection_EventReceived(object? sender, SmartCubeEvent e)
