@@ -490,9 +490,10 @@ namespace SharpTimer.App
             Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
             TimerCountText.Text = snapshot.Statistics.Count.ToString();
             CountText.Text = string.Format(_strings.CountFormat, snapshot.Statistics.Count);
-            AnalysisAo5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
-            AnalysisAo12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
-            AnalysisCountText.Text = snapshot.Statistics.Count.ToString();
+            AnalysisBestText.Text = FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces);
+            AnalysisWorstText.Text = FormatNullableTime(GetWorstTime(snapshot.Solves), _settings.DecimalPlaces);
+            AnalysisMeanText.Text = FormatNullableTime(snapshot.Statistics.Mean, _settings.DecimalPlaces);
+            AnalysisCompletedText.Text = snapshot.Statistics.CompletedCount.ToString();
 
             if (refreshList)
             {
@@ -604,6 +605,15 @@ namespace SharpTimer.App
             }
 
             return false;
+        }
+
+        private static TimeSpan? GetWorstTime(IEnumerable<Solve> solves)
+        {
+            var completed = solves
+                .Select(solve => solve.EffectiveDuration)
+                .OfType<TimeSpan>()
+                .ToArray();
+            return completed.Length == 0 ? null : completed.Max();
         }
 
         private static Brush GetThemeBrush(string resourceKey)
@@ -1513,7 +1523,10 @@ namespace SharpTimer.App
             TimeColumnText.Text = _strings.TimeColumn;
             BestLabelText.Text = _strings.BestLabel;
             TimerCountLabelText.Text = _strings.AnalysisCountLabel;
-            AnalysisCountLabelText.Text = _strings.AnalysisCountLabel;
+            AnalysisBestLabelText.Text = _strings.BestLabel;
+            AnalysisWorstLabelText.Text = _strings.WorstLabel;
+            AnalysisMeanLabelText.Text = _strings.MeanLabel;
+            AnalysisCompletedLabelText.Text = _strings.CompletedCountLabel;
             EmptySolvesTitleText.Text = _strings.EmptySolvesTitle;
             EmptySolvesDescriptionText.Text = _strings.EmptySolvesDescription;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;

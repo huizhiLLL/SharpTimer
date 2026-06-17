@@ -690,40 +690,78 @@
                     Grid.Column="2"
                     Padding="0,0,0,0"
                     RowSpacing="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Grid ColumnSpacing="12">
+                    <Grid
+                        ColumnSpacing="12"
+                        RowSpacing="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Ao5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="AnalysisAo5Text" FontSize="24" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="4">
-                            <TextBlock Text="Ao12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="AnalysisAo12Text" FontSize="24" FontWeight="SemiBold" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Spacing="4">
-                            <TextBlock
-                                x:Name="AnalysisCountLabelText"
-                                Text="次数"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="AnalysisCountText" FontSize="24" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Grid>
 
-                    <Grid Grid.Row="1" MinHeight="220">
-                        <TextBlock
-                            Text="趋势图和分布图会放在这里"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <Border
+                            Padding="16"
+                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    x:Name="AnalysisBestLabelText"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock
+                                    x:Name="AnalysisBestText"
+                                    FontSize="24"
+                                    FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+                        <Border
+                            Grid.Column="1"
+                            Padding="16"
+                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    x:Name="AnalysisWorstLabelText"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock
+                                    x:Name="AnalysisWorstText"
+                                    FontSize="24"
+                                    FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+                        <Border
+                            Grid.Row="1"
+                            Padding="16"
+                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    x:Name="AnalysisMeanLabelText"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock
+                                    x:Name="AnalysisMeanText"
+                                    FontSize="24"
+                                    FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
+                        <Border
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            Padding="16"
+                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <StackPanel Spacing="4">
+                                <TextBlock
+                                    x:Name="AnalysisCompletedLabelText"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <TextBlock
+                                    x:Name="AnalysisCompletedText"
+                                    FontSize="24"
+                                    FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Border>
                     </Grid>
                 </Grid>
             </Grid>

@@ -12,6 +12,9 @@ public sealed record LocalizedStrings
     public required string NoPenalty { get; init; }
     public required string Delete { get; init; }
     public required string BestLabel { get; init; }
+    public required string WorstLabel { get; init; }
+    public required string MeanLabel { get; init; }
+    public required string CompletedCountLabel { get; init; }
     public required string AnalysisCountLabel { get; init; }
     public required string SolveDetailsTitleFormat { get; init; }
     public required string SolveCreatedAtLabel { get; init; }
@@ -95,6 +98,9 @@ public sealed record LocalizedStrings
         NoPenalty = "无罚时",
         Delete = "删除",
         BestLabel = "最佳",
+        WorstLabel = "最慢",
+        MeanLabel = "平均",
+        CompletedCountLabel = "完成",
         AnalysisCountLabel = "次数",
         SolveDetailsTitleFormat = "Solves {0}",
         SolveCreatedAtLabel = "日期",
@@ -174,6 +180,9 @@ public sealed record LocalizedStrings
         NoPenalty = "No penalty",
         Delete = "Delete",
         BestLabel = "Best",
+        WorstLabel = "Worst",
+        MeanLabel = "Mean",
+        CompletedCountLabel = "Completed",
         AnalysisCountLabel = "Solves",
         SolveDetailsTitleFormat = "Solves {0}",
         SolveCreatedAtLabel = "Date",
