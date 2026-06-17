@@ -25,11 +25,12 @@
 - 蓝牙设备展示格式：设备列表项构建已抽到 `BluetoothDeviceListItemFactory`。
 - 蓝牙 Flyout 信息补齐：设备列表已展示服务摘要和最近发现时间，连接中会禁用列表，连接失败后提供重新扫描入口。
 - 成绩列表空状态：无成绩时显示本地化引导。
+- 圆角 token 化：卡片圆角已统一引用 `SharpTimerCardCornerRadius`。
+- 智能魔方预览平移：沉浸态下的预览偏移已改由 VisualState 管理。
 
 部分完成 / 待继续：
 
-- 圆角、padding、spacing 等设计 token 仍未系统统一。
-- `SmartCubePreviewOffset` 沉浸态平移仍在 code-behind 中直接设置，未收敛到 VisualState。
+- padding、spacing 等设计 token 仍未系统统一。
 - 成绩分析区仍未落地真实趋势 / 分布 / 指标内容。
 - session 操作区仍保持图标按钮排列，未收进 `MenuFlyout`。
 - 三页尚未拆为 `TimerView`、`SolvesView`、`SettingsView`。
