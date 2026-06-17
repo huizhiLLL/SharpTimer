@@ -1578,6 +1578,13 @@ namespace SharpTimer.App
             ResetCubeOrientationButton.Content = _strings.BluetoothResetCubeOrientation;
             DisconnectCubeButton.Content = _strings.BluetoothDisconnect;
             SettingsTitleText.Text = _strings.SettingsTitle;
+            SettingsDescriptionText.Text = _strings.SettingsDescription;
+            SettingsTimingSectionTitleText.Text = _strings.SettingsTimingSectionTitle;
+            SettingsTimingSectionDescriptionText.Text = _strings.SettingsTimingSectionDescription;
+            SettingsAppearanceSectionTitleText.Text = _strings.SettingsAppearanceSectionTitle;
+            SettingsAppearanceSectionDescriptionText.Text = _strings.SettingsAppearanceSectionDescription;
+            SettingsLanguageSectionTitleText.Text = _strings.SettingsLanguageSectionTitle;
+            SettingsLanguageSectionDescriptionText.Text = _strings.SettingsLanguageSectionDescription;
             InspectionSwitch.Header = _strings.InspectionHeader;
             PrecisionComboBox.Header = _strings.PrecisionHeader;
             CentisecondsItem.Content = _strings.Centiseconds;

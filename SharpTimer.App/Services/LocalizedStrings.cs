@@ -19,6 +19,12 @@ public sealed record LocalizedStrings
     public required string SolveReplayUnavailable { get; init; }
     public required string SettingsTitle { get; init; }
     public required string SettingsDescription { get; init; }
+    public required string SettingsTimingSectionTitle { get; init; }
+    public required string SettingsTimingSectionDescription { get; init; }
+    public required string SettingsAppearanceSectionTitle { get; init; }
+    public required string SettingsAppearanceSectionDescription { get; init; }
+    public required string SettingsLanguageSectionTitle { get; init; }
+    public required string SettingsLanguageSectionDescription { get; init; }
     public required string InspectionHeader { get; init; }
     public required string PrecisionHeader { get; init; }
     public required string Centiseconds { get; init; }
@@ -86,6 +92,12 @@ public sealed record LocalizedStrings
         SolveReplayUnavailable = "无",
         SettingsTitle = "设置",
         SettingsDescription = "本地偏好会立即生效，并保存在当前 Windows 用户数据里",
+        SettingsTimingSectionTitle = "计时",
+        SettingsTimingSectionDescription = "控制观察和成绩显示方式。",
+        SettingsAppearanceSectionTitle = "外观",
+        SettingsAppearanceSectionDescription = "选择窗口主题和背景材质。",
+        SettingsLanguageSectionTitle = "语言",
+        SettingsLanguageSectionDescription = "切换界面语言。",
         InspectionHeader = "15 秒观察",
         PrecisionHeader = "显示精度",
         Centiseconds = "百分秒",
@@ -149,6 +161,12 @@ public sealed record LocalizedStrings
         SolveReplayUnavailable = "Nothing",
         SettingsTitle = "Settings",
         SettingsDescription = "Local preferences apply immediately and are saved to your Windows user data.",
+        SettingsTimingSectionTitle = "Timing",
+        SettingsTimingSectionDescription = "Control inspection and solve time display.",
+        SettingsAppearanceSectionTitle = "Appearance",
+        SettingsAppearanceSectionDescription = "Choose the window theme and backdrop material.",
+        SettingsLanguageSectionTitle = "Language",
+        SettingsLanguageSectionDescription = "Switch the interface language.",
         InspectionHeader = "15-second inspection",
         PrecisionHeader = "Precision",
         Centiseconds = "Centiseconds",
