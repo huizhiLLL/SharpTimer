@@ -8,6 +8,7 @@ public sealed record LocalizedStrings
     public required string NewSession { get; init; }
     public required string RenameSession { get; init; }
     public required string ArchiveSession { get; init; }
+    public required string SessionActions { get; init; }
     public required string TimeColumn { get; init; }
     public required string NoPenalty { get; init; }
     public required string Delete { get; init; }
@@ -94,6 +95,7 @@ public sealed record LocalizedStrings
         NewSession = "新建",
         RenameSession = "重命名",
         ArchiveSession = "归档",
+        SessionActions = "Session 操作",
         TimeColumn = "时间",
         NoPenalty = "无罚时",
         Delete = "删除",
@@ -176,6 +178,7 @@ public sealed record LocalizedStrings
         NewSession = "New",
         RenameSession = "Rename",
         ArchiveSession = "Archive",
+        SessionActions = "Session actions",
         TimeColumn = "Time",
         NoPenalty = "No penalty",
         Delete = "Delete",

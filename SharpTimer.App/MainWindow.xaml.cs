@@ -1510,16 +1510,15 @@ namespace SharpTimer.App
                 settingsItem.Content = _strings.SettingsNav;
             }
 
-            ToolTipService.SetToolTip(RenameSessionButton, _strings.RenameSession);
-            ToolTipService.SetToolTip(NewSessionButton, _strings.NewSession);
-            ToolTipService.SetToolTip(ArchiveSessionButton, _strings.Delete);
+            ToolTipService.SetToolTip(SessionActionsButton, _strings.SessionActions);
             AutomationProperties.SetName(TitleBarPaneToggleButton, _strings.TitleBarToggleNavigation);
             AutomationProperties.SetName(BluetoothButton, _strings.BluetoothButtonName);
             AutomationProperties.SetName(BluetoothDevicesList, _strings.BluetoothDevicesListName);
             AutomationProperties.SetName(SmartCubePreview, _strings.SmartCubePreviewName);
-            AutomationProperties.SetName(RenameSessionButton, _strings.RenameSession);
-            AutomationProperties.SetName(NewSessionButton, _strings.NewSession);
-            AutomationProperties.SetName(ArchiveSessionButton, _strings.Delete);
+            AutomationProperties.SetName(SessionActionsButton, _strings.SessionActions);
+            RenameSessionMenuItem.Text = _strings.RenameSession;
+            NewSessionMenuItem.Text = _strings.NewSession;
+            ArchiveSessionMenuItem.Text = _strings.Delete;
             TimeColumnText.Text = _strings.TimeColumn;
             BestLabelText.Text = _strings.BestLabel;
             TimerCountLabelText.Text = _strings.AnalysisCountLabel;

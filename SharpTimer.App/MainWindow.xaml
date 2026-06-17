@@ -516,37 +516,40 @@
                                 DisplayMemberPath="DisplayName"
                                 SelectionChanged="SessionComboBox_SelectionChanged" />
                             <Button
-                                x:Name="RenameSessionButton"
+                                x:Name="SessionActionsButton"
                                 Width="36"
                                 Height="32"
                                 Padding="0"
                                 VerticalAlignment="Bottom"
-                                AutomationProperties.Name="重命名"
-                                ToolTipService.ToolTip="重命名"
-                                Click="RenameSessionButton_Click">
-                                <FontIcon Glyph="&#xE70F;" FontSize="18" />
-                            </Button>
-                            <Button
-                                x:Name="NewSessionButton"
-                                Width="36"
-                                Height="32"
-                                Padding="0"
-                                VerticalAlignment="Bottom"
-                                AutomationProperties.Name="新建"
-                                ToolTipService.ToolTip="新建"
-                                Click="NewSessionButton_Click">
-                                <FontIcon Glyph="&#xE710;" FontSize="18" />
-                            </Button>
-                            <Button
-                                x:Name="ArchiveSessionButton"
-                                Width="36"
-                                Height="32"
-                                Padding="0"
-                                VerticalAlignment="Bottom"
-                                AutomationProperties.Name="删除"
-                                ToolTipService.ToolTip="删除"
-                                Click="ArchiveSessionButton_Click">
-                                <FontIcon Glyph="&#xE74D;" FontSize="18" />
+                                AutomationProperties.Name="Session actions"
+                                ToolTipService.ToolTip="Session actions">
+                                <FontIcon Glyph="&#xE712;" FontSize="18" />
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem
+                                            x:Name="RenameSessionMenuItem"
+                                            Click="RenameSessionButton_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE70F;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem
+                                            x:Name="NewSessionMenuItem"
+                                            Click="NewSessionButton_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE710;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem
+                                            x:Name="ArchiveSessionMenuItem"
+                                            Click="ArchiveSessionButton_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE74D;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
                             </Button>
                         </StackPanel>
                         <TextBlock
