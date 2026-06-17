@@ -85,11 +85,8 @@ public sealed partial class SolveAnalysisChart : UserControl
             max = min + 1;
         }
 
-        // 添加 Y 轴标注
-        DrawYAxisLabels(TrendCanvas, bounds, min, max, _decimalPlaces);
-
-        // 添加 X 轴标注
-        DrawXAxisLabels(TrendCanvas, bounds, values.Length);
+        // 添加 Y 轴时间刻度（使用合理的整数秒）
+        DrawTimeAxisLabels(TrendCanvas, bounds, min, max);
 
         var path = new Path
         {
@@ -134,11 +131,8 @@ public sealed partial class SolveAnalysisChart : UserControl
         var gap = 8d;
         var barWidth = Math.Max(4, (bounds.Width - gap * (buckets.Length - 1)) / buckets.Length);
 
-        // 添加 Y 轴标注（数量）
-        DrawCountLabels(DistributionCanvas, bounds, maxCount);
-
-        // 添加 X 轴标注（时间区间）
-        DrawBucketLabels(DistributionCanvas, bounds, buckets, barWidth, gap, _decimalPlaces);
+        // 添加 X 轴时间区间标注
+        DrawBucketRangeLabels(DistributionCanvas, bounds, buckets, barWidth, gap);
 
         for (var index = 0; index < buckets.Length; index++)
         {
@@ -233,17 +227,38 @@ public sealed partial class SolveAnalysisChart : UserControl
         return new Rect(horizontalPadding, verticalPadding, width, height);
     }
 
-    private static void DrawYAxisLabels(Canvas canvas, Rect bounds, double min, double max, int decimalPlaces)
+    private static void DrawTimeAxisLabels(Canvas canvas, Rect bounds, double minMs, double maxMs)
     {
-        var lines = 3;
+        var minSec = minMs / 1000.0;
+        var maxSec = maxMs / 1000.0;
+        var range = maxSec - minSec;
+
+        // 计算合适的刻度间隔（优先整数、整十、整百等）
+        double step;
+        if (range <= 5) step = 1;
+        else if (range <= 10) step = 2;
+        else if (range <= 20) step = 5;
+        else if (range <= 50) step = 10;
+        else if (range <= 100) step = 20;
+        else if (range <= 200) step = 50;
+        else step = 100;
+
+        // 计算起始刻度（向下取整到 step 的倍数）
+        var startSec = Math.Floor(minSec / step) * step;
+
         var brush = GetBrush("TextFillColorTertiaryBrush");
-        for (var index = 0; index <= lines; index++)
+        for (var sec = startSec; sec <= maxSec + step * 0.01; sec += step)
         {
-            var value = max - (max - min) * index / lines;
-            var y = bounds.Top + bounds.Height * index / lines;
+            if (sec < minSec - step * 0.01) continue;
+
+            var ratio = (sec - minSec) / (maxSec - minSec);
+            var y = bounds.Bottom - bounds.Height * ratio;
+
+            if (y < bounds.Top - 1 || y > bounds.Bottom + 1) continue;
+
             var label = new TextBlock
             {
-                Text = FormatTime(value, decimalPlaces),
+                Text = sec.ToString("F0", CultureInfo.CurrentCulture),
                 FontSize = 10,
                 Foreground = brush
             };
@@ -253,46 +268,7 @@ public sealed partial class SolveAnalysisChart : UserControl
         }
     }
 
-    private static void DrawXAxisLabels(Canvas canvas, Rect bounds, int count)
-    {
-        var brush = GetBrush("TextFillColorTertiaryBrush");
-        var step = Math.Max(1, count / 5);
-        for (var index = 0; index < count; index += step)
-        {
-            var x = bounds.Left + bounds.Width * index / Math.Max(1, count - 1);
-            var label = new TextBlock
-            {
-                Text = (index + 1).ToString(CultureInfo.CurrentCulture),
-                FontSize = 10,
-                Foreground = brush
-            };
-            Canvas.SetLeft(label, x - 6);
-            Canvas.SetTop(label, bounds.Bottom + 2);
-            canvas.Children.Add(label);
-        }
-    }
-
-    private static void DrawCountLabels(Canvas canvas, Rect bounds, int maxCount)
-    {
-        var lines = 2;
-        var brush = GetBrush("TextFillColorTertiaryBrush");
-        for (var index = 0; index <= lines; index++)
-        {
-            var value = maxCount - maxCount * index / lines;
-            var y = bounds.Top + bounds.Height * index / lines;
-            var label = new TextBlock
-            {
-                Text = value.ToString(CultureInfo.CurrentCulture),
-                FontSize = 10,
-                Foreground = brush
-            };
-            Canvas.SetLeft(label, bounds.Left);
-            Canvas.SetTop(label, y - 6);
-            canvas.Children.Add(label);
-        }
-    }
-
-    private static void DrawBucketLabels(Canvas canvas, Rect bounds, Bucket[] buckets, double barWidth, double gap, int decimalPlaces)
+    private static void DrawBucketRangeLabels(Canvas canvas, Rect bounds, Bucket[] buckets, double barWidth, double gap)
     {
         var brush = GetBrush("TextFillColorTertiaryBrush");
         for (var index = 0; index < buckets.Length; index++)
@@ -300,23 +276,21 @@ public sealed partial class SolveAnalysisChart : UserControl
             var bucket = buckets[index];
             var left = bounds.Left + index * (barWidth + gap);
             var centerX = left + barWidth / 2;
-            var timeLabel = FormatTime((bucket.From + bucket.To) / 2, decimalPlaces);
+
+            var fromSec = bucket.From / 1000.0;
+            var toSec = bucket.To / 1000.0;
+            var rangeText = $"{fromSec:F1}-{toSec:F1}";
+
             var label = new TextBlock
             {
-                Text = timeLabel,
-                FontSize = 10,
+                Text = rangeText,
+                FontSize = 9,
                 Foreground = brush
             };
-            Canvas.SetLeft(label, centerX - 15);
+            Canvas.SetLeft(label, centerX - 18);
             Canvas.SetTop(label, bounds.Bottom + 2);
             canvas.Children.Add(label);
         }
-    }
-
-    private static string FormatTime(double milliseconds, int decimalPlaces)
-    {
-        var seconds = milliseconds / 1000.0;
-        return seconds.ToString($"F{decimalPlaces}", CultureInfo.CurrentCulture);
     }
 
     private static void DrawHorizontalGrid(Canvas canvas, Rect bounds, int lines)
