@@ -135,6 +135,14 @@ public sealed class SmartCubeSessionController : IAsyncDisposable
         }
         catch
         {
+            // 保活写入失败，很可能底层链路已断，触发断连
+            _keepAliveTimer.Stop();
+            if (_connection is not null && ReferenceEquals(connection, _connection))
+            {
+                _connection = null;
+                connection.EventReceived -= Connection_EventReceived;
+                _ = connection.DisposeAsync();
+            }
         }
     }
 }

@@ -134,6 +134,8 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
             throw new InvalidOperationException("无法订阅 GAN 通知。");
         }
 
+        _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+
         await SendCommandAsync(SmartCubeCommand.RequestHardware, cancellationToken);
         await SendCommandAsync(SmartCubeCommand.RequestFacelets, cancellationToken);
         await SendCommandAsync(SmartCubeCommand.RequestBattery, cancellationToken);
@@ -283,6 +285,8 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
             _writeCharacteristic = null;
             _service = null;
         }
+
+        _device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
 
         if (readCharacteristic is not null)
         {
@@ -922,6 +926,27 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         lock (_lifetimeLock)
         {
             return _isDisconnecting || _isDisposed;
+        }
+    }
+
+    private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
+    {
+        if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
+        {
+            bool shouldEmitEvent;
+            lock (_lifetimeLock)
+            {
+                shouldEmitEvent = !_isDisconnecting && !_isDisposed;
+                if (shouldEmitEvent)
+                {
+                    _isDisconnecting = true;
+                }
+            }
+
+            if (shouldEmitEvent)
+            {
+                EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
+            }
         }
     }
 

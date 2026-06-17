@@ -153,6 +153,8 @@ public static class WindowsBleSmartCubeConnector
                 throw new InvalidOperationException("无法订阅 MoYu32 通知。");
             }
 
+            _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+
             await ProbeKeyAsync(cancellationToken);
             await SendRequestAsync(EnableGyroPayload.ToArray(), cancellationToken);
             await SendSimpleRequestAsync(163, cancellationToken);
@@ -194,6 +196,8 @@ public static class WindowsBleSmartCubeConnector
                 _strongPacketProbe?.TrySetResult(false);
                 _strongPacketProbe = null;
             }
+
+            _device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
 
             if (readCharacteristic is not null)
             {
@@ -448,6 +452,27 @@ public static class WindowsBleSmartCubeConnector
             lock (_lifetimeLock)
             {
                 return _isDisconnecting || _isDisposed;
+            }
+        }
+
+        private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
+        {
+            if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
+            {
+                bool shouldEmitEvent;
+                lock (_lifetimeLock)
+                {
+                    shouldEmitEvent = !_isDisconnecting && !_isDisposed;
+                    if (shouldEmitEvent)
+                    {
+                        _isDisconnecting = true;
+                    }
+                }
+
+                if (shouldEmitEvent)
+                {
+                    EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
+                }
             }
         }
 

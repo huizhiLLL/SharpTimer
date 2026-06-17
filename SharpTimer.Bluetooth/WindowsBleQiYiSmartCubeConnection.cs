@@ -95,6 +95,8 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
             throw new InvalidOperationException("无法订阅 QiYi 通知。");
         }
 
+        _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+
         EventReceived?.Invoke(this, new SmartCubeHardwareEvent(DateTimeOffset.UtcNow, HardwareName: DeviceName));
     }
 
@@ -128,6 +130,8 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
             _helloProbe?.TrySetResult(false);
             _helloProbe = null;
         }
+
+        _device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
 
         if (cubeCharacteristic is not null)
         {
@@ -600,6 +604,27 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         lock (_lifetimeLock)
         {
             return _isDisconnecting || _isDisposed;
+        }
+    }
+
+    private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
+    {
+        if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
+        {
+            bool shouldEmitEvent;
+            lock (_lifetimeLock)
+            {
+                shouldEmitEvent = !_isDisconnecting && !_isDisposed;
+                if (shouldEmitEvent)
+                {
+                    _isDisconnecting = true;
+                }
+            }
+
+            if (shouldEmitEvent)
+            {
+                EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
+            }
         }
     }
 }

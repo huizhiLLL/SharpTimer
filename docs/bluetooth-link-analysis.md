@@ -101,3 +101,35 @@ QiYi 的 `SendCommandAsync(RequestBattery)` 走 `SendHelloAsync`。若 `_helloRe
 ## 结论
 
 用户反馈的「一段时间无操作自动断联且无感知」确属真实缺陷，根因是**三套连接均未监听底层 `ConnectionStatusChanged`，魔方自身睡眠导致的 BLE 掉线无法被转成断连事件**，叠加保活异常被静默吞掉和零重连，形成「断了不知道、也不自己回来」的体验。优先补「断链可感知」是性价比最高的修复，重连和 GAN 溢出降级次之。
+
+## 实现进度（2026-06-17）
+
+### 已完成：P0 断链可感知
+
+在三套连接实现（`WindowsBleGanSmartCubeConnection`、`WindowsBleQiYiSmartCubeConnection`、`Moyu32SmartCubeConnection`）中：
+
+1. **在 `InitializeAsync` 最后订阅 `_device.ConnectionStatusChanged`**：握手和通知订阅成功后，注册系统层断连监听。
+2. **添加 `Device_ConnectionStatusChanged` 处理方法**：当 `ConnectionStatus` 变为 `Disconnected` 时，通过 `_lifetimeLock` 保护检查 `_isDisconnecting` 和 `_isDisposed`，避免与主动断开重复发事件；若确认为意外断链，设置 `_isDisconnecting` 并发出 `SmartCubeDisconnectEvent`。
+3. **在 `DisconnectAsync` 取消订阅**：主动断开时，在 `_device.Dispose()` 前先解绑 `ConnectionStatusChanged`，与 `ValueChanged` 处理对称。
+
+在 `SmartCubeSessionController.KeepAliveTimer_Tick` 中：
+
+4. **改进保活异常处理**：`SendCommandAsync(RequestBattery)` 抛异常时（写入失败，链路已断），停止计时器并主动清理连接，触发 `DisposeAsync`，避免对死连接无限重试。
+
+**验证状态**：代码已编译通过（`dotnet build SharpTimer.slnx` 成功），待真机验证以下场景：
+- 连接后静置使魔方自身睡眠，确认 UI 能在合理时间内显示断开状态。
+- 魔方关机或走出范围，确认能感知断链并触发 `SmartCubeDisconnectEvent`。
+- 保活写入失败时，确认连接能正确清理而非假死。
+
+### 待实现：P1 重连机制
+
+按 `docs/roadmap.md` 既定目标，意外断链后提供有限次自动重连（按地址 `BluetoothLEDevice.FromBluetoothAddressAsync` 重连 + 重新 `InitializeAsync`），在 UI 上反馈「正在重连」，并设置退避上限避免对已关机设备无限重试。重连逻辑放在 `SmartCubeSessionController` 或新增独立控制器，不散落进其他层。
+
+### 待实现：P1 GAN 溢出降级
+
+将 `_moveBuffer.Count > 16` 的硬断连改为先尝试重置序号或重新请求 facelets 重建状态，仅在确实无法恢复时才断连，降低使用中途掉线概率。
+
+### 待实现：P2 QiYi 保活优化
+
+确认 `_helloReceived` 守卫覆盖所有保活路径，握手成功后避免再次进入 MAC 候选遍历分支，防止保活阻塞数秒。
+
