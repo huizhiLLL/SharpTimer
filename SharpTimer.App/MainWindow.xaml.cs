@@ -57,15 +57,6 @@ namespace SharpTimer.App
         private const double NormalSmartCubePreviewOffsetY = 100;
         private const double ImmersiveSmartCubePreviewOffsetY = 0;
 
-        private enum ScrambleRunRole
-        {
-            Primary,
-            Next,
-            Correction
-        }
-
-        private readonly record struct ScrambleDisplayRun(string Text, ScrambleRunRole Role);
-
         public MainWindow()
         {
             InitializeComponent();
@@ -1350,7 +1341,10 @@ namespace SharpTimer.App
 
         private void RenderSmartCubeScrambleText(SmartCubeScrambleSnapshot snapshot)
         {
-            var runs = BuildSmartCubeScrambleRuns(snapshot);
+            var runs = ScrambleTextPresenter.BuildSmartCubeRuns(
+                snapshot,
+                _strings.BluetoothScrambleRestoreRequired,
+                _lastSnapshot?.CurrentScramble ?? string.Empty);
             var renderKey = "smart:" + string.Join("|", runs.Select(run => $"{run.Role}:{run.Text}"));
             if (_scrambleTextRenderKey == renderKey)
             {
@@ -1363,86 +1357,6 @@ namespace SharpTimer.App
             foreach (var run in runs)
             {
                 AddScrambleRun(run.Text, GetScrambleRunBrush(run.Role));
-            }
-        }
-
-        private IReadOnlyList<ScrambleDisplayRun> BuildSmartCubeScrambleRuns(SmartCubeScrambleSnapshot snapshot)
-        {
-            var runs = new List<ScrambleDisplayRun>();
-            switch (snapshot.Status)
-            {
-                case SmartCubeScrambleStatus.Ready:
-                    return runs;
-                case SmartCubeScrambleStatus.RestoreRequired:
-                    runs.Add(new ScrambleDisplayRun(_strings.BluetoothScrambleRestoreRequired, ScrambleRunRole.Correction));
-                    return runs;
-                case SmartCubeScrambleStatus.Correction:
-                    var displayMoves = new List<(string Move, bool IsCorrection)>();
-                    foreach (var move in snapshot.CorrectionMoves)
-                    {
-                        AppendDisplayMove(displayMoves, move, isCorrection: true);
-                    }
-
-                    foreach (var move in snapshot.RemainingMoves)
-                    {
-                        AppendDisplayMove(displayMoves, move, isCorrection: false);
-                    }
-
-                    var highlightedNext = false;
-                    foreach (var move in displayMoves)
-                    {
-                        if (move.IsCorrection)
-                        {
-                            runs.Add(new ScrambleDisplayRun(move.Move, ScrambleRunRole.Correction));
-                        }
-                        else if (!highlightedNext)
-                        {
-                            runs.Add(new ScrambleDisplayRun(move.Move, ScrambleRunRole.Next));
-                            highlightedNext = true;
-                        }
-                        else
-                        {
-                            runs.Add(new ScrambleDisplayRun(move.Move, ScrambleRunRole.Primary));
-                        }
-                    }
-
-                    return runs;
-                case SmartCubeScrambleStatus.Scrambling:
-                    for (var index = 0; index < snapshot.RemainingMoves.Count; index++)
-                    {
-                        runs.Add(new ScrambleDisplayRun(
-                            snapshot.RemainingMoves[index],
-                            index == 0 ? ScrambleRunRole.Next : ScrambleRunRole.Primary));
-                    }
-
-                    return runs;
-                default:
-                    runs.Add(new ScrambleDisplayRun(_lastSnapshot?.CurrentScramble ?? string.Empty, ScrambleRunRole.Primary));
-                    return runs;
-            }
-        }
-
-        private static void AppendDisplayMove(IList<(string Move, bool IsCorrection)> moves, string move, bool isCorrection)
-        {
-            if (string.IsNullOrWhiteSpace(move))
-            {
-                return;
-            }
-
-            var normalized = SmartCubeMoveNotation.Normalize(move);
-            if (moves.Count == 0 || moves[^1].Move[0] != normalized[0])
-            {
-                moves.Add((normalized, isCorrection));
-                return;
-            }
-
-            var last = moves[^1];
-            var mergedPower = (GetMovePower(last.Move) + GetMovePower(normalized)) % 4;
-            var mergedCorrection = last.IsCorrection || isCorrection;
-            moves.RemoveAt(moves.Count - 1);
-            if (mergedPower != 0)
-            {
-                moves.Add((last.Move[0] + GetMoveSuffix(mergedPower), mergedCorrection));
             }
         }
 
@@ -1482,32 +1396,13 @@ namespace SharpTimer.App
             });
         }
 
-        private Brush GetScrambleRunBrush(ScrambleRunRole role)
+        private Brush GetScrambleRunBrush(ScrambleTextRole role)
         {
             return role switch
             {
-                ScrambleRunRole.Next => GetNextScrambleBrush(),
-                ScrambleRunRole.Correction => GetCorrectionScrambleBrush(),
+                ScrambleTextRole.Next => GetNextScrambleBrush(),
+                ScrambleTextRole.Correction => GetCorrectionScrambleBrush(),
                 _ => GetPrimaryTextBrush()
-            };
-        }
-
-        private static int GetMovePower(string move)
-        {
-            return move.Length == 1
-                ? 1
-                : move[1] == '2'
-                    ? 2
-                    : 3;
-        }
-
-        private static string GetMoveSuffix(int power)
-        {
-            return power switch
-            {
-                2 => "2",
-                3 => "'",
-                _ => string.Empty
             };
         }
 
