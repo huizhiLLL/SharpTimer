@@ -5,6 +5,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:SharpTimer.App.Controls"
     xmlns:rendering="using:SharpTimer.App.Rendering"
+    xmlns:solving="using:SharpTimer.App.Views.Solving"
     xmlns:views="using:SharpTimer.App.Views"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -135,14 +136,6 @@
                             <Setter Target="Ao12StatCard.(Grid.Column)" Value="0" />
                             <Setter Target="TimerCountStatCard.(Grid.Row)" Value="1" />
                             <Setter Target="TimerCountStatCard.(Grid.Column)" Value="1" />
-                            <Setter Target="SolvesPage.RowSpacing" Value="18" />
-                            <Setter Target="SolvesListColumn.Width" Value="*" />
-                            <Setter Target="SolvesDividerColumn.Width" Value="0" />
-                            <Setter Target="SolvesAnalysisColumn.Width" Value="0" />
-                            <Setter Target="SolvesDivider.Visibility" Value="Collapsed" />
-                            <Setter Target="SolvesAnalysisPanel.(Grid.Row)" Value="1" />
-                            <Setter Target="SolvesAnalysisPanel.(Grid.Column)" Value="0" />
-                            <Setter Target="SolvesAnalysisPanel.Margin" Value="0,18,0,0" />
                         </VisualState.Setters>
                     </VisualState>
                     <VisualState x:Name="MediumLayout">
@@ -162,14 +155,6 @@
                             <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
                             <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
                             <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
-                            <Setter Target="SolvesPage.RowSpacing" Value="18" />
-                            <Setter Target="SolvesListColumn.Width" Value="*" />
-                            <Setter Target="SolvesDividerColumn.Width" Value="0" />
-                            <Setter Target="SolvesAnalysisColumn.Width" Value="0" />
-                            <Setter Target="SolvesDivider.Visibility" Value="Collapsed" />
-                            <Setter Target="SolvesAnalysisPanel.(Grid.Row)" Value="1" />
-                            <Setter Target="SolvesAnalysisPanel.(Grid.Column)" Value="0" />
-                            <Setter Target="SolvesAnalysisPanel.Margin" Value="0,18,0,0" />
                         </VisualState.Setters>
                     </VisualState>
                     <VisualState x:Name="WideLayout">
@@ -189,14 +174,6 @@
                             <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
                             <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
                             <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
-                            <Setter Target="SolvesPage.RowSpacing" Value="0" />
-                            <Setter Target="SolvesListColumn.Width" Value="2*" />
-                            <Setter Target="SolvesDividerColumn.Width" Value="Auto" />
-                            <Setter Target="SolvesAnalysisColumn.Width" Value="3*" />
-                            <Setter Target="SolvesDivider.Visibility" Value="Visible" />
-                            <Setter Target="SolvesAnalysisPanel.(Grid.Row)" Value="0" />
-                            <Setter Target="SolvesAnalysisPanel.(Grid.Column)" Value="2" />
-                            <Setter Target="SolvesAnalysisPanel.Margin" Value="0" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
@@ -483,302 +460,14 @@
                 </Grid>
             </Grid>
 
-            <Grid
+            <solving:SolvesView
                 x:Name="SolvesPage"
                 Visibility="Collapsed"
-                ColumnSpacing="18">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition x:Name="SolvesListColumn" Width="2*" />
-                    <ColumnDefinition x:Name="SolvesDividerColumn" Width="Auto" />
-                    <ColumnDefinition x:Name="SolvesAnalysisColumn" Width="3*" />
-                </Grid.ColumnDefinitions>
-
-                <Grid RowSpacing="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel
-                            Orientation="Horizontal"
-                            Spacing="8"
-                            VerticalAlignment="Bottom">
-                            <ComboBox
-                                x:Name="SessionComboBox"
-                                Width="130"
-                                DisplayMemberPath="DisplayName"
-                                SelectionChanged="SessionComboBox_SelectionChanged" />
-                            <Button
-                                x:Name="SessionActionsButton"
-                                Width="36"
-                                Height="32"
-                                Padding="0"
-                                VerticalAlignment="Bottom"
-                                AutomationProperties.Name="Session actions"
-                                ToolTipService.ToolTip="Session actions">
-                                <FontIcon Glyph="&#xE712;" FontSize="18" />
-                                <Button.Flyout>
-                                    <MenuFlyout>
-                                        <MenuFlyoutItem
-                                            x:Name="RenameSessionMenuItem"
-                                            Click="RenameSessionButton_Click">
-                                            <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE70F;" />
-                                            </MenuFlyoutItem.Icon>
-                                        </MenuFlyoutItem>
-                                        <MenuFlyoutItem
-                                            x:Name="NewSessionMenuItem"
-                                            Click="NewSessionButton_Click">
-                                            <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE710;" />
-                                            </MenuFlyoutItem.Icon>
-                                        </MenuFlyoutItem>
-                                        <MenuFlyoutSeparator />
-                                        <MenuFlyoutItem
-                                            x:Name="ArchiveSessionMenuItem"
-                                            Click="ArchiveSessionButton_Click">
-                                            <MenuFlyoutItem.Icon>
-                                                <FontIcon Glyph="&#xE74D;" />
-                                            </MenuFlyoutItem.Icon>
-                                        </MenuFlyoutItem>
-                                    </MenuFlyout>
-                                </Button.Flyout>
-                            </Button>
-                        </StackPanel>
-                        <TextBlock
-                            x:Name="CountText"
-                            Grid.Column="1"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            VerticalAlignment="Center" />
-                    </Grid>
-
-                    <Grid Grid.Row="1">
-                        <ListView
-                            x:Name="SolvesList"
-                            SelectionMode="Single"
-                            IsItemClickEnabled="True"
-                            ItemClick="SolvesList_ItemClick">
-                            <ListView.ItemContainerStyle>
-                                <Style TargetType="ListViewItem">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="Padding" Value="0" />
-                                    <Setter Property="Margin" Value="0" />
-                                    <Setter Property="MinHeight" Value="0" />
-                                </Style>
-                            </ListView.ItemContainerStyle>
-                            <ListView.Header>
-                                <Grid
-                                    Padding="4,0,4,8"
-                                    ColumnSpacing="12">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="44" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="72" />
-                                        <ColumnDefinition Width="72" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock
-                                        Text="序号"
-                                        HorizontalAlignment="Stretch"
-                                        TextAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock
-                                        x:Name="TimeColumnText"
-                                        Grid.Column="1"
-                                        Text="时间"
-                                        HorizontalAlignment="Stretch"
-                                        TextAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock
-                                        Grid.Column="2"
-                                        Text="ao5"
-                                        HorizontalAlignment="Stretch"
-                                        TextAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock
-                                        Grid.Column="3"
-                                        Text="ao12"
-                                        HorizontalAlignment="Stretch"
-                                        TextAlignment="Center"
-                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                </Grid>
-                            </ListView.Header>
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid
-                                        Padding="4,8"
-                                        ColumnSpacing="12"
-                                        HorizontalAlignment="Stretch">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="44" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="72" />
-                                            <ColumnDefinition Width="72" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock
-                                            Text="{Binding Number}"
-                                            HorizontalAlignment="Stretch"
-                                            TextAlignment="Center"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            VerticalAlignment="Center" />
-                                        <TextBlock
-                                            Grid.Column="1"
-                                            Text="{Binding Time}"
-                                            FontSize="18"
-                                            FontWeight="SemiBold"
-                                            Foreground="{Binding TimeForeground}"
-                                            HorizontalAlignment="Stretch"
-                                            TextAlignment="Center"
-                                            VerticalAlignment="Center" />
-                                        <TextBlock
-                                            Grid.Column="2"
-                                            Text="{Binding AverageOf5}"
-                                            FontSize="18"
-                                            FontWeight="SemiBold"
-                                            HorizontalAlignment="Stretch"
-                                            TextAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Foreground="{Binding AverageOf5Foreground}" />
-                                        <TextBlock
-                                            Grid.Column="3"
-                                            Text="{Binding AverageOf12}"
-                                            FontSize="18"
-                                            FontWeight="SemiBold"
-                                            HorizontalAlignment="Stretch"
-                                            TextAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Foreground="{Binding AverageOf12Foreground}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-
-                        <StackPanel
-                            x:Name="EmptySolvesPanel"
-                            MaxWidth="420"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            Spacing="6"
-                            Visibility="Collapsed">
-                            <TextBlock
-                                x:Name="EmptySolvesTitleText"
-                                HorizontalAlignment="Center"
-                                FontSize="20"
-                                FontWeight="SemiBold"
-                                TextAlignment="Center" />
-                            <TextBlock
-                                x:Name="EmptySolvesDescriptionText"
-                                HorizontalAlignment="Center"
-                                TextWrapping="Wrap"
-                                TextAlignment="Center"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-
-                <Border
-                    x:Name="SolvesDivider"
-                    Grid.Column="1"
-                    Width="1"
-                    Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
-
-                <Grid
-                    x:Name="SolvesAnalysisPanel"
-                    Grid.Column="2"
-                    Padding="0,0,0,0"
-                    RowSpacing="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Grid
-                        ColumnSpacing="12"
-                        RowSpacing="12">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <Border
-                            Padding="16"
-                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                            <StackPanel Spacing="4">
-                                <TextBlock
-                                    x:Name="AnalysisBestLabelText"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <TextBlock
-                                    x:Name="AnalysisBestText"
-                                    FontSize="24"
-                                    FontWeight="SemiBold" />
-                            </StackPanel>
-                        </Border>
-                        <Border
-                            Grid.Column="1"
-                            Padding="16"
-                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                            <StackPanel Spacing="4">
-                                <TextBlock
-                                    x:Name="AnalysisWorstLabelText"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <TextBlock
-                                    x:Name="AnalysisWorstText"
-                                    FontSize="24"
-                                    FontWeight="SemiBold" />
-                            </StackPanel>
-                        </Border>
-                        <Border
-                            Grid.Row="1"
-                            Padding="16"
-                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                            <StackPanel Spacing="4">
-                                <TextBlock
-                                    x:Name="AnalysisMeanLabelText"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <TextBlock
-                                    x:Name="AnalysisMeanText"
-                                    FontSize="24"
-                                    FontWeight="SemiBold" />
-                            </StackPanel>
-                        </Border>
-                        <Border
-                            Grid.Row="1"
-                            Grid.Column="1"
-                            Padding="16"
-                            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                            <StackPanel Spacing="4">
-                                <TextBlock
-                                    x:Name="AnalysisCompletedLabelText"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <TextBlock
-                                    x:Name="AnalysisCompletedText"
-                                    FontSize="24"
-                                    FontWeight="SemiBold" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <controls:SolveAnalysisChart
-                        x:Name="SolveAnalysisChart"
-                        Grid.Row="1" />
-                </Grid>
-            </Grid>
+                SessionChanged="SolvesPage_SessionChanged"
+                NewSessionRequested="SolvesPage_NewSessionRequested"
+                RenameSessionRequested="SolvesPage_RenameSessionRequested"
+                ArchiveSessionRequested="SolvesPage_ArchiveSessionRequested"
+                SolveClicked="SolvesPage_SolveClicked" />
 
             <views:SettingsView
                 x:Name="SettingsPage"

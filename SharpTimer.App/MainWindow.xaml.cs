@@ -62,8 +62,8 @@ namespace SharpTimer.App
             ConfigureTitleBar();
             ApplyInitialWindowPlacement();
 
-            SolvesList.ItemsSource = _solveItems;
-            SessionComboBox.ItemsSource = _sessionItems;
+            SolvesPage.SolvesItemsSource = _solveItems;
+            SolvesPage.SessionsItemsSource = _sessionItems;
             BluetoothDevicesList.ItemsSource = _bluetoothDeviceItems;
             SmartCubePreview.OpenRequested += SmartCubePreview_OpenRequested;
             SmartCubePreview.InteractionCompleted += SmartCubePreview_InteractionCompleted;
@@ -261,9 +261,9 @@ namespace SharpTimer.App
             }
         }
 
-        private async void SessionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void SolvesPage_SessionChanged(object sender, SessionListItem item)
         {
-            if (_isRendering || _appService is null || SessionComboBox.SelectedItem is not SessionListItem item)
+            if (_isRendering || _appService is null)
             {
                 return;
             }
@@ -272,7 +272,7 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private async void NewSessionButton_Click(object sender, RoutedEventArgs e)
+        private async void SolvesPage_NewSessionRequested(object sender, EventArgs e)
         {
             if (_appService is null)
             {
@@ -289,9 +289,9 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private async void RenameSessionButton_Click(object sender, RoutedEventArgs e)
+        private async void SolvesPage_RenameSessionRequested(object sender, EventArgs e)
         {
-            if (_appService is null || SessionComboBox.SelectedItem is not SessionListItem item)
+            if (_appService is null || SolvesPage.SelectedSession is not SessionListItem item)
             {
                 return;
             }
@@ -306,7 +306,7 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private async void ArchiveSessionButton_Click(object sender, RoutedEventArgs e)
+        private async void SolvesPage_ArchiveSessionRequested(object sender, EventArgs e)
         {
             if (_appService is null)
             {
@@ -332,13 +332,9 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private async void SolvesList_ItemClick(object sender, ItemClickEventArgs e)
+        private async void SolvesPage_SolveClicked(object sender, SolveListItem item)
         {
-            if (e.ClickedItem is SolveListItem item)
-            {
-                SolvesList.SelectedItem = item;
-                await ShowSolveDetailsAsync(item);
-            }
+            await ShowSolveDetailsAsync(item);
         }
 
         private void BluetoothButton_Click(object sender, RoutedEventArgs e)
@@ -447,35 +443,44 @@ namespace SharpTimer.App
         {
             _lastSnapshot = snapshot;
             _isRendering = true;
-            RenderSessions(snapshot);
-            if (_smartCubeConnection is null)
+            SolvesPage.BeginRender();
+            try
             {
-                SetScrambleTextPlain(snapshot.CurrentScramble);
+                RenderSessions(snapshot);
+                if (_smartCubeConnection is null)
+                {
+                    SetScrambleTextPlain(snapshot.CurrentScramble);
+                }
+
+                SyncSmartCubeScramble(snapshot);
+                TimerText.Text = FormatTime(snapshot.Timer.Elapsed, _settings.DecimalPlaces);
+                InspectionText.Text = FormatInspection(snapshot.Timer);
+                ApplyTimerVisualState(snapshot.Timer);
+                ApplyImmersiveTimerLayout(snapshot.Timer);
+
+                BestText.Text = FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces);
+                Ao5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
+                Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
+                TimerCountText.Text = snapshot.Statistics.Count.ToString();
+                SolvesPage.UpdateCount(string.Format(_strings.CountFormat, snapshot.Statistics.Count));
+                SolvesPage.UpdateAnalysis(
+                    FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces),
+                    FormatNullableTime(GetWorstTime(snapshot.Solves), _settings.DecimalPlaces),
+                    FormatNullableTime(snapshot.Statistics.Mean, _settings.DecimalPlaces),
+                    snapshot.Statistics.CompletedCount.ToString(),
+                    snapshot.Solves,
+                    _settings.DecimalPlaces);
+
+                if (refreshList)
+                {
+                    RenderSolves(snapshot);
+                }
             }
-
-            SyncSmartCubeScramble(snapshot);
-            TimerText.Text = FormatTime(snapshot.Timer.Elapsed, _settings.DecimalPlaces);
-            InspectionText.Text = FormatInspection(snapshot.Timer);
-            ApplyTimerVisualState(snapshot.Timer);
-            ApplyImmersiveTimerLayout(snapshot.Timer);
-
-            BestText.Text = FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces);
-            Ao5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
-            Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
-            TimerCountText.Text = snapshot.Statistics.Count.ToString();
-            CountText.Text = string.Format(_strings.CountFormat, snapshot.Statistics.Count);
-            AnalysisBestText.Text = FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces);
-            AnalysisWorstText.Text = FormatNullableTime(GetWorstTime(snapshot.Solves), _settings.DecimalPlaces);
-            AnalysisMeanText.Text = FormatNullableTime(snapshot.Statistics.Mean, _settings.DecimalPlaces);
-            AnalysisCompletedText.Text = snapshot.Statistics.CompletedCount.ToString();
-            SolveAnalysisChart.SetSolves(snapshot.Solves, _settings.DecimalPlaces);
-
-            if (refreshList)
+            finally
             {
-                RenderSolves(snapshot);
+                SolvesPage.EndRender();
+                _isRendering = false;
             }
-
-            _isRendering = false;
         }
 
         private void RenderSessions(TimerAppSnapshot snapshot)
@@ -514,12 +519,12 @@ namespace SharpTimer.App
                 }
             }
 
-            SessionComboBox.SelectedItem = _sessionItems.FirstOrDefault(item => item.Id == currentId);
+            SolvesPage.SelectedSession = _sessionItems.FirstOrDefault(item => item.Id == currentId);
         }
 
         private void RenderSolves(TimerAppSnapshot snapshot)
         {
-            var selectedId = (SolvesList.SelectedItem as SolveListItem)?.Id;
+            var selectedId = SolvesPage.SelectedSolveId;
             var orderedSolves = snapshot.Solves
                 .OrderBy(solve => solve.CreatedAt)
                 .ToArray();
@@ -555,14 +560,14 @@ namespace SharpTimer.App
                 .Reverse()
                 .ToArray();
 
-            EmptySolvesPanel.Visibility = items.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+            SolvesPage.SetEmptyStateVisible(items.Length == 0);
             _solveItems.Clear();
             foreach (var item in items)
             {
                 _solveItems.Add(item);
             }
 
-            SolvesList.SelectedItem = _solveItems.FirstOrDefault(item => item.Id == selectedId)
+            SolvesPage.SelectedSolve = _solveItems.FirstOrDefault(item => item.Id == selectedId)
                 ?? _solveItems.FirstOrDefault();
         }
 
@@ -1463,25 +1468,13 @@ namespace SharpTimer.App
                 settingsItem.Content = _strings.SettingsNav;
             }
 
-            ToolTipService.SetToolTip(SessionActionsButton, _strings.SessionActions);
             AutomationProperties.SetName(TitleBarPaneToggleButton, _strings.TitleBarToggleNavigation);
             AutomationProperties.SetName(BluetoothButton, _strings.BluetoothButtonName);
             AutomationProperties.SetName(BluetoothDevicesList, _strings.BluetoothDevicesListName);
             AutomationProperties.SetName(SmartCubePreview, _strings.SmartCubePreviewName);
-            AutomationProperties.SetName(SessionActionsButton, _strings.SessionActions);
-            RenameSessionMenuItem.Text = _strings.RenameSession;
-            NewSessionMenuItem.Text = _strings.NewSession;
-            ArchiveSessionMenuItem.Text = _strings.Delete;
-            TimeColumnText.Text = _strings.TimeColumn;
             BestLabelText.Text = _strings.BestLabel;
             TimerCountLabelText.Text = _strings.AnalysisCountLabel;
-            AnalysisBestLabelText.Text = _strings.BestLabel;
-            AnalysisWorstLabelText.Text = _strings.WorstLabel;
-            AnalysisMeanLabelText.Text = _strings.MeanLabel;
-            AnalysisCompletedLabelText.Text = _strings.CompletedCountLabel;
-            SolveAnalysisChart.SetText(_strings.SolveTrendTitle, _strings.SolveDistributionTitle, _strings.SolveChartEmptyText);
-            EmptySolvesTitleText.Text = _strings.EmptySolvesTitle;
-            EmptySolvesDescriptionText.Text = _strings.EmptySolvesDescription;
+            SolvesPage.ApplyLanguage(_strings);
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
             BluetoothRetryScanButton.Content = _strings.BluetoothRetryScan;
             ResetCubeStateButton.Content = _strings.BluetoothResetCubeState;
