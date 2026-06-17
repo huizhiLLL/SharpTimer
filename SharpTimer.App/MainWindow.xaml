@@ -6,6 +6,7 @@
     xmlns:controls="using:SharpTimer.App.Controls"
     xmlns:rendering="using:SharpTimer.App.Rendering"
     xmlns:solving="using:SharpTimer.App.Views.Solving"
+    xmlns:timing="using:SharpTimer.App.Views.Timing"
     xmlns:views="using:SharpTimer.App.Views"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -86,21 +87,6 @@
             IsSettingsVisible="True"
             SelectionChanged="AppNavigationView_SelectionChanged"
             Background="Transparent">
-            <VisualStateManager.VisualStateGroups>
-                <VisualStateGroup x:Name="TimerImmersionStates">
-                    <VisualState x:Name="TimerContextVisible">
-                        <VisualState.Setters>
-                            <Setter Target="SmartCubePreviewOffset.Y" Value="100" />
-                        </VisualState.Setters>
-                    </VisualState>
-                    <VisualState x:Name="TimerImmersive">
-                        <VisualState.Setters>
-                            <Setter Target="SmartCubePreviewOffset.Y" Value="0" />
-                        </VisualState.Setters>
-                    </VisualState>
-                </VisualStateGroup>
-            </VisualStateManager.VisualStateGroups>
-
         <NavigationView.MenuItems>
             <NavigationViewItem
                 x:Name="TimerNavItem"
@@ -125,17 +111,6 @@
                         </VisualState.StateTriggers>
                         <VisualState.Setters>
                             <Setter Target="PageHost.Padding" Value="16" />
-                            <Setter Target="TimerText.FontSize" Value="72" />
-                            <Setter Target="ScrambleText.Margin" Value="0,16,0,0" />
-                            <Setter Target="StatsPanel.RowSpacing" Value="12" />
-                            <Setter Target="StatsColumn0.Width" Value="*" />
-                            <Setter Target="StatsColumn1.Width" Value="*" />
-                            <Setter Target="StatsColumn2.Width" Value="0" />
-                            <Setter Target="StatsColumn3.Width" Value="0" />
-                            <Setter Target="Ao12StatCard.(Grid.Row)" Value="1" />
-                            <Setter Target="Ao12StatCard.(Grid.Column)" Value="0" />
-                            <Setter Target="TimerCountStatCard.(Grid.Row)" Value="1" />
-                            <Setter Target="TimerCountStatCard.(Grid.Column)" Value="1" />
                         </VisualState.Setters>
                     </VisualState>
                     <VisualState x:Name="MediumLayout">
@@ -144,17 +119,6 @@
                         </VisualState.StateTriggers>
                         <VisualState.Setters>
                             <Setter Target="PageHost.Padding" Value="24" />
-                            <Setter Target="TimerText.FontSize" Value="96" />
-                            <Setter Target="ScrambleText.Margin" Value="0,20,0,0" />
-                            <Setter Target="StatsPanel.RowSpacing" Value="0" />
-                            <Setter Target="StatsColumn0.Width" Value="*" />
-                            <Setter Target="StatsColumn1.Width" Value="*" />
-                            <Setter Target="StatsColumn2.Width" Value="*" />
-                            <Setter Target="StatsColumn3.Width" Value="*" />
-                            <Setter Target="Ao12StatCard.(Grid.Row)" Value="0" />
-                            <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
-                            <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
-                            <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
                         </VisualState.Setters>
                     </VisualState>
                     <VisualState x:Name="WideLayout">
@@ -163,302 +127,21 @@
                         </VisualState.StateTriggers>
                         <VisualState.Setters>
                             <Setter Target="PageHost.Padding" Value="32" />
-                            <Setter Target="TimerText.FontSize" Value="112" />
-                            <Setter Target="ScrambleText.Margin" Value="0,24,0,0" />
-                            <Setter Target="StatsPanel.RowSpacing" Value="0" />
-                            <Setter Target="StatsColumn0.Width" Value="*" />
-                            <Setter Target="StatsColumn1.Width" Value="*" />
-                            <Setter Target="StatsColumn2.Width" Value="*" />
-                            <Setter Target="StatsColumn3.Width" Value="*" />
-                            <Setter Target="Ao12StatCard.(Grid.Row)" Value="0" />
-                            <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
-                            <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
-                            <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
                         </VisualState.Setters>
                     </VisualState>
                 </VisualStateGroup>
             </VisualStateManager.VisualStateGroups>
 
-            <Grid
+            <timing:TimerView
                 x:Name="TimerPage"
-                RowSpacing="22">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <Grid ColumnSpacing="12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="44" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="44" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock
-                        x:Name="ScrambleText"
-                        Grid.Column="1"
-                        MaxWidth="900"
-                        Margin="0,24,0,0"
-                        HorizontalAlignment="Center"
-                        TextAlignment="Center"
-                        TextWrapping="Wrap"
-                        FontFamily="Consolas"
-                        FontSize="22"
-                        Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
-
-                    <Button
-                        x:Name="BluetoothButton"
-                        Grid.Column="2"
-                        Width="44"
-                        Height="44"
-                        Padding="0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        CornerRadius="22"
-                        AutomationProperties.Name="智能魔方蓝牙"
-                        Click="BluetoothButton_Click">
-                        <FontIcon Glyph="&#xE702;" FontSize="18" />
-                        <Button.Flyout>
-                            <Flyout
-                                x:Name="BluetoothFlyout"
-                                Opened="BluetoothFlyout_Opened"
-                                Closed="BluetoothFlyout_Closed">
-                                <Grid
-                                    Width="360"
-                                    RowSpacing="12">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock
-                                            x:Name="BluetoothFlyoutStatusText"
-                                            Text="正在扫描附近魔方..."
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            TextWrapping="Wrap" />
-                                        <Button
-                                            x:Name="BluetoothRetryScanButton"
-                                            Grid.Column="1"
-                                            Visibility="Collapsed"
-                                            Click="BluetoothRetryScanButton_Click" />
-                                    </Grid>
-
-                                    <ProgressBar
-                                        x:Name="BluetoothScanProgress"
-                                        Grid.Row="1"
-                                        IsIndeterminate="True" />
-
-                                    <ListView
-                                        x:Name="BluetoothDevicesList"
-                                        Grid.Row="2"
-                                        MaxHeight="260"
-                                        SelectionMode="None"
-                                        IsItemClickEnabled="True"
-                                        ItemClick="BluetoothDevicesList_ItemClick"
-                                        AutomationProperties.Name="智能魔方设备">
-                                        <ListView.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Padding="2,8" ColumnSpacing="12">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Spacing="2">
-                                                        <TextBlock
-                                                            Text="{Binding Name}"
-                                                            FontWeight="SemiBold"
-                                                            TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock
-                                                            Text="{Binding Address}"
-                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                            FontFamily="Consolas"
-                                                            FontSize="12"
-                                                            TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock
-                                                            Text="{Binding Services}"
-                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                            FontSize="12"
-                                                            TextTrimming="CharacterEllipsis" />
-                                                    </StackPanel>
-                                                    <StackPanel
-                                                        Grid.Column="1"
-                                                        HorizontalAlignment="Right"
-                                                        Spacing="2">
-                                                        <TextBlock
-                                                            Text="{Binding Protocol}"
-                                                            HorizontalAlignment="Right"
-                                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                        <TextBlock
-                                                            Text="{Binding LastSeen}"
-                                                            HorizontalAlignment="Right"
-                                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                                            FontSize="12" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ListView.ItemTemplate>
-                                    </ListView>
-
-                                    <Border
-                                        x:Name="ConnectedCubePanel"
-                                        Grid.Row="3"
-                                        Padding="12"
-                                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                                        Visibility="Collapsed"
-                                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                                        <StackPanel Spacing="6">
-                                            <TextBlock
-                                                x:Name="ConnectedCubeNameText"
-                                                FontWeight="SemiBold" />
-                                            <TextBlock
-                                                x:Name="ConnectedCubeBatteryText"
-                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                            <StackPanel
-                                                HorizontalAlignment="Right"
-                                                Orientation="Horizontal"
-                                                Spacing="8">
-                                                <Button
-                                                    x:Name="ResetCubeStateButton"
-                                                    Content="重置状态"
-                                                    Click="ResetCubeStateButton_Click" />
-                                                <Button
-                                                    x:Name="ResetCubeOrientationButton"
-                                                    Content="重置姿态"
-                                                    Click="ResetCubeOrientationButton_Click" />
-                                                <Button
-                                                    x:Name="DisconnectCubeButton"
-                                                    Content="断开连接"
-                                                    Click="DisconnectCubeButton_Click" />
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
-                            </Flyout>
-                        </Button.Flyout>
-                    </Button>
-                </Grid>
-
-                <Grid
-                    Grid.Row="1"
-                    Margin="0,0,0,8">
-                    <StackPanel
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Spacing="12">
-                        <TextBlock
-                            x:Name="TimerText"
-                            HorizontalAlignment="Center"
-                            FontFamily="Consolas"
-                            FontSize="112"
-                            FontWeight="SemiBold"
-                            RenderTransformOrigin="0.5,0.5">
-                            <TextBlock.RenderTransform>
-                                <ScaleTransform
-                                    x:Name="TimerTextScale"
-                                    ScaleX="1"
-                                    ScaleY="1" />
-                            </TextBlock.RenderTransform>
-                        </TextBlock>
-                        <TextBlock
-                            x:Name="InspectionText"
-                            HorizontalAlignment="Center"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            FontSize="18" />
-                    </StackPanel>
-
-                    <rendering:SmartCubePreviewControl
-                        x:Name="SmartCubePreview"
-                        Width="180"
-                        Height="180"
-                        Margin="0,0,16,0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Bottom"
-                        Visibility="Collapsed">
-                        <rendering:SmartCubePreviewControl.RenderTransform>
-                            <TranslateTransform
-                                x:Name="SmartCubePreviewOffset"
-                                Y="100" />
-                        </rendering:SmartCubePreviewControl.RenderTransform>
-                    </rendering:SmartCubePreviewControl>
-                </Grid>
-
-                <Grid
-                    x:Name="StatsPanel"
-                    Grid.Row="2"
-                    ColumnSpacing="12">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="StatsColumn0" Width="*" />
-                        <ColumnDefinition x:Name="StatsColumn1" Width="*" />
-                        <ColumnDefinition x:Name="StatsColumn2" Width="*" />
-                        <ColumnDefinition x:Name="StatsColumn3" Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <Border
-                        Padding="16"
-                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                        <StackPanel Spacing="4">
-                            <TextBlock
-                                x:Name="BestLabelText"
-                                Text="Best"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock
-                                x:Name="BestText"
-                                FontSize="24"
-                                FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
-                    <Border
-                        Grid.Column="1"
-                        Padding="16"
-                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Ao5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="Ao5Text" FontSize="24" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
-                    <Border
-                        x:Name="Ao12StatCard"
-                        Grid.Column="2"
-                        Padding="16"
-                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Ao12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock x:Name="Ao12Text" FontSize="24" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
-                    <Border
-                        x:Name="TimerCountStatCard"
-                        Grid.Column="3"
-                        Padding="16"
-                        CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                        <StackPanel Spacing="4">
-                            <TextBlock
-                                x:Name="TimerCountLabelText"
-                                Text="次数"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock
-                                x:Name="TimerCountText"
-                                FontSize="24"
-                                FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </Grid>
+                BluetoothButtonClicked="TimerPage_BluetoothButtonClicked"
+                BluetoothFlyoutOpened="TimerPage_BluetoothFlyoutOpened"
+                BluetoothFlyoutClosed="TimerPage_BluetoothFlyoutClosed"
+                BluetoothRetryScanRequested="TimerPage_BluetoothRetryScanRequested"
+                BluetoothDeviceClicked="TimerPage_BluetoothDeviceClicked"
+                ResetCubeStateRequested="TimerPage_ResetCubeStateRequested"
+                ResetCubeOrientationRequested="TimerPage_ResetCubeOrientationRequested"
+                DisconnectCubeRequested="TimerPage_DisconnectCubeRequested" />
 
             <solving:SolvesView
                 x:Name="SolvesPage"

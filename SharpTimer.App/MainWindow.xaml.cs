@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Shapes;
 using SharpTimer.App.Rendering;
 using SharpTimer.Bluetooth;
 using SharpTimer.App.Services;
@@ -54,6 +55,31 @@ namespace SharpTimer.App
         private const int InitialWindowWidth = 2000;
         private const int InitialWindowHeight = 1200;
         private const int InitialWindowTopOffset = 10;
+
+        private TextBlock ScrambleText => TimerPage.ScrambleText;
+        private Button BluetoothButton => TimerPage.BluetoothButton;
+        private Flyout BluetoothFlyout => TimerPage.BluetoothFlyout;
+        private TextBlock BluetoothFlyoutStatusText => TimerPage.BluetoothFlyoutStatusText;
+        private Button BluetoothRetryScanButton => TimerPage.BluetoothRetryScanButton;
+        private ProgressBar BluetoothScanProgress => TimerPage.BluetoothScanProgress;
+        private ListView BluetoothDevicesList => TimerPage.BluetoothDevicesList;
+        private Border ConnectedCubePanel => TimerPage.ConnectedCubePanel;
+        private TextBlock ConnectedCubeNameText => TimerPage.ConnectedCubeNameText;
+        private TextBlock ConnectedCubeBatteryText => TimerPage.ConnectedCubeBatteryText;
+        private Button ResetCubeStateButton => TimerPage.ResetCubeStateButton;
+        private Button ResetCubeOrientationButton => TimerPage.ResetCubeOrientationButton;
+        private Button DisconnectCubeButton => TimerPage.DisconnectCubeButton;
+        private TextBlock TimerText => TimerPage.TimerText;
+        private ScaleTransform TimerTextScale => TimerPage.TimerTextScale;
+        private TextBlock InspectionText => TimerPage.InspectionText;
+        private SmartCubePreviewControl SmartCubePreview => TimerPage.SmartCubePreview;
+        private Grid StatsPanel => TimerPage.StatsPanel;
+        private TextBlock BestLabelText => TimerPage.BestLabelText;
+        private TextBlock BestText => TimerPage.BestText;
+        private TextBlock Ao5Text => TimerPage.Ao5Text;
+        private TextBlock Ao12Text => TimerPage.Ao12Text;
+        private TextBlock TimerCountLabelText => TimerPage.TimerCountLabelText;
+        private TextBlock TimerCountText => TimerPage.TimerCountText;
 
         public MainWindow()
         {
@@ -337,12 +363,12 @@ namespace SharpTimer.App
             await ShowSolveDetailsAsync(item);
         }
 
-        private void BluetoothButton_Click(object sender, RoutedEventArgs e)
+        private void TimerPage_BluetoothButtonClicked(object sender, EventArgs e)
         {
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private void BluetoothFlyout_Opened(object sender, object e)
+        private void TimerPage_BluetoothFlyoutOpened(object sender, EventArgs e)
         {
             if (_smartCubeConnection is not null)
             {
@@ -354,7 +380,7 @@ namespace SharpTimer.App
             StartSmartCubeScan();
         }
 
-        private void BluetoothFlyout_Closed(object sender, object e)
+        private void TimerPage_BluetoothFlyoutClosed(object sender, EventArgs e)
         {
             if (_smartCubeConnection is null)
             {
@@ -362,7 +388,7 @@ namespace SharpTimer.App
             }
         }
 
-        private async void BluetoothDevicesList_ItemClick(object sender, ItemClickEventArgs e)
+        private async void TimerPage_BluetoothDeviceClicked(object sender, ItemClickEventArgs e)
         {
             if (e.ClickedItem is not BluetoothDeviceListItem item)
             {
@@ -393,25 +419,25 @@ namespace SharpTimer.App
             }
         }
 
-        private void BluetoothRetryScanButton_Click(object sender, RoutedEventArgs e)
+        private void TimerPage_BluetoothRetryScanRequested(object sender, EventArgs e)
         {
             _bluetoothDeviceItems.Clear();
             StartSmartCubeScan();
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private async void DisconnectCubeButton_Click(object sender, RoutedEventArgs e)
+        private async void TimerPage_DisconnectCubeRequested(object sender, EventArgs e)
         {
             await DisconnectSmartCubeAsync();
         }
 
-        private void ResetCubeStateButton_Click(object sender, RoutedEventArgs e)
+        private void TimerPage_ResetCubeStateRequested(object sender, EventArgs e)
         {
             ResetSmartCubeLocalState();
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private void ResetCubeOrientationButton_Click(object sender, RoutedEventArgs e)
+        private void TimerPage_ResetCubeOrientationRequested(object sender, EventArgs e)
         {
             SmartCubePreview.ResetOrientationToDefault();
             RootGrid.Focus(FocusState.Programmatic);
@@ -796,8 +822,7 @@ namespace SharpTimer.App
             ScrambleText.Visibility = contextVisibility;
             InspectionText.Visibility = contextVisibility;
             StatsPanel.Visibility = contextVisibility;
-            VisualStateManager.GoToState(
-                RootGrid,
+            TimerPage.GoToImmersionState(
                 isImmersive ? "TimerImmersive" : "TimerContextVisible",
                 useTransitions: true);
         }
@@ -1580,3 +1605,4 @@ namespace SharpTimer.App
         }
     }
 }
+

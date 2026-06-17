@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SharpTimer.App.Views.Timing.TimerView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:rendering="using:SharpTimer.App.Rendering">
+
+    <Grid
+        x:Name="Root"
+        RowSpacing="22">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup x:Name="TimerImmersionStates">
+                <VisualState x:Name="TimerContextVisible">
+                    <VisualState.Setters>
+                        <Setter Target="SmartCubePreviewOffset.Y" Value="100" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="TimerImmersive">
+                    <VisualState.Setters>
+                        <Setter Target="SmartCubePreviewOffset.Y" Value="0" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+            <VisualStateGroup x:Name="LayoutStates">
+                <VisualState x:Name="NarrowLayout">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="TimerText.FontSize" Value="72" />
+                        <Setter Target="ScrambleText.Margin" Value="0,16,0,0" />
+                        <Setter Target="StatsPanel.RowSpacing" Value="12" />
+                        <Setter Target="StatsColumn0.Width" Value="*" />
+                        <Setter Target="StatsColumn1.Width" Value="*" />
+                        <Setter Target="StatsColumn2.Width" Value="0" />
+                        <Setter Target="StatsColumn3.Width" Value="0" />
+                        <Setter Target="Ao12StatCard.(Grid.Row)" Value="1" />
+                        <Setter Target="Ao12StatCard.(Grid.Column)" Value="0" />
+                        <Setter Target="TimerCountStatCard.(Grid.Row)" Value="1" />
+                        <Setter Target="TimerCountStatCard.(Grid.Column)" Value="1" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="MediumLayout">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="720" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="TimerText.FontSize" Value="96" />
+                        <Setter Target="ScrambleText.Margin" Value="0,20,0,0" />
+                        <Setter Target="StatsPanel.RowSpacing" Value="0" />
+                        <Setter Target="StatsColumn0.Width" Value="*" />
+                        <Setter Target="StatsColumn1.Width" Value="*" />
+                        <Setter Target="StatsColumn2.Width" Value="*" />
+                        <Setter Target="StatsColumn3.Width" Value="*" />
+                        <Setter Target="Ao12StatCard.(Grid.Row)" Value="0" />
+                        <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
+                        <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
+                        <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="WideLayout">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1100" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="TimerText.FontSize" Value="112" />
+                        <Setter Target="ScrambleText.Margin" Value="0,24,0,0" />
+                        <Setter Target="StatsPanel.RowSpacing" Value="0" />
+                        <Setter Target="StatsColumn0.Width" Value="*" />
+                        <Setter Target="StatsColumn1.Width" Value="*" />
+                        <Setter Target="StatsColumn2.Width" Value="*" />
+                        <Setter Target="StatsColumn3.Width" Value="*" />
+                        <Setter Target="Ao12StatCard.(Grid.Row)" Value="0" />
+                        <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
+                        <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
+                        <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="44" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="44" />
+            </Grid.ColumnDefinitions>
+            <TextBlock
+                x:Name="ScrambleText"
+                x:FieldModifier="public"
+                Grid.Column="1"
+                MaxWidth="900"
+                Margin="0,24,0,0"
+                HorizontalAlignment="Center"
+                TextAlignment="Center"
+                TextWrapping="Wrap"
+                FontFamily="Consolas"
+                FontSize="22"
+                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+
+            <Button
+                x:Name="BluetoothButton"
+                x:FieldModifier="public"
+                Grid.Column="2"
+                Width="44"
+                Height="44"
+                Padding="0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                CornerRadius="22"
+                AutomationProperties.Name="智能魔方蓝牙"
+                Click="BluetoothButton_Click">
+                <FontIcon Glyph="&#xE702;" FontSize="18" />
+                <Button.Flyout>
+                    <Flyout
+                        x:Name="BluetoothFlyout"
+                        x:FieldModifier="public"
+                        Opened="BluetoothFlyout_Opened"
+                        Closed="BluetoothFlyout_Closed">
+                        <Grid
+                            Width="360"
+                            RowSpacing="12">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    x:Name="BluetoothFlyoutStatusText"
+                                    x:FieldModifier="public"
+                                    Text="正在扫描附近魔方..."
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap" />
+                                <Button
+                                    x:Name="BluetoothRetryScanButton"
+                                    x:FieldModifier="public"
+                                    Grid.Column="1"
+                                    Visibility="Collapsed"
+                                    Click="BluetoothRetryScanButton_Click" />
+                            </Grid>
+
+                            <ProgressBar
+                                x:Name="BluetoothScanProgress"
+                                x:FieldModifier="public"
+                                Grid.Row="1"
+                                IsIndeterminate="True" />
+
+                            <ListView
+                                x:Name="BluetoothDevicesList"
+                                x:FieldModifier="public"
+                                Grid.Row="2"
+                                MaxHeight="260"
+                                SelectionMode="None"
+                                IsItemClickEnabled="True"
+                                ItemClick="BluetoothDevicesList_ItemClick"
+                                AutomationProperties.Name="智能魔方设备">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Padding="2,8" ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="2">
+                                                <TextBlock
+                                                    Text="{Binding Name}"
+                                                    FontWeight="SemiBold"
+                                                    TextTrimming="CharacterEllipsis" />
+                                                <TextBlock
+                                                    Text="{Binding Address}"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    FontFamily="Consolas"
+                                                    FontSize="12"
+                                                    TextTrimming="CharacterEllipsis" />
+                                                <TextBlock
+                                                    Text="{Binding Services}"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                    FontSize="12"
+                                                    TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <StackPanel
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Right"
+                                                Spacing="2">
+                                                <TextBlock
+                                                    Text="{Binding Protocol}"
+                                                    HorizontalAlignment="Right"
+                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                <TextBlock
+                                                    Text="{Binding LastSeen}"
+                                                    HorizontalAlignment="Right"
+                                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                    FontSize="12" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+
+                            <Border
+                                x:Name="ConnectedCubePanel"
+                                x:FieldModifier="public"
+                                Grid.Row="3"
+                                Padding="12"
+                                CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                                Visibility="Collapsed"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock
+                                        x:Name="ConnectedCubeNameText"
+                                        x:FieldModifier="public"
+                                        FontWeight="SemiBold" />
+                                    <TextBlock
+                                        x:Name="ConnectedCubeBatteryText"
+                                        x:FieldModifier="public"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <StackPanel
+                                        HorizontalAlignment="Right"
+                                        Orientation="Horizontal"
+                                        Spacing="8">
+                                        <Button
+                                            x:Name="ResetCubeStateButton"
+                                            x:FieldModifier="public"
+                                            Content="重置状态"
+                                            Click="ResetCubeStateButton_Click" />
+                                        <Button
+                                            x:Name="ResetCubeOrientationButton"
+                                            x:FieldModifier="public"
+                                            Content="重置姿态"
+                                            Click="ResetCubeOrientationButton_Click" />
+                                        <Button
+                                            x:Name="DisconnectCubeButton"
+                                            x:FieldModifier="public"
+                                            Content="断开连接"
+                                            Click="DisconnectCubeButton_Click" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+        <Grid
+            Grid.Row="1"
+            Margin="0,0,0,8">
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="12">
+                <TextBlock
+                    x:Name="TimerText"
+                    x:FieldModifier="public"
+                    HorizontalAlignment="Center"
+                    FontFamily="Consolas"
+                    FontSize="112"
+                    FontWeight="SemiBold"
+                    RenderTransformOrigin="0.5,0.5">
+                    <TextBlock.RenderTransform>
+                        <ScaleTransform
+                            x:Name="TimerTextScale"
+                            x:FieldModifier="public"
+                            ScaleX="1"
+                            ScaleY="1" />
+                    </TextBlock.RenderTransform>
+                </TextBlock>
+                <TextBlock
+                    x:Name="InspectionText"
+                    x:FieldModifier="public"
+                    HorizontalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    FontSize="18" />
+            </StackPanel>
+
+            <rendering:SmartCubePreviewControl
+                x:Name="SmartCubePreview"
+                x:FieldModifier="public"
+                Width="180"
+                Height="180"
+                Margin="0,0,16,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Visibility="Collapsed">
+                <rendering:SmartCubePreviewControl.RenderTransform>
+                    <TranslateTransform
+                        x:Name="SmartCubePreviewOffset"
+                        Y="100" />
+                </rendering:SmartCubePreviewControl.RenderTransform>
+            </rendering:SmartCubePreviewControl>
+        </Grid>
+
+        <Grid
+            x:Name="StatsPanel"
+            x:FieldModifier="public"
+            Grid.Row="2"
+            ColumnSpacing="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="StatsColumn0" Width="*" />
+                <ColumnDefinition x:Name="StatsColumn1" Width="*" />
+                <ColumnDefinition x:Name="StatsColumn2" Width="*" />
+                <ColumnDefinition x:Name="StatsColumn3" Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border
+                Padding="16"
+                CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Name="BestLabelText"
+                        x:FieldModifier="public"
+                        Text="Best"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock
+                        x:Name="BestText"
+                        x:FieldModifier="public"
+                        FontSize="24"
+                        FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border
+                Grid.Column="1"
+                Padding="16"
+                CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Ao5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock x:Name="Ao5Text" x:FieldModifier="public" FontSize="24" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border
+                x:Name="Ao12StatCard"
+                Grid.Column="2"
+                Padding="16"
+                CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Ao12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock x:Name="Ao12Text" x:FieldModifier="public" FontSize="24" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <Border
+                x:Name="TimerCountStatCard"
+                Grid.Column="3"
+                Padding="16"
+                CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Name="TimerCountLabelText"
+                        x:FieldModifier="public"
+                        Text="次数"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <TextBlock
+                        x:Name="TimerCountText"
+                        x:FieldModifier="public"
+                        FontSize="24"
+                        FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

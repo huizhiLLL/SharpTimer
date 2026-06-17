@@ -31,11 +31,11 @@
 - session 操作区：重命名 / 新建 / 删除已收进官方 `MenuFlyout`。
 - 设置页拆分：`SettingsPage` 已抽成独立 `SettingsView`，主窗口仅保留设置持久化、主题和语言切换编排。
 - 成绩页拆分：`SolvesPage` 已抽成独立 `SolvesView`，成绩页响应式布局状态随 View 一起下沉。
+- 计时页拆分：`TimerPage` 已抽成独立 `TimerView`，计时页响应式布局和沉浸态 VisualState 随 View 一起下沉，窗口级空格监听保留在主窗口。
 
 部分完成 / 待继续：
 
 - padding、spacing 等设计 token 仍未系统统一。
-- 计时页尚未拆为 `TimerView`。
 - 蓝牙 / 智能魔方编排尚未抽到 `SmartCubeSessionController`。
 
 ### 1. 响应式布局（最高优先，违反 AGENTS.md 明文约束）
@@ -155,7 +155,7 @@
 
 ### 第三阶段（架构整理，中型重构，分多次）
 
-7. `[部分完成]` 三页拆为独立 `UserControl`；当前已完成 `SettingsView`、`SolvesView`，仍需拆 `TimerView`；保留窗口级空格监听。
+7. `[已完成]` 三页拆为独立 `UserControl`；已完成 `TimerView`、`SolvesView`、`SettingsView`；窗口级空格监听保留在主窗口。
 8. `[部分完成]` 蓝牙 / 智能魔方编排抽 `SmartCubeSessionController`；打乱着色抽 presenter。
 
 ### 第四阶段（功能补齐）
