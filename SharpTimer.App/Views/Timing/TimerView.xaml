@@ -32,12 +32,9 @@
                         <Setter Target="StatsPanel.RowSpacing" Value="12" />
                         <Setter Target="StatsColumn0.Width" Value="*" />
                         <Setter Target="StatsColumn1.Width" Value="*" />
-                        <Setter Target="StatsColumn2.Width" Value="0" />
-                        <Setter Target="StatsColumn3.Width" Value="0" />
+                        <Setter Target="StatsColumn2.Width" Value="*" />
                         <Setter Target="Ao12StatCard.(Grid.Row)" Value="1" />
                         <Setter Target="Ao12StatCard.(Grid.Column)" Value="0" />
-                        <Setter Target="TimerCountStatCard.(Grid.Row)" Value="1" />
-                        <Setter Target="TimerCountStatCard.(Grid.Column)" Value="1" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="MediumLayout">
@@ -51,11 +48,8 @@
                         <Setter Target="StatsColumn0.Width" Value="*" />
                         <Setter Target="StatsColumn1.Width" Value="*" />
                         <Setter Target="StatsColumn2.Width" Value="*" />
-                        <Setter Target="StatsColumn3.Width" Value="*" />
                         <Setter Target="Ao12StatCard.(Grid.Row)" Value="0" />
                         <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
-                        <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
-                        <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="WideLayout">
@@ -69,11 +63,8 @@
                         <Setter Target="StatsColumn0.Width" Value="*" />
                         <Setter Target="StatsColumn1.Width" Value="*" />
                         <Setter Target="StatsColumn2.Width" Value="*" />
-                        <Setter Target="StatsColumn3.Width" Value="*" />
                         <Setter Target="Ao12StatCard.(Grid.Row)" Value="0" />
                         <Setter Target="Ao12StatCard.(Grid.Column)" Value="2" />
-                        <Setter Target="TimerCountStatCard.(Grid.Row)" Value="0" />
-                        <Setter Target="TimerCountStatCard.(Grid.Column)" Value="3" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -185,26 +176,12 @@
                                                     FontFamily="Consolas"
                                                     FontSize="12"
                                                     TextTrimming="CharacterEllipsis" />
-                                                <TextBlock
-                                                    Text="{Binding Services}"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                                    FontSize="12"
-                                                    TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
-                                            <StackPanel
+                                            <TextBlock
                                                 Grid.Column="1"
-                                                HorizontalAlignment="Right"
-                                                Spacing="2">
-                                                <TextBlock
-                                                    Text="{Binding Protocol}"
-                                                    HorizontalAlignment="Right"
-                                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                                <TextBlock
-                                                    Text="{Binding LastSeen}"
-                                                    HorizontalAlignment="Right"
-                                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                                    FontSize="12" />
-                                            </StackPanel>
+                                                Text="{Binding Protocol}"
+                                                VerticalAlignment="Center"
+                                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                         </Grid>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
@@ -316,7 +293,6 @@
                 <ColumnDefinition x:Name="StatsColumn0" Width="*" />
                 <ColumnDefinition x:Name="StatsColumn1" Width="*" />
                 <ColumnDefinition x:Name="StatsColumn2" Width="*" />
-                <ColumnDefinition x:Name="StatsColumn3" Width="*" />
             </Grid.ColumnDefinitions>
 
             <Border
@@ -325,9 +301,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                 <StackPanel Spacing="4">
                     <TextBlock
-                        x:Name="BestLabelText"
-                        x:FieldModifier="public"
-                        Text="Best"
+                        Text="best"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock
                         x:Name="BestText"
@@ -355,25 +329,6 @@
                 <StackPanel Spacing="4">
                     <TextBlock Text="Ao12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock x:Name="Ao12Text" x:FieldModifier="public" FontSize="24" FontWeight="SemiBold" />
-                </StackPanel>
-            </Border>
-            <Border
-                x:Name="TimerCountStatCard"
-                Grid.Column="3"
-                Padding="16"
-                CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                <StackPanel Spacing="4">
-                    <TextBlock
-                        x:Name="TimerCountLabelText"
-                        x:FieldModifier="public"
-                        Text="次数"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                    <TextBlock
-                        x:Name="TimerCountText"
-                        x:FieldModifier="public"
-                        FontSize="24"
-                        FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
         </Grid>

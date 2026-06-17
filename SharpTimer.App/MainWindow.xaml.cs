@@ -72,12 +72,9 @@ namespace SharpTimer.App
         private TextBlock InspectionText => TimerPage.InspectionText;
         private SmartCubePreviewControl SmartCubePreview => TimerPage.SmartCubePreview;
         private Grid StatsPanel => TimerPage.StatsPanel;
-        private TextBlock BestLabelText => TimerPage.BestLabelText;
         private TextBlock BestText => TimerPage.BestText;
         private TextBlock Ao5Text => TimerPage.Ao5Text;
         private TextBlock Ao12Text => TimerPage.Ao12Text;
-        private TextBlock TimerCountLabelText => TimerPage.TimerCountLabelText;
-        private TextBlock TimerCountText => TimerPage.TimerCountText;
 
         public MainWindow()
         {
@@ -458,7 +455,6 @@ namespace SharpTimer.App
                 BestText.Text = FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces);
                 Ao5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
                 Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
-                TimerCountText.Text = snapshot.Statistics.Count.ToString();
                 SolvesPage.UpdateCount(string.Format(_strings.CountFormat, snapshot.Statistics.Count));
                 SolvesPage.UpdateAnalysis(
                     FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces),
@@ -1435,8 +1431,6 @@ namespace SharpTimer.App
             AutomationProperties.SetName(BluetoothButton, _strings.BluetoothButtonName);
             AutomationProperties.SetName(BluetoothDevicesList, _strings.BluetoothDevicesListName);
             AutomationProperties.SetName(SmartCubePreview, _strings.SmartCubePreviewName);
-            BestLabelText.Text = _strings.BestLabel;
-            TimerCountLabelText.Text = _strings.AnalysisCountLabel;
             SolvesPage.ApplyLanguage(_strings);
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
             BluetoothRetryScanButton.Content = _strings.BluetoothRetryScan;
