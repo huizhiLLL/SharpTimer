@@ -27,6 +27,10 @@ public sealed record LocalizedStrings
     public required string SettingsAppearanceSectionDescription { get; init; }
     public required string SettingsLanguageSectionTitle { get; init; }
     public required string SettingsLanguageSectionDescription { get; init; }
+    public required string TitleBarToggleNavigation { get; init; }
+    public required string BluetoothButtonName { get; init; }
+    public required string BluetoothDevicesListName { get; init; }
+    public required string SmartCubePreviewName { get; init; }
     public required string InspectionHeader { get; init; }
     public required string PrecisionHeader { get; init; }
     public required string Centiseconds { get; init; }
@@ -102,6 +106,10 @@ public sealed record LocalizedStrings
         SettingsAppearanceSectionDescription = "选择窗口主题和背景材质。",
         SettingsLanguageSectionTitle = "语言",
         SettingsLanguageSectionDescription = "切换界面语言。",
+        TitleBarToggleNavigation = "展开或折叠导航",
+        BluetoothButtonName = "智能魔方蓝牙",
+        BluetoothDevicesListName = "智能魔方设备",
+        SmartCubePreviewName = "智能魔方预览",
         InspectionHeader = "15 秒观察",
         PrecisionHeader = "显示精度",
         Centiseconds = "百分秒",
@@ -173,6 +181,10 @@ public sealed record LocalizedStrings
         SettingsAppearanceSectionDescription = "Choose the window theme and backdrop material.",
         SettingsLanguageSectionTitle = "Language",
         SettingsLanguageSectionDescription = "Switch the interface language.",
+        TitleBarToggleNavigation = "Toggle navigation",
+        BluetoothButtonName = "Smart cube Bluetooth",
+        BluetoothDevicesListName = "Smart cube devices",
+        SmartCubePreviewName = "Smart cube preview",
         InspectionHeader = "15-second inspection",
         PrecisionHeader = "Precision",
         Centiseconds = "Centiseconds",

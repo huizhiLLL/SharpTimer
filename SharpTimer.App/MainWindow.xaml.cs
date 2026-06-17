@@ -1615,6 +1615,10 @@ namespace SharpTimer.App
             ToolTipService.SetToolTip(RenameSessionButton, _strings.RenameSession);
             ToolTipService.SetToolTip(NewSessionButton, _strings.NewSession);
             ToolTipService.SetToolTip(ArchiveSessionButton, _strings.Delete);
+            AutomationProperties.SetName(TitleBarPaneToggleButton, _strings.TitleBarToggleNavigation);
+            AutomationProperties.SetName(BluetoothButton, _strings.BluetoothButtonName);
+            AutomationProperties.SetName(BluetoothDevicesList, _strings.BluetoothDevicesListName);
+            AutomationProperties.SetName(SmartCubePreview, _strings.SmartCubePreviewName);
             AutomationProperties.SetName(RenameSessionButton, _strings.RenameSession);
             AutomationProperties.SetName(NewSessionButton, _strings.NewSession);
             AutomationProperties.SetName(ArchiveSessionButton, _strings.Delete);
