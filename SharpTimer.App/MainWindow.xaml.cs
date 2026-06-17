@@ -35,11 +35,9 @@ namespace SharpTimer.App
         private readonly BluetoothDeviceListItemFactory _bluetoothDeviceListItemFactory;
         private readonly SmartCubeScrambleTracker _smartCubeScrambleTracker = new();
         private readonly DispatcherTimer _uiTimer = new();
-        private readonly DispatcherTimer _smartCubeKeepAliveTimer = new();
         private readonly AppSettingsService _settingsService = new();
+        private readonly SmartCubeSessionController _smartCubeSessionController = new();
         private TimerAppService? _appService;
-        private WindowsBleSmartCubeScanner? _bluetoothScanner;
-        private ISmartCubeConnection? _smartCubeConnection;
         private TimerAppSnapshot? _lastSnapshot;
         private AppSettings _settings = new();
         private LocalizedStrings _strings = LocalizedStrings.For(AppLanguagePreference.Chinese);
@@ -93,6 +91,8 @@ namespace SharpTimer.App
             BluetoothDevicesList.ItemsSource = _bluetoothDeviceItems;
             SmartCubePreview.OpenRequested += SmartCubePreview_OpenRequested;
             SmartCubePreview.InteractionCompleted += SmartCubePreview_InteractionCompleted;
+            _smartCubeSessionController.DeviceDiscovered += SmartCubeSessionController_DeviceDiscovered;
+            _smartCubeSessionController.CubeEventReceived += SmartCubeSessionController_CubeEventReceived;
             AppRoot.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(RootGrid_KeyDown), true);
             AppRoot.AddHandler(UIElement.KeyUpEvent, new KeyEventHandler(RootGrid_KeyUp), true);
             RootGrid.Loaded += RootGrid_Loaded;
@@ -100,8 +100,6 @@ namespace SharpTimer.App
 
             _uiTimer.Interval = TimeSpan.FromMilliseconds(33);
             _uiTimer.Tick += UiTimer_Tick;
-            _smartCubeKeepAliveTimer.Interval = TimeSpan.FromSeconds(60);
-            _smartCubeKeepAliveTimer.Tick += SmartCubeKeepAliveTimer_Tick;
         }
 
         private void ApplyInitialWindowPlacement()
@@ -140,31 +138,8 @@ namespace SharpTimer.App
 
         private async void MainWindow_Closed(object sender, WindowEventArgs args)
         {
-            _bluetoothScanner?.Dispose();
-            _bluetoothScanner = null;
             SmartCubePreview.StopAnimation();
-            if (_smartCubeConnection is not null)
-            {
-                await _smartCubeConnection.DisposeAsync();
-            }
-        }
-
-        private async void SmartCubeKeepAliveTimer_Tick(object? sender, object e)
-        {
-            var connection = _smartCubeConnection;
-            if (connection is null)
-            {
-                _smartCubeKeepAliveTimer.Stop();
-                return;
-            }
-
-            try
-            {
-                await connection.SendCommandAsync(SmartCubeCommand.RequestBattery);
-            }
-            catch
-            {
-            }
+            await _smartCubeSessionController.DisposeAsync();
         }
 
         private async void RootGrid_Loaded(object sender, RoutedEventArgs e)
@@ -370,7 +345,7 @@ namespace SharpTimer.App
 
         private void TimerPage_BluetoothFlyoutOpened(object sender, EventArgs e)
         {
-            if (_smartCubeConnection is not null)
+            if (_smartCubeSessionController.Connection is not null)
             {
                 RenderSmartCubeConnection();
                 return;
@@ -382,7 +357,7 @@ namespace SharpTimer.App
 
         private void TimerPage_BluetoothFlyoutClosed(object sender, EventArgs e)
         {
-            if (_smartCubeConnection is null)
+            if (_smartCubeSessionController.Connection is null)
             {
                 StopBluetoothScan();
             }
@@ -403,12 +378,8 @@ namespace SharpTimer.App
             try
             {
                 SmartCubePreview.ResetView();
-                _smartCubeConnection = await WindowsBleSmartCubeConnector.ConnectAsync(item.Device);
-                _smartCubeConnection.EventReceived += SmartCubeConnection_EventReceived;
-                _smartCubeKeepAliveTimer.Start();
+                await _smartCubeSessionController.ConnectAsync(item.Device);
                 RenderSmartCubeConnection();
-                await _smartCubeConnection.SendCommandAsync(SmartCubeCommand.RequestBattery);
-                await _smartCubeConnection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
             }
             catch (Exception ex)
             {
@@ -473,7 +444,7 @@ namespace SharpTimer.App
             try
             {
                 RenderSessions(snapshot);
-                if (_smartCubeConnection is null)
+                if (_smartCubeSessionController.Connection is null)
                 {
                     SetScrambleTextPlain(snapshot.CurrentScramble);
                 }
@@ -949,14 +920,7 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private WindowsBleSmartCubeScanner CreateBluetoothScanner()
-        {
-            var scanner = new WindowsBleSmartCubeScanner();
-            scanner.DeviceDiscovered += BluetoothScanner_DeviceDiscovered;
-            return scanner;
-        }
-
-        private void BluetoothScanner_DeviceDiscovered(object? sender, SmartCubeDeviceInfo device)
+        private void SmartCubeSessionController_DeviceDiscovered(object? sender, SmartCubeDeviceInfo device)
         {
             DispatcherQueue.TryEnqueue(() =>
             {
@@ -971,8 +935,7 @@ namespace SharpTimer.App
         {
             try
             {
-                _bluetoothScanner ??= CreateBluetoothScanner();
-                _bluetoothScanner.Start();
+                _smartCubeSessionController.StartScan();
                 BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
                 BluetoothScanProgress.IsIndeterminate = true;
                 BluetoothDevicesList.IsEnabled = true;
@@ -991,7 +954,7 @@ namespace SharpTimer.App
         {
             try
             {
-                _bluetoothScanner?.Stop();
+                _smartCubeSessionController.StopScan();
             }
             finally
             {
@@ -1028,19 +991,11 @@ namespace SharpTimer.App
                 .Any(protocol => protocol.NameFilters.Any(filter => filter.Matches(device.Name)));
         }
 
-        private void SmartCubeConnection_EventReceived(object? sender, SmartCubeEvent e)
+        private void SmartCubeSessionController_CubeEventReceived(object? sender, SmartCubeEvent e)
         {
-            if (!ReferenceEquals(sender, _smartCubeConnection))
-            {
-                return;
-            }
-
             DispatcherQueue.TryEnqueue(async () =>
             {
-                if (ReferenceEquals(sender, _smartCubeConnection))
-                {
-                    await RenderSmartCubeEventAsync(e);
-                }
+                await RenderSmartCubeEventAsync(e);
             });
         }
 
@@ -1065,8 +1020,6 @@ namespace SharpTimer.App
                         gyro.Quaternion.W);
                     break;
                 case SmartCubeDisconnectEvent:
-                    _smartCubeKeepAliveTimer.Stop();
-                    _smartCubeConnection = null;
                     _smartCubeSolveHasMove = false;
                     _smartCubeReadyToStart = false;
                     _smartCubeHasLocalMoveState = false;
@@ -1202,24 +1155,12 @@ namespace SharpTimer.App
 
         private async System.Threading.Tasks.Task RequestSmartCubeFaceletsAsync()
         {
-            var connection = _smartCubeConnection;
-            if (connection is null)
-            {
-                return;
-            }
-
-            try
-            {
-                await connection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
-            }
-            catch
-            {
-            }
+            await _smartCubeSessionController.RequestFaceletsAsync();
         }
 
         private void RenderSmartCubeConnection()
         {
-            if (_smartCubeConnection is null)
+            if (_smartCubeSessionController.Connection is null)
             {
                 ConnectedCubePanel.Visibility = Visibility.Collapsed;
                 BluetoothDevicesList.IsEnabled = true;
@@ -1235,7 +1176,7 @@ namespace SharpTimer.App
             BluetoothScanProgress.IsIndeterminate = false;
             ConnectedCubePanel.Visibility = Visibility.Visible;
             SmartCubePreview.Visibility = Visibility.Visible;
-            ConnectedCubeNameText.Text = _smartCubeConnection.DeviceName;
+            ConnectedCubeNameText.Text = _smartCubeSessionController.Connection.DeviceName;
             ConnectedCubeBatteryText.Text = _strings.BluetoothBatteryUnknown;
             SyncSmartCubeScramble(_lastSnapshot);
             if (ThreeByThreeFacelets.IsValidState(_smartCubeFacelets ?? string.Empty))
@@ -1251,16 +1192,13 @@ namespace SharpTimer.App
 
         private async System.Threading.Tasks.Task DisconnectSmartCubeAsync()
         {
-            var connection = _smartCubeConnection;
+            var connection = _smartCubeSessionController.Connection;
             if (connection is null)
             {
                 return;
             }
 
             StopBluetoothScan();
-            _smartCubeKeepAliveTimer.Stop();
-            _smartCubeConnection = null;
-            connection.EventReceived -= SmartCubeConnection_EventReceived;
             _smartCubeSolveHasMove = false;
             _smartCubeReadyToStart = false;
             _smartCubeHasLocalMoveState = false;
@@ -1272,8 +1210,8 @@ namespace SharpTimer.App
             ConnectedCubePanel.Visibility = Visibility.Collapsed;
             SmartCubePreview.Visibility = Visibility.Collapsed;
             _bluetoothDeviceItems.Clear();
+            await _smartCubeSessionController.DisconnectAsync();
             StartSmartCubeScan();
-            await connection.DisposeAsync();
         }
 
         private void ResetSmartCubeLocalState()
@@ -1289,7 +1227,7 @@ namespace SharpTimer.App
 
         private void SyncSmartCubeScramble(TimerAppSnapshot? snapshot)
         {
-            if (_smartCubeConnection is null || snapshot is null || snapshot.Timer.Phase == TimerPhase.Running)
+            if (_smartCubeSessionController.Connection is null || snapshot is null || snapshot.Timer.Phase == TimerPhase.Running)
             {
                 return;
             }
@@ -1316,7 +1254,7 @@ namespace SharpTimer.App
 
         private void EnsureSmartCubeScramble(TimerAppSnapshot? snapshot)
         {
-            if (_smartCubeConnection is null || snapshot is null || snapshot.Timer.Phase == TimerPhase.Running)
+            if (_smartCubeSessionController.Connection is null || snapshot is null || snapshot.Timer.Phase == TimerPhase.Running)
             {
                 return;
             }
