@@ -17,6 +17,8 @@ public sealed record LocalizedStrings
     public required string SolveScrambleLabel { get; init; }
     public required string SolveReplayLabel { get; init; }
     public required string SolveReplayUnavailable { get; init; }
+    public required string DeleteSolveDialogTitle { get; init; }
+    public required string DeleteSolveDialogContent { get; init; }
     public required string SettingsTitle { get; init; }
     public required string SettingsDescription { get; init; }
     public required string SettingsTimingSectionTitle { get; init; }
@@ -90,6 +92,8 @@ public sealed record LocalizedStrings
         SolveScrambleLabel = "打乱",
         SolveReplayLabel = "解法",
         SolveReplayUnavailable = "无",
+        DeleteSolveDialogTitle = "删除这条成绩",
+        DeleteSolveDialogContent = "删除后无法从应用内恢复。",
         SettingsTitle = "设置",
         SettingsDescription = "本地偏好会立即生效，并保存在当前 Windows 用户数据里",
         SettingsTimingSectionTitle = "计时",
@@ -159,6 +163,8 @@ public sealed record LocalizedStrings
         SolveScrambleLabel = "Scramble",
         SolveReplayLabel = "Solution",
         SolveReplayUnavailable = "Nothing",
+        DeleteSolveDialogTitle = "Delete this solve",
+        DeleteSolveDialogContent = "Deleted solves cannot be restored from the app.",
         SettingsTitle = "Settings",
         SettingsDescription = "Local preferences apply immediately and are saved to your Windows user data.",
         SettingsTimingSectionTitle = "Timing",

@@ -347,12 +347,12 @@ namespace SharpTimer.App
             ApplySettingsFromControls();
         }
 
-        private void SolvesList_ItemClick(object sender, ItemClickEventArgs e)
+        private async void SolvesList_ItemClick(object sender, ItemClickEventArgs e)
         {
             if (e.ClickedItem is SolveListItem item)
             {
                 SolvesList.SelectedItem = item;
-                ShowSolveDetails(item);
+                await ShowSolveDetailsAsync(item);
             }
         }
 
@@ -607,17 +607,7 @@ namespace SharpTimer.App
                 ?? new SolidColorBrush(Microsoft.UI.Colors.Black);
         }
 
-        private void SolveDetailsOverlay_Tapped(object sender, TappedRoutedEventArgs e)
-        {
-            HideSolveDetails();
-        }
-
-        private void SolveDetailsCard_Tapped(object sender, TappedRoutedEventArgs e)
-        {
-            e.Handled = true;
-        }
-
-        private void ShowSolveDetails(SolveListItem item)
+        private async System.Threading.Tasks.Task ShowSolveDetailsAsync(SolveListItem item)
         {
             if (_appService is null)
             {
@@ -639,43 +629,101 @@ namespace SharpTimer.App
             content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, _strings.SolveReplayUnavailable));
             content.Children.Add(CreateDetailRow(_strings.SolveCreatedAtLabel, item.Solve.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")));
 
+            ContentDialog? detailsDialog = null;
+            Penalty? selectedPenalty = null;
+            var deleteRequested = false;
             var actionButtons = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 8
             };
 
-            actionButtons.Children.Add(CreatePenaltyButton("+2", Penalty.PlusTwo, item.Id));
-            actionButtons.Children.Add(CreatePenaltyButton("DNF", Penalty.Dnf, item.Id));
-            actionButtons.Children.Add(CreatePenaltyButton(_strings.NoPenalty, Penalty.None, item.Id));
+            actionButtons.Children.Add(CreatePenaltyButton("+2", Penalty.PlusTwo, penalty =>
+            {
+                selectedPenalty = penalty;
+                detailsDialog?.Hide();
+            }));
+            actionButtons.Children.Add(CreatePenaltyButton("DNF", Penalty.Dnf, penalty =>
+            {
+                selectedPenalty = penalty;
+                detailsDialog?.Hide();
+            }));
+            actionButtons.Children.Add(CreatePenaltyButton(_strings.NoPenalty, Penalty.None, penalty =>
+            {
+                selectedPenalty = penalty;
+                detailsDialog?.Hide();
+            }));
 
             var deleteButton = new Button
             {
                 Content = _strings.Delete
             };
-            deleteButton.Click += async (_, _) =>
+            deleteButton.Click += (_, _) =>
             {
-                HideSolveDetails();
-                if (_appService is null)
-                {
-                    return;
-                }
-
-                Render(await _appService.DeleteSolveAsync(item.Id));
-                RootGrid.Focus(FocusState.Programmatic);
+                deleteRequested = true;
+                detailsDialog?.Hide();
             };
             actionButtons.Children.Add(deleteButton);
             content.Children.Add(actionButtons);
 
-            SolveDetailsContent.Content = content;
-            SolveDetailsOverlay.Visibility = Visibility.Visible;
+            detailsDialog = new ContentDialog
+            {
+                XamlRoot = RootGrid.XamlRoot,
+                Content = new ScrollViewer
+                {
+                    MaxHeight = 620,
+                    Content = content
+                },
+                CloseButtonText = _strings.Cancel,
+                DefaultButton = ContentDialogButton.Close
+            };
+
+            await detailsDialog.ShowAsync();
+            if (selectedPenalty is not null)
+            {
+                await SetSolvePenaltyAsync(item.Id, selectedPenalty.Value);
+                return;
+            }
+
+            if (deleteRequested)
+            {
+                await DeleteSolveWithConfirmationAsync(item.Id);
+                return;
+            }
+
+            RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private void HideSolveDetails()
+        private async System.Threading.Tasks.Task DeleteSolveWithConfirmationAsync(Guid solveId)
         {
-            SolveDetailsOverlay.Visibility = Visibility.Collapsed;
-            SolveDetailsContent.Content = null;
+            if (!await ConfirmDeleteSolveAsync())
+            {
+                RootGrid.Focus(FocusState.Programmatic);
+                return;
+            }
+
+            if (_appService is null)
+            {
+                return;
+            }
+
+            Render(await _appService.DeleteSolveAsync(solveId));
             RootGrid.Focus(FocusState.Programmatic);
+        }
+
+        private async System.Threading.Tasks.Task<bool> ConfirmDeleteSolveAsync()
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = RootGrid.XamlRoot,
+                Title = _strings.DeleteSolveDialogTitle,
+                Content = _strings.DeleteSolveDialogContent,
+                PrimaryButtonText = _strings.Delete,
+                CloseButtonText = _strings.Cancel,
+                DefaultButton = ContentDialogButton.Close
+            };
+
+            return await dialog.ShowAsync() == ContentDialogResult.Primary;
         }
 
         private static FrameworkElement CreateDetailRow(string label, string value)
@@ -714,13 +762,12 @@ namespace SharpTimer.App
             return string.IsNullOrEmpty(penalty) ? time : $"{time} {penalty}";
         }
 
-        private Button CreatePenaltyButton(string text, Penalty penalty, Guid solveId)
+        private static Button CreatePenaltyButton(string text, Penalty penalty, Action<Penalty> selectPenalty)
         {
             var button = new Button { Content = text };
-            button.Click += async (_, _) =>
+            button.Click += (_, _) =>
             {
-                HideSolveDetails();
-                await SetSolvePenaltyAsync(solveId, penalty);
+                selectPenalty(penalty);
             };
             return button;
         }
