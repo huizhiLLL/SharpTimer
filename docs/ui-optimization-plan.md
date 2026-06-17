@@ -23,6 +23,7 @@
 - 蓝牙入口：已从绝对定位改为打乱行独立列，去掉 `Margin 72` 硬避让。
 - 打乱文本展示：智能打乱文本构建已抽到 `ScrambleTextPresenter`。
 - 蓝牙设备展示格式：设备列表项构建已抽到 `BluetoothDeviceListItemFactory`。
+- 蓝牙 Flyout 信息补齐：设备列表已展示服务摘要和最近发现时间，连接中会禁用列表，连接失败后提供重新扫描入口。
 - 成绩列表空状态：无成绩时显示本地化引导。
 
 部分完成 / 待继续：
@@ -31,7 +32,6 @@
 - `SmartCubePreviewOffset` 沉浸态平移仍在 code-behind 中直接设置，未收敛到 VisualState。
 - 成绩分析区仍未落地真实趋势 / 分布 / 指标内容。
 - session 操作区仍保持图标按钮排列，未收进 `MenuFlyout`。
-- 蓝牙 Flyout 仍未展示 `Services` / `LastSeen`，也未补失败态重试和连接中禁用列表。
 - 三页尚未拆为 `TimerView`、`SolvesView`、`SettingsView`。
 - 蓝牙 / 智能魔方编排尚未抽到 `SmartCubeSessionController`。
 
