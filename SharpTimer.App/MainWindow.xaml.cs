@@ -494,6 +494,7 @@ namespace SharpTimer.App
             AnalysisWorstText.Text = FormatNullableTime(GetWorstTime(snapshot.Solves), _settings.DecimalPlaces);
             AnalysisMeanText.Text = FormatNullableTime(snapshot.Statistics.Mean, _settings.DecimalPlaces);
             AnalysisCompletedText.Text = snapshot.Statistics.CompletedCount.ToString();
+            SolveAnalysisChart.SetSolves(snapshot.Solves, _settings.DecimalPlaces);
 
             if (refreshList)
             {
@@ -1526,6 +1527,7 @@ namespace SharpTimer.App
             AnalysisWorstLabelText.Text = _strings.WorstLabel;
             AnalysisMeanLabelText.Text = _strings.MeanLabel;
             AnalysisCompletedLabelText.Text = _strings.CompletedCountLabel;
+            SolveAnalysisChart.SetText(_strings.SolveTrendTitle, _strings.SolveDistributionTitle, _strings.SolveChartEmptyText);
             EmptySolvesTitleText.Text = _strings.EmptySolvesTitle;
             EmptySolvesDescriptionText.Text = _strings.EmptySolvesDescription;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;

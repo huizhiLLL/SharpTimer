@@ -17,6 +17,9 @@ public sealed record LocalizedStrings
     public required string MeanLabel { get; init; }
     public required string CompletedCountLabel { get; init; }
     public required string AnalysisCountLabel { get; init; }
+    public required string SolveTrendTitle { get; init; }
+    public required string SolveDistributionTitle { get; init; }
+    public required string SolveChartEmptyText { get; init; }
     public required string SolveDetailsTitleFormat { get; init; }
     public required string SolveCreatedAtLabel { get; init; }
     public required string SolveScrambleLabel { get; init; }
@@ -104,6 +107,9 @@ public sealed record LocalizedStrings
         MeanLabel = "平均",
         CompletedCountLabel = "完成",
         AnalysisCountLabel = "次数",
+        SolveTrendTitle = "趋势",
+        SolveDistributionTitle = "分布",
+        SolveChartEmptyText = "有效成绩不足",
         SolveDetailsTitleFormat = "Solves {0}",
         SolveCreatedAtLabel = "日期",
         SolveScrambleLabel = "打乱",
@@ -187,6 +193,9 @@ public sealed record LocalizedStrings
         MeanLabel = "Mean",
         CompletedCountLabel = "Completed",
         AnalysisCountLabel = "Solves",
+        SolveTrendTitle = "Trend",
+        SolveDistributionTitle = "Distribution",
+        SolveChartEmptyText = "Not enough valid solves",
         SolveDetailsTitleFormat = "Solves {0}",
         SolveCreatedAtLabel = "Date",
         SolveScrambleLabel = "Scramble",

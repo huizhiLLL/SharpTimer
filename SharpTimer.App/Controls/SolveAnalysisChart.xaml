@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SharpTimer.App.Controls.SolveAnalysisChart"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid
+        RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="160" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="124" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            x:Name="TrendTitleText"
+            FontWeight="SemiBold" />
+
+        <Border
+            Grid.Row="1"
+            Padding="12"
+            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+            <Grid>
+                <Canvas
+                    x:Name="TrendCanvas"
+                    SizeChanged="ChartCanvas_SizeChanged" />
+                <TextBlock
+                    x:Name="TrendEmptyText"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </Border>
+
+        <TextBlock
+            x:Name="DistributionTitleText"
+            Grid.Row="2"
+            Margin="0,4,0,0"
+            FontWeight="SemiBold" />
+
+        <Border
+            Grid.Row="3"
+            Padding="12"
+            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+            <Grid>
+                <Canvas
+                    x:Name="DistributionCanvas"
+                    SizeChanged="ChartCanvas_SizeChanged" />
+                <TextBlock
+                    x:Name="DistributionEmptyText"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
