@@ -97,7 +97,68 @@
                 Tag="solves" />
         </NavigationView.MenuItems>
 
-        <Grid Padding="32">
+        <Grid
+            x:Name="PageHost"
+            Padding="32">
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="LayoutStates">
+                    <VisualState x:Name="NarrowLayout">
+                        <VisualState.StateTriggers>
+                            <AdaptiveTrigger MinWindowWidth="0" />
+                        </VisualState.StateTriggers>
+                        <VisualState.Setters>
+                            <Setter Target="PageHost.Padding" Value="16" />
+                            <Setter Target="TimerText.FontSize" Value="72" />
+                            <Setter Target="ScrambleText.Margin" Value="0,16,0,0" />
+                            <Setter Target="SolvesPage.RowSpacing" Value="18" />
+                            <Setter Target="SolvesListColumn.Width" Value="*" />
+                            <Setter Target="SolvesDividerColumn.Width" Value="0" />
+                            <Setter Target="SolvesAnalysisColumn.Width" Value="0" />
+                            <Setter Target="SolvesDivider.Visibility" Value="Collapsed" />
+                            <Setter Target="SolvesAnalysisPanel.(Grid.Row)" Value="1" />
+                            <Setter Target="SolvesAnalysisPanel.(Grid.Column)" Value="0" />
+                            <Setter Target="SolvesAnalysisPanel.Margin" Value="0,18,0,0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="MediumLayout">
+                        <VisualState.StateTriggers>
+                            <AdaptiveTrigger MinWindowWidth="720" />
+                        </VisualState.StateTriggers>
+                        <VisualState.Setters>
+                            <Setter Target="PageHost.Padding" Value="24" />
+                            <Setter Target="TimerText.FontSize" Value="96" />
+                            <Setter Target="ScrambleText.Margin" Value="0,20,56,0" />
+                            <Setter Target="SolvesPage.RowSpacing" Value="18" />
+                            <Setter Target="SolvesListColumn.Width" Value="*" />
+                            <Setter Target="SolvesDividerColumn.Width" Value="0" />
+                            <Setter Target="SolvesAnalysisColumn.Width" Value="0" />
+                            <Setter Target="SolvesDivider.Visibility" Value="Collapsed" />
+                            <Setter Target="SolvesAnalysisPanel.(Grid.Row)" Value="1" />
+                            <Setter Target="SolvesAnalysisPanel.(Grid.Column)" Value="0" />
+                            <Setter Target="SolvesAnalysisPanel.Margin" Value="0,18,0,0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="WideLayout">
+                        <VisualState.StateTriggers>
+                            <AdaptiveTrigger MinWindowWidth="1100" />
+                        </VisualState.StateTriggers>
+                        <VisualState.Setters>
+                            <Setter Target="PageHost.Padding" Value="32" />
+                            <Setter Target="TimerText.FontSize" Value="112" />
+                            <Setter Target="ScrambleText.Margin" Value="0,24,72,0" />
+                            <Setter Target="SolvesPage.RowSpacing" Value="0" />
+                            <Setter Target="SolvesListColumn.Width" Value="2*" />
+                            <Setter Target="SolvesDividerColumn.Width" Value="Auto" />
+                            <Setter Target="SolvesAnalysisColumn.Width" Value="3*" />
+                            <Setter Target="SolvesDivider.Visibility" Value="Visible" />
+                            <Setter Target="SolvesAnalysisPanel.(Grid.Row)" Value="0" />
+                            <Setter Target="SolvesAnalysisPanel.(Grid.Column)" Value="2" />
+                            <Setter Target="SolvesAnalysisPanel.Margin" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+
             <Grid
                 x:Name="TimerPage"
                 RowSpacing="22">
@@ -316,10 +377,14 @@
                 x:Name="SolvesPage"
                 Visibility="Collapsed"
                 ColumnSpacing="18">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="3*" />
+                    <ColumnDefinition x:Name="SolvesListColumn" Width="2*" />
+                    <ColumnDefinition x:Name="SolvesDividerColumn" Width="Auto" />
+                    <ColumnDefinition x:Name="SolvesAnalysisColumn" Width="3*" />
                 </Grid.ColumnDefinitions>
 
                 <Grid RowSpacing="16">
@@ -485,11 +550,13 @@
                 </Grid>
 
                 <Border
+                    x:Name="SolvesDivider"
                     Grid.Column="1"
                     Width="1"
                     Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
                 <Grid
+                    x:Name="SolvesAnalysisPanel"
                     Grid.Column="2"
                     Padding="0,0,0,0"
                     RowSpacing="16">
