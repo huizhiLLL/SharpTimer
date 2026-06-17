@@ -46,13 +46,6 @@ public sealed partial class SettingsView : UserControl
     public void ApplyLanguage(LocalizedStrings strings)
     {
         SettingsTitleText.Text = strings.SettingsTitle;
-        SettingsDescriptionText.Text = strings.SettingsDescription;
-        SettingsTimingSectionTitleText.Text = strings.SettingsTimingSectionTitle;
-        SettingsTimingSectionDescriptionText.Text = strings.SettingsTimingSectionDescription;
-        SettingsAppearanceSectionTitleText.Text = strings.SettingsAppearanceSectionTitle;
-        SettingsAppearanceSectionDescriptionText.Text = strings.SettingsAppearanceSectionDescription;
-        SettingsLanguageSectionTitleText.Text = strings.SettingsLanguageSectionTitle;
-        SettingsLanguageSectionDescriptionText.Text = strings.SettingsLanguageSectionDescription;
         InspectionSwitch.Header = strings.InspectionHeader;
         PrecisionComboBox.Header = strings.PrecisionHeader;
         CentisecondsItem.Content = strings.Centiseconds;

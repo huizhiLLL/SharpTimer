@@ -43,7 +43,6 @@
                 Padding="0"
                 Background="Transparent"
                 BorderThickness="0"
-                AutomationProperties.Name="展开或折叠导航"
                 Click="TitleBarPaneToggleButton_Click">
                 <FontIcon Glyph="&#xE700;" FontSize="18" />
             </Button>
