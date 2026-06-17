@@ -50,6 +50,9 @@ namespace SharpTimer.App
         private string? _smartCubeFacelets;
         private string? _scrambleTextRenderKey;
         private double _currentTimerScale = 1;
+        private string? _lastTimerText;
+        private string? _lastInspectionText;
+        private bool _lastImmersiveState;
         private const int InitialWindowWidth = 2000;
         private const int InitialWindowHeight = 1200;
         private const int InitialWindowTopOffset = 10;
@@ -94,7 +97,7 @@ namespace SharpTimer.App
             RootGrid.Loaded += RootGrid_Loaded;
             Closed += MainWindow_Closed;
 
-            _uiTimer.Interval = TimeSpan.FromMilliseconds(33);
+            _uiTimer.Interval = TimeSpan.FromMilliseconds(16);
             _uiTimer.Tick += UiTimer_Tick;
         }
 
@@ -168,7 +171,7 @@ namespace SharpTimer.App
                 return;
             }
 
-            Render(_appService.Tick(), refreshList: false);
+            RenderTimerOnly(_appService.Tick());
         }
 
         private async void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -446,8 +449,21 @@ namespace SharpTimer.App
                 }
 
                 SyncSmartCubeScramble(snapshot);
-                TimerText.Text = FormatTime(snapshot.Timer.Elapsed, _settings.DecimalPlaces);
-                InspectionText.Text = FormatInspection(snapshot.Timer);
+
+                var timerText = FormatTime(snapshot.Timer.Elapsed, _settings.DecimalPlaces);
+                if (_lastTimerText != timerText)
+                {
+                    TimerText.Text = timerText;
+                    _lastTimerText = timerText;
+                }
+
+                var inspectionText = FormatInspection(snapshot.Timer);
+                if (_lastInspectionText != inspectionText)
+                {
+                    InspectionText.Text = inspectionText;
+                    _lastInspectionText = inspectionText;
+                }
+
                 ApplyTimerVisualState(snapshot.Timer);
                 ApplyImmersiveTimerLayout(snapshot.Timer);
 
@@ -472,6 +488,25 @@ namespace SharpTimer.App
             {
                 SolvesPage.EndRender();
                 _isRendering = false;
+            }
+        }
+
+        private void RenderTimerOnly(TimerAppSnapshot snapshot)
+        {
+            _lastSnapshot = snapshot;
+
+            var timerText = FormatTime(snapshot.Timer.Elapsed, _settings.DecimalPlaces);
+            if (_lastTimerText != timerText)
+            {
+                TimerText.Text = timerText;
+                _lastTimerText = timerText;
+            }
+
+            var inspectionText = FormatInspection(snapshot.Timer);
+            if (_lastInspectionText != inspectionText)
+            {
+                InspectionText.Text = inspectionText;
+                _lastInspectionText = inspectionText;
             }
         }
 
@@ -775,14 +810,26 @@ namespace SharpTimer.App
                 _currentTimerScale = targetScale;
             }
 
-            TimerText.Foreground = _isReadyToStart || _smartCubeReadyToStart
+            var targetBrush = _isReadyToStart || _smartCubeReadyToStart
                 ? GetThemeBrush("ScrambleNextBrush")
                 : GetThemeBrush("TextFillColorPrimaryBrush");
+
+            if (TimerText.Foreground != targetBrush)
+            {
+                TimerText.Foreground = targetBrush;
+            }
         }
 
         private void ApplyImmersiveTimerLayout(TimerSnapshot snapshot)
         {
             var isImmersive = _isReadyToStart || _smartCubeReadyToStart || snapshot.Phase == TimerPhase.Running;
+
+            if (_lastImmersiveState == isImmersive)
+            {
+                return;
+            }
+
+            _lastImmersiveState = isImmersive;
             var contextVisibility = isImmersive ? Visibility.Collapsed : Visibility.Visible;
 
             ScrambleText.Visibility = contextVisibility;
