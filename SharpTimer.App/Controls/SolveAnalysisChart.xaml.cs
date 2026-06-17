@@ -85,6 +85,12 @@ public sealed partial class SolveAnalysisChart : UserControl
             max = min + 1;
         }
 
+        // 添加 Y 轴标注
+        DrawYAxisLabels(TrendCanvas, bounds, min, max, _decimalPlaces);
+
+        // 添加 X 轴标注
+        DrawXAxisLabels(TrendCanvas, bounds, values.Length);
+
         var path = new Path
         {
             Stroke = GetBrush("AccentFillColorDefaultBrush"),
@@ -127,6 +133,12 @@ public sealed partial class SolveAnalysisChart : UserControl
         var maxCount = Math.Max(1, buckets.Max(bucket => bucket.Count));
         var gap = 8d;
         var barWidth = Math.Max(4, (bounds.Width - gap * (buckets.Length - 1)) / buckets.Length);
+
+        // 添加 Y 轴标注（数量）
+        DrawCountLabels(DistributionCanvas, bounds, maxCount);
+
+        // 添加 X 轴标注（时间区间）
+        DrawBucketLabels(DistributionCanvas, bounds, buckets, barWidth, gap, _decimalPlaces);
 
         for (var index = 0; index < buckets.Length; index++)
         {
@@ -219,6 +231,92 @@ public sealed partial class SolveAnalysisChart : UserControl
         var width = Math.Max(0, canvas.ActualWidth - horizontalPadding * 2);
         var height = Math.Max(0, canvas.ActualHeight - verticalPadding * 2);
         return new Rect(horizontalPadding, verticalPadding, width, height);
+    }
+
+    private static void DrawYAxisLabels(Canvas canvas, Rect bounds, double min, double max, int decimalPlaces)
+    {
+        var lines = 3;
+        var brush = GetBrush("TextFillColorTertiaryBrush");
+        for (var index = 0; index <= lines; index++)
+        {
+            var value = max - (max - min) * index / lines;
+            var y = bounds.Top + bounds.Height * index / lines;
+            var label = new TextBlock
+            {
+                Text = FormatTime(value, decimalPlaces),
+                FontSize = 10,
+                Foreground = brush
+            };
+            Canvas.SetLeft(label, bounds.Left);
+            Canvas.SetTop(label, y - 6);
+            canvas.Children.Add(label);
+        }
+    }
+
+    private static void DrawXAxisLabels(Canvas canvas, Rect bounds, int count)
+    {
+        var brush = GetBrush("TextFillColorTertiaryBrush");
+        var step = Math.Max(1, count / 5);
+        for (var index = 0; index < count; index += step)
+        {
+            var x = bounds.Left + bounds.Width * index / Math.Max(1, count - 1);
+            var label = new TextBlock
+            {
+                Text = (index + 1).ToString(CultureInfo.CurrentCulture),
+                FontSize = 10,
+                Foreground = brush
+            };
+            Canvas.SetLeft(label, x - 6);
+            Canvas.SetTop(label, bounds.Bottom + 2);
+            canvas.Children.Add(label);
+        }
+    }
+
+    private static void DrawCountLabels(Canvas canvas, Rect bounds, int maxCount)
+    {
+        var lines = 2;
+        var brush = GetBrush("TextFillColorTertiaryBrush");
+        for (var index = 0; index <= lines; index++)
+        {
+            var value = maxCount - maxCount * index / lines;
+            var y = bounds.Top + bounds.Height * index / lines;
+            var label = new TextBlock
+            {
+                Text = value.ToString(CultureInfo.CurrentCulture),
+                FontSize = 10,
+                Foreground = brush
+            };
+            Canvas.SetLeft(label, bounds.Left);
+            Canvas.SetTop(label, y - 6);
+            canvas.Children.Add(label);
+        }
+    }
+
+    private static void DrawBucketLabels(Canvas canvas, Rect bounds, Bucket[] buckets, double barWidth, double gap, int decimalPlaces)
+    {
+        var brush = GetBrush("TextFillColorTertiaryBrush");
+        for (var index = 0; index < buckets.Length; index++)
+        {
+            var bucket = buckets[index];
+            var left = bounds.Left + index * (barWidth + gap);
+            var centerX = left + barWidth / 2;
+            var timeLabel = FormatTime((bucket.From + bucket.To) / 2, decimalPlaces);
+            var label = new TextBlock
+            {
+                Text = timeLabel,
+                FontSize = 10,
+                Foreground = brush
+            };
+            Canvas.SetLeft(label, centerX - 15);
+            Canvas.SetTop(label, bounds.Bottom + 2);
+            canvas.Children.Add(label);
+        }
+    }
+
+    private static string FormatTime(double milliseconds, int decimalPlaces)
+    {
+        var seconds = milliseconds / 1000.0;
+        return seconds.ToString($"F{decimalPlaces}", CultureInfo.CurrentCulture);
     }
 
     private static void DrawHorizontalGrid(Canvas canvas, Rect bounds, int lines)
