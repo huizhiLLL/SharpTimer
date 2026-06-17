@@ -546,7 +546,7 @@ namespace SharpTimer.App
 
             var primaryBrush = GetThemeBrush("TextFillColorPrimaryBrush");
             var secondaryBrush = GetThemeBrush("TextFillColorSecondaryBrush");
-            var personalBestBrush = new SolidColorBrush(Microsoft.UI.Colors.OrangeRed);
+            var personalBestBrush = GetThemeBrush("PersonalBestBrush");
             var bestSingle = (TimeSpan?)null;
             var bestAverageOf5 = (TimeSpan?)null;
             var bestAverageOf12 = (TimeSpan?)null;
@@ -742,8 +742,8 @@ namespace SharpTimer.App
             }
 
             TimerText.Foreground = _isReadyToStart || _smartCubeReadyToStart
-                ? new SolidColorBrush(Microsoft.UI.Colors.ForestGreen)
-                : Application.Current.Resources["TextFillColorPrimaryBrush"] as Brush;
+                ? GetThemeBrush("ScrambleNextBrush")
+                : GetThemeBrush("TextFillColorPrimaryBrush");
         }
 
         private void ApplyImmersiveTimerLayout(TimerSnapshot snapshot)
@@ -1464,18 +1464,17 @@ namespace SharpTimer.App
 
         private Brush GetPrimaryTextBrush()
         {
-            return Application.Current.Resources["TextFillColorPrimaryBrush"] as Brush
-                ?? new SolidColorBrush(Microsoft.UI.Colors.Black);
+            return GetThemeBrush("TextFillColorPrimaryBrush");
         }
 
-        private static Brush GetNextScrambleBrush()
+        private Brush GetNextScrambleBrush()
         {
-            return new SolidColorBrush(Microsoft.UI.Colors.ForestGreen);
+            return GetThemeBrush("ScrambleNextBrush");
         }
 
-        private static Brush GetCorrectionScrambleBrush()
+        private Brush GetCorrectionScrambleBrush()
         {
-            return new SolidColorBrush(Microsoft.UI.Colors.OrangeRed);
+            return GetThemeBrush("ScrambleCorrectionBrush");
         }
 
         private void SmartCubePreview_OpenRequested(object? sender, EventArgs e)

@@ -606,7 +606,7 @@
         <Grid
             x:Name="SolveDetailsOverlay"
             Grid.RowSpan="2"
-            Background="#27000000"
+            Background="{ThemeResource OverlayScrimBrush}"
             Visibility="Collapsed"
             Tapped="SolveDetailsOverlay_Tapped">
             <Border
