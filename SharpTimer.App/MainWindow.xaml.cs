@@ -55,8 +55,6 @@ namespace SharpTimer.App
         private const int InitialWindowWidth = 2000;
         private const int InitialWindowHeight = 1200;
         private const int InitialWindowTopOffset = 10;
-        private const double NormalSmartCubePreviewOffsetY = 100;
-        private const double ImmersiveSmartCubePreviewOffsetY = 0;
 
         public MainWindow()
         {
@@ -808,9 +806,10 @@ namespace SharpTimer.App
             ScrambleText.Visibility = contextVisibility;
             InspectionText.Visibility = contextVisibility;
             StatsPanel.Visibility = contextVisibility;
-            SmartCubePreviewOffset.Y = isImmersive
-                ? ImmersiveSmartCubePreviewOffsetY
-                : NormalSmartCubePreviewOffsetY;
+            VisualStateManager.GoToState(
+                RootGrid,
+                isImmersive ? "TimerImmersive" : "TimerContextVisible",
+                useTransitions: true);
         }
 
         private void AnimateTimerScale(double targetScale)

@@ -83,6 +83,20 @@
             IsSettingsVisible="True"
             SelectionChanged="AppNavigationView_SelectionChanged"
             Background="Transparent">
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup x:Name="TimerImmersionStates">
+                    <VisualState x:Name="TimerContextVisible">
+                        <VisualState.Setters>
+                            <Setter Target="SmartCubePreviewOffset.Y" Value="100" />
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="TimerImmersive">
+                        <VisualState.Setters>
+                            <Setter Target="SmartCubePreviewOffset.Y" Value="0" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
 
         <NavigationView.MenuItems>
             <NavigationViewItem
