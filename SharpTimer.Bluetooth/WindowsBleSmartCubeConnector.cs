@@ -84,7 +84,6 @@ public static class WindowsBleSmartCubeConnector
         private TaskCompletionSource<bool>? _strongPacketProbe;
         private int _moveCount = -1;
         private int _previousMoveCount = -1;
-        private bool _hasStrongPacket;
         private bool _isDisconnecting;
         private bool _isDisposed;
 
@@ -354,11 +353,6 @@ public static class WindowsBleSmartCubeConnector
 
                     return ParseResult.Dropped;
                 case 164:
-                    if (!_hasStrongPacket)
-                    {
-                        return ParseResult.Ignored;
-                    }
-
                     EmitSmartCubeEvent(new SmartCubeBatteryEvent(timestamp, decoded.Length > 1 ? decoded[1] : 0));
                     return ParseResult.Handled;
                 case 165:
@@ -433,7 +427,6 @@ public static class WindowsBleSmartCubeConnector
 
         private void MarkStrongPacket()
         {
-            _hasStrongPacket = true;
             _strongPacketProbe?.TrySetResult(true);
         }
 
