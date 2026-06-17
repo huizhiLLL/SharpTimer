@@ -28,12 +28,12 @@
 - 圆角 token 化：卡片圆角已统一引用 `SharpTimerCardCornerRadius`。
 - 智能魔方预览平移：沉浸态下的预览偏移已改由 VisualState 管理。
 - 成绩分析区指标：占位文本已替换为 Best / Worst / Mean / Completed 指标卡。
+- session 操作区：重命名 / 新建 / 删除已收进官方 `MenuFlyout`。
 
 部分完成 / 待继续：
 
 - padding、spacing 等设计 token 仍未系统统一。
 - 成绩分析区趋势图 / 分布图仍未落地。
-- session 操作区仍保持图标按钮排列，未收进 `MenuFlyout`。
 - 三页尚未拆为 `TimerView`、`SolvesView`、`SettingsView`。
 - 蓝牙 / 智能魔方编排尚未抽到 `SmartCubeSessionController`。
 
