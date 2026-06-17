@@ -570,6 +570,7 @@ namespace SharpTimer.App
                 .Reverse()
                 .ToArray();
 
+            EmptySolvesPanel.Visibility = items.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
             _solveItems.Clear();
             foreach (var item in items)
             {
@@ -1497,6 +1498,8 @@ namespace SharpTimer.App
             BestLabelText.Text = _strings.BestLabel;
             TimerCountLabelText.Text = _strings.AnalysisCountLabel;
             AnalysisCountLabelText.Text = _strings.AnalysisCountLabel;
+            EmptySolvesTitleText.Text = _strings.EmptySolvesTitle;
+            EmptySolvesDescriptionText.Text = _strings.EmptySolvesDescription;
             BluetoothFlyoutStatusText.Text = _strings.BluetoothScanningMessage;
             ResetCubeStateButton.Content = _strings.BluetoothResetCubeState;
             ResetCubeOrientationButton.Content = _strings.BluetoothResetCubeOrientation;

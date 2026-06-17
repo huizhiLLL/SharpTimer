@@ -18,6 +18,8 @@ public sealed record LocalizedStrings
     public required string SolveScrambleLabel { get; init; }
     public required string SolveReplayLabel { get; init; }
     public required string SolveReplayUnavailable { get; init; }
+    public required string EmptySolvesTitle { get; init; }
+    public required string EmptySolvesDescription { get; init; }
     public required string DeleteSolveDialogTitle { get; init; }
     public required string DeleteSolveDialogContent { get; init; }
     public required string SettingsTitle { get; init; }
@@ -98,6 +100,8 @@ public sealed record LocalizedStrings
         SolveScrambleLabel = "打乱",
         SolveReplayLabel = "解法",
         SolveReplayUnavailable = "无",
+        EmptySolvesTitle = "还没有成绩",
+        EmptySolvesDescription = "按空格或转动智能魔方开始第一次计时。",
         DeleteSolveDialogTitle = "删除这条成绩",
         DeleteSolveDialogContent = "删除后无法从应用内恢复。",
         SettingsTitle = "设置",
@@ -174,6 +178,8 @@ public sealed record LocalizedStrings
         SolveScrambleLabel = "Scramble",
         SolveReplayLabel = "Solution",
         SolveReplayUnavailable = "Nothing",
+        EmptySolvesTitle = "No solves yet",
+        EmptySolvesDescription = "Press Space or turn a smart cube to start your first solve.",
         DeleteSolveDialogTitle = "Delete this solve",
         DeleteSolveDialogContent = "Deleted solves cannot be restored from the app.",
         SettingsTitle = "Settings",
