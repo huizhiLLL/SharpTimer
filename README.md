@@ -30,6 +30,14 @@
 - 已支持 Moyu32 系列智能魔方的计时接入（智能打乱推进）
 - 提供亮/暗主题、Mica / Mica Alt / Acrylic 背景材质和中英切换
 
+### 测试
+
+```powershell
+.\scripts\package-test.ps1
+```
+
+运行还原、测试、打包和压缩
+
 ### 许可证
 
 GPL-3.0
