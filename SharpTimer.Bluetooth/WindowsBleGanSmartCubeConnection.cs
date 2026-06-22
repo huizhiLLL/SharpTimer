@@ -547,6 +547,7 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         if (type == 0x01)
         {
             var bitLength = decoded.Length * 8;
+            var chunkStart = _moveBuffer.Count;
             for (var offset = 0; offset + 72 <= bitLength && reader.Get(offset, 8) == 0x01; offset += 72)
             {
                 var serial = reader.Get(offset + 48, 16, littleEndian: true);
@@ -565,6 +566,7 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
                 }
             }
 
+            SortNewGen4MoveChunks(chunkStart);
             foreach (var smartCubeEvent in EvictMoveBuffer(requestHistory: true))
             {
                 yield return smartCubeEvent;
@@ -662,6 +664,20 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         {
             _ = DisconnectAsync();
         }
+    }
+
+    private void SortNewGen4MoveChunks(int startIndex)
+    {
+        if (startIndex < 0 || _moveBuffer.Count - startIndex <= 1)
+        {
+            return;
+        }
+
+        _moveBuffer.Sort(
+            startIndex,
+            _moveBuffer.Count - startIndex,
+            Comparer<GanBufferedMove>.Create((left, right) =>
+                ((left.Serial - _lastMoveCount) & 0xFF).CompareTo((right.Serial - _lastMoveCount) & 0xFF)));
     }
 
     private SmartCubeHardwareEvent CreateGen4HardwareEvent(DateTimeOffset timestamp)
