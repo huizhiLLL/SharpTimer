@@ -1,85 +1,53 @@
 using System;
-using Windows.Storage;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SharpTimer.App.Services;
 
 public sealed class AppSettingsService
 {
-    private const string UseInspectionKey = "UseInspection";
-    private const string DecimalPlacesKey = "DecimalPlaces";
-    private const string ThemeKey = "Theme";
-    private const string BackdropMaterialKey = "BackdropMaterial";
-    private const string LanguageKey = "Language";
-    private readonly ApplicationDataContainer _localSettings = ApplicationData.Current.LocalSettings;
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public AppSettings Load()
     {
-        return new AppSettings
+        if (!File.Exists(AppDataPaths.SettingsPath))
         {
-            UseInspection = ReadBoolean(UseInspectionKey, true),
-            DecimalPlaces = Math.Clamp(ReadInt32(DecimalPlacesKey, 2), 2, 3),
-            Theme = ReadTheme(),
-            BackdropMaterial = ReadBackdropMaterial(),
-            Language = ReadLanguage()
-        };
+            return new AppSettings();
+        }
+
+        try
+        {
+            var json = File.ReadAllText(AppDataPaths.SettingsPath);
+            var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+
+            return settings with
+            {
+                DecimalPlaces = Math.Clamp(settings.DecimalPlaces, 2, 3)
+            };
+        }
+        catch (JsonException)
+        {
+            return new AppSettings();
+        }
+        catch (IOException)
+        {
+            return new AppSettings();
+        }
     }
 
     public void Save(AppSettings settings)
     {
-        _localSettings.Values[UseInspectionKey] = settings.UseInspection;
-        _localSettings.Values[DecimalPlacesKey] = Math.Clamp(settings.DecimalPlaces, 2, 3);
-        _localSettings.Values[ThemeKey] = settings.Theme.ToString();
-        _localSettings.Values[BackdropMaterialKey] = settings.BackdropMaterial.ToString();
-        _localSettings.Values[LanguageKey] = settings.Language.ToString();
-    }
-
-    private bool ReadBoolean(string key, bool fallback)
-    {
-        return _localSettings.Values.TryGetValue(key, out var value) && value is bool boolean
-            ? boolean
-            : fallback;
-    }
-
-    private int ReadInt32(string key, int fallback)
-    {
-        return _localSettings.Values.TryGetValue(key, out var value) && value is int integer
-            ? integer
-            : fallback;
-    }
-
-    private AppThemePreference ReadTheme()
-    {
-        if (!_localSettings.Values.TryGetValue(ThemeKey, out var value) || value is not string text)
+        var normalized = settings with
         {
-            return AppThemePreference.Light;
-        }
+            DecimalPlaces = Math.Clamp(settings.DecimalPlaces, 2, 3)
+        };
 
-        return Enum.TryParse<AppThemePreference>(text, out var theme)
-            ? theme
-            : AppThemePreference.Light;
-    }
-
-    private AppLanguagePreference ReadLanguage()
-    {
-        if (!_localSettings.Values.TryGetValue(LanguageKey, out var value) || value is not string text)
-        {
-            return AppLanguagePreference.English;
-        }
-
-        return Enum.TryParse<AppLanguagePreference>(text, out var language)
-            ? language
-            : AppLanguagePreference.English;
-    }
-
-    private AppBackdropMaterialPreference ReadBackdropMaterial()
-    {
-        if (!_localSettings.Values.TryGetValue(BackdropMaterialKey, out var value) || value is not string text)
-        {
-            return AppBackdropMaterialPreference.Mica;
-        }
-
-        return Enum.TryParse<AppBackdropMaterialPreference>(text, out var material)
-            ? material
-            : AppBackdropMaterialPreference.Mica;
+        var json = JsonSerializer.Serialize(normalized, JsonOptions);
+        File.WriteAllText(AppDataPaths.SettingsPath, json);
     }
 }

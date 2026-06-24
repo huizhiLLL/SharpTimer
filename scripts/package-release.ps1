@@ -71,6 +71,29 @@ function Resolve-InnoSetupCompiler {
     return $null
 }
 
+function Copy-WinUIAppResources {
+    param(
+        [string]$BuildOutputDir,
+        [string]$PublishDir
+    )
+
+    $rootResourceFiles = @(
+        "*.xbf",
+        "*.pri"
+    )
+
+    foreach ($pattern in $rootResourceFiles) {
+        Copy-Item -Path (Join-Path $BuildOutputDir $pattern) -Destination $PublishDir -Force -ErrorAction SilentlyContinue
+    }
+
+    foreach ($directory in @("Controls", "Rendering", "Views")) {
+        $source = Join-Path $BuildOutputDir $directory
+        if (Test-Path $source) {
+            Copy-Item -Path $source -Destination $PublishDir -Recurse -Force
+        }
+    }
+}
+
 $repoRoot = Resolve-RepoRoot
 $solutionPath = Join-Path $repoRoot "SharpTimer.slnx"
 $projectPath = Join-Path $repoRoot "SharpTimer.App\SharpTimer.App.csproj"
@@ -79,6 +102,7 @@ $innoScriptPath = Join-Path $repoRoot "installer\SharpTimer.iss"
 $version = Get-AppVersion -ManifestPath $manifestPath
 $runtimeIdentifier = "win-$Platform"
 $outputRootPath = Join-Path $repoRoot $OutputRoot
+$buildOutputDir = Join-Path $repoRoot "SharpTimer.App\bin\$Platform\$Configuration\net8.0-windows10.0.19041.0\$runtimeIdentifier"
 $publishDir = Join-Path $outputRootPath "publish\$runtimeIdentifier"
 $portableRoot = Join-Path $outputRootPath "portable"
 $installerRoot = Join-Path $outputRootPath "installer"
@@ -122,6 +146,8 @@ Invoke-Checked -FilePath "dotnet" -Arguments @(
     "-p:PublishSingleFile=false",
     "-o", $publishDir
 )
+
+Copy-WinUIAppResources -BuildOutputDir $buildOutputDir -PublishDir $publishDir
 
 Write-Step "生成便携版 zip"
 if (Test-Path $portableStage) {

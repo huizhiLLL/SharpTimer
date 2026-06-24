@@ -22,7 +22,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Windows.Graphics;
-using Windows.Storage;
 
 namespace SharpTimer.App
 {
@@ -145,15 +144,12 @@ namespace SharpTimer.App
         {
             RootGrid.Focus(FocusState.Programmatic);
 
-            var databasePath = System.IO.Path.Combine(
-                ApplicationData.Current.LocalFolder.Path,
-                "sharptimer.db");
             _settings = _settingsService.Load();
             _strings = LocalizedStrings.For(_settings.Language);
             ApplyLanguage();
             ApplyTheme(_settings.Theme);
             ApplyBackdropMaterial(_settings.BackdropMaterial);
-            _appService = new TimerAppService(databasePath, _settings);
+            _appService = new TimerAppService(AppDataPaths.DatabasePath, _settings);
 
             var snapshot = await _appService.InitializeAsync();
             RootGrid.SelectedItem = TimerNavItem;
@@ -1579,4 +1575,3 @@ namespace SharpTimer.App
         }
     }
 }
-
