@@ -86,7 +86,7 @@ function Copy-WinUIAppResources {
         Copy-Item -Path (Join-Path $BuildOutputDir $pattern) -Destination $PublishDir -Force -ErrorAction SilentlyContinue
     }
 
-    foreach ($directory in @("Controls", "Rendering", "Views")) {
+    foreach ($directory in @("Assets", "Controls", "Rendering", "Views")) {
         $source = Join-Path $BuildOutputDir $directory
         if (Test-Path $source) {
             Copy-Item -Path $source -Destination $PublishDir -Recurse -Force
