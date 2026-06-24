@@ -61,6 +61,12 @@ SQLite 当前使用 v1 schema：
 - 样式优先使用 `ThemeResource` 和 Windows App SDK 能力，语义画刷（PersonalBest / ScrambleNext / ScrambleCorrectionBrush）已 token 化并支持亮暗主题切换。
 - UI 控件、窗口 API 或样式资源不确定时，优先查 `ref/WinUI-Gallery`。
 
+## 发布模型
+
+- 当前默认发布路线是 WinUI 3 unpackaged self-contained 普通 exe：`WindowsPackageType=None`、`WindowsAppSDKSelfContained=true`。
+- `scripts/package-release.ps1` 是默认一键发布入口，会生成便携版 zip；本机安装 Inno Setup 6 时会额外生成普通安装包 exe。
+- `scripts/package-test.ps1` 保留为历史 MSIX 测试包脚本。重新启用 MSIX 时需要显式传入或恢复 `EnableMsixTooling=true`，并重新处理证书、签名和安装信任链。
+
 ## BLE 边界
 
 `SharpTimer.Bluetooth` 负责和 Windows BLE API 交互。厂商协议差异、加密、通知包解析、历史补偿和连接细节应隔离在该项目中。

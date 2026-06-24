@@ -89,6 +89,12 @@ dotnet build SharpTimer.slnx
 dotnet test SharpTimer.slnx
 ```
 
+打包命令：
+
+```
+.\scripts\package-release.ps1
+```
+
 ## Git And Safety
 
 - 不要回滚用户已有改动，除非用户明确要求。

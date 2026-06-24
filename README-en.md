@@ -30,14 +30,6 @@
 - Supports timing integration for Moyu32 series smart cubes, including smart scramble progression
 - Provides light / dark themes, Mica / Mica Alt / Acrylic backdrop materials, and Chinese / English switching
 
-### Test
-
-```powershell
-.\scripts\package-test.ps1
-```
-
-Restores dependencies, runs tests, packages the app, and writes a zip file
-
 GPL-3.0
 
 ### Acknowledgements
