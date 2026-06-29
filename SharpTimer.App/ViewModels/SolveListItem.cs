@@ -22,5 +22,5 @@ public sealed class SolveListItem
 
     public Brush AverageOf12Foreground { get; init; } = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
 
-    public Solve Solve { get; init; } = new();
+    public Solve Solve { get; set; } = new();
 }

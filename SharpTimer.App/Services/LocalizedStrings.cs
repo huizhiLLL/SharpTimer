@@ -11,6 +11,7 @@ public sealed record LocalizedStrings
     public required string SessionActions { get; init; }
     public required string TimeColumn { get; init; }
     public required string Delete { get; init; }
+    public required string Close { get; init; }
     public required string BestLabel { get; init; }
     public required string WorstLabel { get; init; }
     public required string MeanLabel { get; init; }
@@ -117,6 +118,7 @@ public sealed record LocalizedStrings
         SessionActions = "Session 操作",
         TimeColumn = "时间",
         Delete = "删除",
+        Close = "关闭",
         BestLabel = "Best",
         WorstLabel = "Worst",
         MeanLabel = "Average",
@@ -219,6 +221,7 @@ public sealed record LocalizedStrings
         SessionActions = "Session actions",
         TimeColumn = "Time",
         Delete = "Delete",
+        Close = "Close",
         BestLabel = "Best",
         WorstLabel = "Worst",
         MeanLabel = "Mean",
