@@ -1261,10 +1261,13 @@ namespace SharpTimer.App
             _smartCubeFacelets = ThreeByThreeFacelets.Solved;
             _smartCubeSolveHasMove = false;
             _smartCubeReadyToStart = false;
-            _smartCubeHasLocalMoveState = false;
             SmartCubePreview.ResetViewAngles();
-            RenderSmartCubePreview(_smartCubeFacelets);
+
             SyncSmartCubeScramble(_lastSnapshot);
+            _smartCubeHasLocalMoveState = true;
+            var scrambleSnapshot = _smartCubeScrambleTracker.UpdateFacelets(_smartCubeFacelets);
+            RenderSmartCubePreview(_smartCubeFacelets);
+            ApplySmartCubeScrambleSnapshot(scrambleSnapshot);
         }
 
         private void SyncSmartCubeScramble(TimerAppSnapshot? snapshot)
