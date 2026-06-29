@@ -1,10 +1,12 @@
 using SharpTimer.Core.SmartCubes;
+using System;
 using System.Collections.Generic;
 
 namespace SharpTimer.App.Services;
 
 public enum ScrambleTextRole
 {
+    Completed,
     Primary,
     Next,
     Correction
@@ -17,7 +19,8 @@ public static class ScrambleTextPresenter
     public static IReadOnlyList<ScrambleTextRun> BuildSmartCubeRuns(
         SmartCubeScrambleSnapshot snapshot,
         string restoreRequiredText,
-        string fallbackScramble)
+        string fallbackScramble,
+        SmartCubeScrambleProgressStyle progressStyle = SmartCubeScrambleProgressStyle.HideCompleted)
     {
         var runs = new List<ScrambleTextRun>();
         switch (snapshot.Status)
@@ -28,9 +31,21 @@ public static class ScrambleTextPresenter
                 runs.Add(new ScrambleTextRun(restoreRequiredText, ScrambleTextRole.Correction));
                 return runs;
             case SmartCubeScrambleStatus.Correction:
+                if (progressStyle == SmartCubeScrambleProgressStyle.DimCompleted)
+                {
+                    AddDimCompletedCorrectionRuns(snapshot, fallbackScramble, runs);
+                    return runs;
+                }
+
                 AddCorrectionRuns(snapshot, runs);
                 return runs;
             case SmartCubeScrambleStatus.Scrambling:
+                if (progressStyle == SmartCubeScrambleProgressStyle.DimCompleted)
+                {
+                    AddDimCompletedRuns(snapshot, fallbackScramble, runs);
+                    return runs;
+                }
+
                 for (var index = 0; index < snapshot.RemainingMoves.Count; index++)
                 {
                     runs.Add(new ScrambleTextRun(
@@ -42,6 +57,34 @@ public static class ScrambleTextPresenter
             default:
                 runs.Add(new ScrambleTextRun(fallbackScramble, ScrambleTextRole.Primary));
                 return runs;
+        }
+    }
+
+    private static void AddDimCompletedRuns(
+        SmartCubeScrambleSnapshot snapshot,
+        string fallbackScramble,
+        ICollection<ScrambleTextRun> runs)
+    {
+        var moves = SmartCubeMoveNotation.ParseSequence(fallbackScramble);
+        if (moves.Count == 0)
+        {
+            foreach (var move in snapshot.RemainingMoves)
+            {
+                runs.Add(new ScrambleTextRun(move, runs.Count == 0 ? ScrambleTextRole.Next : ScrambleTextRole.Primary));
+            }
+
+            return;
+        }
+
+        var nextIndex = Math.Max(0, Math.Min(snapshot.Progress, moves.Count));
+        for (var index = 0; index < moves.Count; index++)
+        {
+            var role = index < nextIndex
+                ? ScrambleTextRole.Completed
+                : index == nextIndex
+                    ? ScrambleTextRole.Next
+                    : ScrambleTextRole.Primary;
+            runs.Add(new ScrambleTextRun(moves[index], role));
         }
     }
 
@@ -75,6 +118,21 @@ public static class ScrambleTextPresenter
                 runs.Add(new ScrambleTextRun(move.Move, ScrambleTextRole.Primary));
             }
         }
+    }
+
+    private static void AddDimCompletedCorrectionRuns(
+        SmartCubeScrambleSnapshot snapshot,
+        string fallbackScramble,
+        ICollection<ScrambleTextRun> runs)
+    {
+        var moves = SmartCubeMoveNotation.ParseSequence(fallbackScramble);
+        var completedCount = Math.Max(0, Math.Min(snapshot.Progress, moves.Count));
+        for (var index = 0; index < completedCount; index++)
+        {
+            runs.Add(new ScrambleTextRun(moves[index], ScrambleTextRole.Completed));
+        }
+
+        AddCorrectionRuns(snapshot, runs);
     }
 
     private static void AppendDisplayMove(IList<(string Move, bool IsCorrection)> moves, string move, bool isCorrection)

@@ -36,6 +36,10 @@ public sealed partial class SettingsView : UserControl
                 _ => 0
             });
             SetSelectedIndex(LanguageComboBox, settings.Language == AppLanguagePreference.English ? 1 : 0);
+            SetSelectedIndex(ScrambleProgressStyleComboBox, settings.SmartCubeScrambleProgressStyle == SmartCubeScrambleProgressStyle.DimCompleted ? 1 : 0);
+            ScrambleFontSizeSlider.Value = settings.ScrambleFontSize;
+            SmartCubePreviewSizeSlider.Value = settings.SmartCubePreviewSize;
+            UpdateSliderValueText();
         }
         finally
         {
@@ -61,11 +65,18 @@ public sealed partial class SettingsView : UserControl
         LanguageComboBox.Header = strings.LanguageHeader;
         ChineseLanguageItem.Content = strings.ChineseLanguage;
         EnglishLanguageItem.Content = strings.EnglishLanguage;
+        SmartCubeSectionTitleText.Text = strings.SmartCubeSectionTitle;
+        ScrambleProgressStyleComboBox.Header = strings.ScrambleProgressStyleHeader;
+        ScrambleProgressHideCompletedItem.Content = strings.ScrambleProgressHideCompleted;
+        ScrambleProgressDimCompletedItem.Content = strings.ScrambleProgressDimCompleted;
+        ScrambleFontSizeHeaderText.Text = strings.ScrambleFontSizeHeader;
+        SmartCubePreviewSizeHeaderText.Text = strings.SmartCubePreviewSizeHeader;
+        UpdateSliderValueText();
     }
 
     private void SettingControl_Changed(object sender, RoutedEventArgs e)
     {
-        if (_isApplyingSettings)
+        if (_isApplyingSettings || ScrambleFontSizeSlider is null || SmartCubePreviewSizeSlider is null)
         {
             return;
         }
@@ -88,8 +99,15 @@ public sealed partial class SettingsView : UserControl
             },
             Language = LanguageComboBox.SelectedIndex == 1
                 ? AppLanguagePreference.English
-                : AppLanguagePreference.Chinese
+                : AppLanguagePreference.Chinese,
+            SmartCubeScrambleProgressStyle = ScrambleProgressStyleComboBox.SelectedIndex == 1
+                ? SmartCubeScrambleProgressStyle.DimCompleted
+                : SmartCubeScrambleProgressStyle.HideCompleted,
+            ScrambleFontSize = (int)Math.Round(ScrambleFontSizeSlider.Value),
+            SmartCubePreviewSize = (int)Math.Round(SmartCubePreviewSizeSlider.Value)
         });
+
+        UpdateSliderValueText();
     }
 
     private static void SetSelectedIndex(ComboBox comboBox, int selectedIndex)
@@ -98,5 +116,16 @@ public sealed partial class SettingsView : UserControl
         {
             comboBox.SelectedIndex = selectedIndex;
         }
+    }
+
+    private void UpdateSliderValueText()
+    {
+        if (ScrambleFontSizeValueText is null || SmartCubePreviewSizeValueText is null)
+        {
+            return;
+        }
+
+        ScrambleFontSizeValueText.Text = $"{Math.Round(ScrambleFontSizeSlider.Value)} px";
+        SmartCubePreviewSizeValueText.Text = $"{Math.Round(SmartCubePreviewSizeSlider.Value)} px";
     }
 }

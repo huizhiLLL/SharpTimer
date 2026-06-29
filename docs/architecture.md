@@ -56,6 +56,7 @@ SQLite 当前使用 v1 schema：
 - 主界面使用官方 `NavigationView`，三个页面已拆为独立 `UserControl`（`TimerView`、`SolvesView`、`SettingsView`），包含主计时、成绩列表、成绩分析区和设置区域。
 - 三页均已接入响应式布局（窄 < 720、中 720–1100、宽 > 1100），计时字号、页面 padding、成绩页分栏 / 堆叠、统计卡片排布随窗口宽度自适应。
 - 智能魔方预览作为独立 `UserControl` 接入主计时页，避免把预览交互和动画状态继续堆在主窗口 code-behind。
+- 智能打乱推进显示由 `ScrambleTextPresenter` 负责，App 设置可在隐藏已完成步骤和变浅保留已完成步骤之间切换。
 - 智能魔方连接编排已抽到 `SmartCubeSessionController`（BLE 扫描、连接、断开、保活和设备事件转发）。
 - 常规操作优先使用 WinUI 官方控件，如 `Button`、`ListView`、`ContentDialog`、`ToggleSwitch`、`ComboBox`、`MenuFlyout`。
 - 样式优先使用 `ThemeResource` 和 Windows App SDK 能力，语义画刷（PersonalBest / ScrambleNext / ScrambleCorrectionBrush）已 token 化并支持亮暗主题切换。

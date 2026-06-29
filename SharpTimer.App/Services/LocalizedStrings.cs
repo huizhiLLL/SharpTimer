@@ -56,6 +56,12 @@ public sealed record LocalizedStrings
     public required string LanguageHeader { get; init; }
     public required string ChineseLanguage { get; init; }
     public required string EnglishLanguage { get; init; }
+    public required string SmartCubeSectionTitle { get; init; }
+    public required string ScrambleProgressStyleHeader { get; init; }
+    public required string ScrambleProgressHideCompleted { get; init; }
+    public required string ScrambleProgressDimCompleted { get; init; }
+    public required string ScrambleFontSizeHeader { get; init; }
+    public required string SmartCubePreviewSizeHeader { get; init; }
     public required string InspectionRemainingFormat { get; init; }
     public required string CountFormat { get; init; }
     public required string NewSessionDialogTitle { get; init; }
@@ -146,6 +152,12 @@ public sealed record LocalizedStrings
         LanguageHeader = "语言",
         ChineseLanguage = "中文",
         EnglishLanguage = "English",
+        SmartCubeSectionTitle = "智能魔方",
+        ScrambleProgressStyleHeader = "打乱推进样式",
+        ScrambleProgressHideCompleted = "自动消失",
+        ScrambleProgressDimCompleted = "变浅保留",
+        ScrambleFontSizeHeader = "打乱字体",
+        SmartCubePreviewSizeHeader = "虚拟魔方大小",
         InspectionRemainingFormat = "观察剩余 {0:0}s",
         CountFormat = "{0} 次",
         NewSessionDialogTitle = "新建 session",
@@ -232,6 +244,12 @@ public sealed record LocalizedStrings
         LanguageHeader = "Language",
         ChineseLanguage = "中文",
         EnglishLanguage = "English",
+        SmartCubeSectionTitle = "Smart cube",
+        ScrambleProgressStyleHeader = "Scramble progress style",
+        ScrambleProgressHideCompleted = "Hide completed moves",
+        ScrambleProgressDimCompleted = "Dim completed moves",
+        ScrambleFontSizeHeader = "Scramble font size",
+        SmartCubePreviewSizeHeader = "Virtual cube size",
         InspectionRemainingFormat = "Inspection left {0:0}s",
         CountFormat = "{0} solves",
         NewSessionDialogTitle = "New session",

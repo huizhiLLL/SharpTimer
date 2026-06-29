@@ -48,6 +48,7 @@ namespace SharpTimer.App
         private bool _smartCubeHasLocalMoveState;
         private string? _smartCubeFacelets;
         private string? _scrambleTextRenderKey;
+        private Brush? _completedScrambleBrush;
         private double _currentTimerScale = 1;
         private string? _lastTimerText;
         private string? _lastInspectionText;
@@ -150,6 +151,7 @@ namespace SharpTimer.App
             ApplyLanguage();
             ApplyTheme(_settings.Theme);
             ApplyBackdropMaterial(_settings.BackdropMaterial);
+            ApplyTimerViewSettings();
             _appService = new TimerAppService(AppDataPaths.DatabasePath, _settings);
 
             var snapshot = await _appService.InitializeAsync();
@@ -1328,8 +1330,9 @@ namespace SharpTimer.App
             var runs = ScrambleTextPresenter.BuildSmartCubeRuns(
                 snapshot,
                 _strings.BluetoothScrambleRestoreRequired,
-                _lastSnapshot?.CurrentScramble ?? string.Empty);
-            var renderKey = "smart:" + string.Join("|", runs.Select(run => $"{run.Role}:{run.Text}"));
+                _lastSnapshot?.CurrentScramble ?? string.Empty,
+                _settings.SmartCubeScrambleProgressStyle);
+            var renderKey = $"smart:{_settings.SmartCubeScrambleProgressStyle}:" + string.Join("|", runs.Select(run => $"{run.Role}:{run.Text}"));
             if (_scrambleTextRenderKey == renderKey)
             {
                 return;
@@ -1386,6 +1389,7 @@ namespace SharpTimer.App
             {
                 ScrambleTextRole.Next => GetNextScrambleBrush(),
                 ScrambleTextRole.Correction => GetCorrectionScrambleBrush(),
+                ScrambleTextRole.Completed => GetCompletedScrambleBrush(),
                 _ => GetPrimaryTextBrush()
             };
         }
@@ -1403,6 +1407,11 @@ namespace SharpTimer.App
         private Brush GetCorrectionScrambleBrush()
         {
             return GetThemeBrush("ScrambleCorrectionBrush");
+        }
+
+        private Brush GetCompletedScrambleBrush()
+        {
+            return _completedScrambleBrush ??= new SolidColorBrush(Colors.Gray) { Opacity = 0.48 };
         }
 
         private void SmartCubePreview_OpenRequested(object? sender, EventArgs e)
@@ -1494,6 +1503,7 @@ namespace SharpTimer.App
             var previousTheme = _settings.Theme;
             var previousBackdropMaterial = _settings.BackdropMaterial;
             var previousLanguage = _settings.Language;
+            var previousScrambleProgressStyle = _settings.SmartCubeScrambleProgressStyle;
             _settings = nextSettings;
 
             _settingsService.Save(_settings);
@@ -1514,10 +1524,23 @@ namespace SharpTimer.App
                 ApplyBackdropMaterial(_settings.BackdropMaterial);
             }
 
+            ApplyTimerViewSettings();
+            if (_settings.SmartCubeScrambleProgressStyle != previousScrambleProgressStyle)
+            {
+                _scrambleTextRenderKey = null;
+            }
+
             if (_appService is not null)
             {
                 Render(_appService.ApplySettings(_settings));
             }
+        }
+
+        private void ApplyTimerViewSettings()
+        {
+            ScrambleText.FontSize = _settings.ScrambleFontSize;
+            SmartCubePreview.Width = _settings.SmartCubePreviewSize;
+            SmartCubePreview.Height = _settings.SmartCubePreviewSize;
         }
 
         private async System.Threading.Tasks.Task<string?> ShowSessionNameDialogAsync(string title, string defaultName)
