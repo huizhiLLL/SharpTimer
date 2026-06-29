@@ -728,11 +728,7 @@ namespace SharpTimer.App
             detailsDialog = new ContentDialog
             {
                 XamlRoot = RootGrid.XamlRoot,
-                Content = new ScrollViewer
-                {
-                    MaxHeight = 620,
-                    Content = content
-                },
+                Content = content,
                 DefaultButton = ContentDialogButton.None
             };
 
