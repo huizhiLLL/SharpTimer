@@ -6,7 +6,7 @@
   <h1>SharpTimer</h1>
     
   <p>
-    A native Windows speedcubing timer based on WinUI 3, with smart cube support
+    A native WinUI 3 desktop timer for smart cube training on Windows
   </p>
 
   <p>
@@ -26,8 +26,10 @@
 ### Features
 
 - Native Windows desktop experience, with the UI built on WinUI 3 / Windows App SDK
-- Supports basic timing features such as spacebar timing, inspection, penalties, and solve session management
-- Supports timing integration for Moyu32 series smart cubes, including smart scramble progression
+- Built around smart cube training: connect a cube, follow smart scramble progression, start on the first READY turn, and save solves automatically
+- Supports basic integration for MoYu32, GAN v2/v3/v4, and QiYi smart cubes
+- Saves smart cube move sequences, move count, TPS, and replay metadata as the base for future phase analysis
+- Keeps lightweight manual timing as a fallback and debugging path, not as the core product direction
 - Provides light / dark themes, Mica / Mica Alt / Acrylic backdrop materials, and Chinese / English switching
 
 GPL-3.0
@@ -36,4 +38,4 @@ GPL-3.0
 
 - `WinUI-Gallery`: official WinUI Gallery examples, frontend reference
 - `smartcube-web-bluetooth`: smart cube Bluetooth protocol reference
-- `cstimer`: smart cube Bluetooth protocol and basic timing feature reference
+- `cstimer`: smart cube Bluetooth protocol and timing behavior reference

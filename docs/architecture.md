@@ -2,7 +2,7 @@
 
 ## 目标
 
-SharpTimer 是一个支持智能魔方的 Windows 原生魔方计时器。本文件只记录技术结构、模块边界和关键设计约束；项目当前状态见 `docs/project.md`，后续计划见 `docs/roadmap.md`。
+SharpTimer 是一个专为智能魔方训练打造的 Windows 原生桌面计时器。本文件只记录技术结构、模块边界和关键设计约束；项目当前状态见 `docs/project.md`，后续计划见 `docs/roadmap.md`。
 
 ## 项目结构
 
@@ -19,7 +19,7 @@ SharpTimer
 
 ## 分层原则
 
-- `SharpTimer.Core` 放平台无关规则：手动计时状态机、成绩模型、罚时、统计、三阶打乱生成和智能打乱推进。
+- `SharpTimer.Core` 放平台无关规则：计时状态机、成绩模型、罚时、统计、三阶打乱生成和智能打乱推进。
 - `SharpTimer.Storage` 放 SQLite schema、迁移和仓储实现，App 不直接拼 SQL。
 - `SharpTimer.Bluetooth` 放 BLE 扫描、连接、通知订阅、协议解析和设备命令。
 - `SharpTimer.App` 放 WinUI 事件、界面渲染、本地设置和跨层编排。
@@ -41,7 +41,7 @@ SharpTimer
 
 - `Solve`：一次复原成绩，包含原始用时、罚时、session、打乱、备注、来源、可选智能魔方转动序列、步数、TPS、复盘元数据和时间戳。
 - `Penalty`：`None`、`PlusTwo`、`Dnf`。
-- `ManualTimerStateMachine`：手动计时状态机。
+- `ManualTimerStateMachine`：通用计时状态机，当前同时支撑智能魔方首转起表和备用手动输入路径。
 - `SmartCubeScrambleTracker`：平台无关的智能魔方打乱推进器。
 - `StatisticsCalculator`：计算 best、mean、ao5、ao12。
 
@@ -53,7 +53,7 @@ SQLite 当前使用 v2 schema：
 
 ## UI 与 WinUI 约束
 
-- 主界面使用官方 `NavigationView`，三个页面已拆为独立 `UserControl`（`TimerView`、`SolvesView`、`SettingsView`），包含主计时、成绩列表、成绩分析区和设置区域。
+- 主界面使用官方 `NavigationView`，三个页面已拆为独立 `UserControl`（`TimerView`、`SolvesView`、`SettingsView`），包含智能魔方计时、成绩列表、成绩分析区和设置区域。
 - 三页均已接入响应式布局（窄 < 720、中 720–1100、宽 > 1100），计时字号、页面 padding、成绩页分栏 / 堆叠、统计卡片排布随窗口宽度自适应。
 - 智能魔方预览作为独立 `UserControl` 接入主计时页，避免把预览交互和动画状态继续堆在主窗口 code-behind。
 - 智能打乱推进显示由 `ScrambleTextPresenter` 负责，App 设置可在隐藏已完成步骤和变浅保留已完成步骤之间切换。
@@ -81,6 +81,6 @@ BLE 链路约束：
 - 协议补偿优先恢复状态而不是直接断链：GAN Gen4 gap / overflow 走 history 或 facelets 重同步，QiYi 状态包按时间戳拆分当前步和未来步后再交给 App。
 - WinUI `DispatcherTimer` 等 UI 线程对象只能在 UI Dispatcher 上启停，BLE 回调线程不得直接操作 UI 线程资源。
 
-`SharpTimer.Core` 只保留可测试的智能魔方规则，例如打乱推进、READY 判定和复原判定。App 层只负责把 BLE 事件转成界面状态和计时动作。
+`SharpTimer.Core` 优先保留可测试的智能魔方规则，例如打乱推进、READY 判定、复原判定和计时状态转换。App 层只负责把 BLE 事件转成界面状态和计时动作。手动输入路径只作为备用入口，不应驱动新的产品设计。
 
 后续扩展 Giiker、GoCube 等设备，或继续增强 GAN / QiYi 实机兼容性时，应优先新增协议实现和平台无关测试，不把厂商特例散落到 `MainWindow.xaml.cs`。

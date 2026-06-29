@@ -6,7 +6,7 @@
   <h1>SharpTimer</h1>
     
   <p>
-    基于 WinUI 3 的 Windows 原生魔方计时器，支持智能魔方
+    专为智能魔方打造的 WinUI 3 Windows 原生桌面计时器
   </p>
   
   <p>
@@ -26,8 +26,10 @@
 ### 特点
 
 - 原生 Windows 桌面体验，界面基于 WinUI 3 / Windows App SDK
-- 支持空格计时、观察、判罚、成绩 session 管理等基础计时功能
-- 已支持 Moyu32 系列智能魔方的计时接入（智能打乱推进）
+- 面向智能魔方训练流程：连接设备、智能打乱推进、READY 后首转起表、复原完成自动保存
+- 已支持 MoYu32、GAN v2/v3/v4 与 QiYi 系列智能魔方的基础接入
+- 保存智能魔方转动序列、步数、TPS 和复盘元数据，为后续分段分析做准备
+- 保留轻量手动计时作为备用输入和调试路径，但不作为核心产品方向
 - 提供亮/暗主题、Mica / Mica Alt / Acrylic 背景材质和中英切换
 
 ### 许可证
@@ -38,4 +40,4 @@ GPL-3.0
 
 - `WinUI-Gallery`：官方 WinUI Gallery 示例，前端参考
 - `smartcube-web-bluetooth`：智能魔方蓝牙协议参考
-- `cstimer`：智能魔方蓝牙协议、基础计时功能参考
+- `cstimer`：智能魔方蓝牙协议和计时行为参考
