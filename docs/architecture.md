@@ -19,7 +19,7 @@ SharpTimer
 
 ## 分层原则
 
-- `SharpTimer.Core` 放平台无关规则：计时状态机、成绩模型、罚时、统计、三阶打乱生成和智能打乱推进。
+- `SharpTimer.Core` 放平台无关规则：计时状态机、成绩模型、统计、三阶打乱生成和智能打乱推进。
 - `SharpTimer.Storage` 放 SQLite schema、迁移和仓储实现，App 不直接拼 SQL。
 - `SharpTimer.Bluetooth` 放 BLE 扫描、连接、通知订阅、协议解析和设备命令。
 - `SharpTimer.App` 放 WinUI 事件、界面渲染、本地设置和跨层编排。
@@ -39,8 +39,7 @@ SharpTimer
 
 核心模型：
 
-- `Solve`：一次复原成绩，包含原始用时、罚时、session、打乱、备注、来源、可选智能魔方转动序列、步数、TPS、复盘元数据和时间戳。
-- `Penalty`：`None`、`PlusTwo`、`Dnf`。
+- `Solve`：一次复原成绩，包含用时、session、打乱、备注、来源、可选智能魔方转动序列、步数、TPS、复盘元数据和时间戳。
 - `ManualTimerStateMachine`：通用计时状态机，当前同时支撑智能魔方首转起表和备用手动输入路径。
 - `SmartCubeScrambleTracker`：平台无关的智能魔方打乱推进器。
 - `StatisticsCalculator`：计算 best、mean、ao5、ao12。
@@ -48,7 +47,7 @@ SharpTimer
 SQLite 当前使用 v2 schema：
 
 - `sessions`：session 基本信息、项目代号、归档状态和排序。
-- `solves`：成绩用时、罚时、来源、打乱、备注、智能魔方解法摘要和所属 session。
+- `solves`：成绩用时、来源、打乱、备注、智能魔方解法摘要和所属 session。
 - `schema_migrations`：记录 schema 版本。
 
 ## UI 与 WinUI 约束

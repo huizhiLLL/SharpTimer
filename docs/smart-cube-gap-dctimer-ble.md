@@ -11,7 +11,7 @@ SharpTimer 当前已经具备智能魔方训练计时闭环：
 - 保存智能魔方成绩摘要字段：`MoveSequence`、`MoveCount`、`Tps`、`ReconstructionMethod`、`SolveMetaJson`。
 - `solve_meta_json` 已记录 `rawMoves`、`prettySolve` 和 `phases`，可支撑后续重新分析和统计。
 - 设置页已支持选择 `CFOP` / `Roux` 分段方式。
-- 详情页已展示分段表：阶段、用时、步数、TPS。
+- 详情页已展示分段解法和分段表：阶段、用时、步数、TPS。
 
 DCTimer-BLE 的智能魔方能力更成熟，主要优势在于实机验证、分段算法细节、方向设置、异常恢复和训练反馈完整度。
 
@@ -86,12 +86,12 @@ SharpTimer 已有：
 
 SharpTimer 已有：
 
-- 详情页展示原始时间、罚后时间、罚时、步数、TPS、打乱、解法、日期、备注。
+- 详情页展示时间、步数、TPS、打乱、分段解法、日期、备注。
 - 详情页展示分段表：阶段、用时、步数、TPS。
 
 相对 DCTimer-BLE 的差距：
 
-- 还没有按阶段展开 moves。
+- 已按阶段展示 `prettySolve`，但分段表行还不能单独展开 / 折叠。
 - 没有高亮最慢段、最低 TPS 段、占比异常段。
 - 没有完整 pretty solve 视图和复制入口。
 - 没有 alg.cubing.net 或类似复盘链接。
@@ -99,7 +99,7 @@ SharpTimer 已有：
 
 建议优先级：
 
-1. 详情页显示 `prettySolve`，并支持复制完整解法。
+1. 详情页支持复制完整解法。
 2. 分段表增加占比、最慢段和最低 TPS 高亮。
 3. 分段行可展开显示该段 moves。
 4. 增加复盘链接或导出文本。
