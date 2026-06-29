@@ -9,16 +9,16 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
 {
     private static readonly byte[] Key = { 87, 177, 249, 171, 205, 90, 232, 167, 156, 185, 140, 231, 87, 140, 81, 8 };
     private static readonly HashSet<ushort> QiYiCompanyIds = new() { 0x0504 };
-    private const int HistorySlotCount = 11;
-    private const int HistorySlotStart = 36;
-    private const int HistorySlotSize = 5;
     private const double DeviceTimeScale = 1.6d;
+    private const int WriteRetryCount = 2;
+    private static readonly TimeSpan WriteRetryDelay = TimeSpan.FromMilliseconds(80);
 
     private readonly BluetoothLEDevice _device;
     private readonly SmartCubeDeviceInfo _advertisedDevice;
     private readonly IReadOnlyList<string> _macCandidates;
     private readonly object _lifetimeLock = new();
     private readonly SemaphoreSlim _helloLock = new(1, 1);
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
     private GattDeviceService? _service;
     private GattCharacteristic? _cubeCharacteristic;
     private GattCharacteristic? _writeCharacteristic;
@@ -29,6 +29,7 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
     private bool _helloReceived;
     private bool _isDisconnecting;
     private bool _isDisposed;
+    private bool _disconnectEventEmitted;
 
     public WindowsBleQiYiSmartCubeConnection(BluetoothLEDevice device, SmartCubeDeviceInfo advertisedDevice)
     {
@@ -114,14 +115,16 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
     {
         GattCharacteristic? cubeCharacteristic;
         GattDeviceService? service;
+        bool shouldEmitEvent;
         lock (_lifetimeLock)
         {
-            if (_isDisconnecting || _isDisposed)
+            if (_isDisposed)
             {
                 return;
             }
 
             _isDisconnecting = true;
+            _isDisposed = true;
             cubeCharacteristic = _cubeCharacteristic;
             service = _service;
             _cubeCharacteristic = null;
@@ -129,6 +132,8 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
             _service = null;
             _helloProbe?.TrySetResult(false);
             _helloProbe = null;
+            shouldEmitEvent = !_disconnectEventEmitted;
+            _disconnectEventEmitted = true;
         }
 
         _device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
@@ -149,12 +154,10 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
 
         service?.Dispose();
         _device.Dispose();
-        lock (_lifetimeLock)
+        if (shouldEmitEvent)
         {
-            _isDisposed = true;
+            EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
         }
-
-        EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
     }
 
     public async ValueTask DisposeAsync()
@@ -248,10 +251,32 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
         }
 
         var encrypted = SmartCubeCrypto.TransformAesEcbAllBlocks(message.ToArray(), encrypt: true, Key);
-        await characteristic.WriteValueAsync(
-                CryptographicBuffer.CreateFromByteArray(encrypted),
-                ResolveWriteOption(characteristic))
-            .AsTask(cancellationToken);
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            var buffer = CryptographicBuffer.CreateFromByteArray(encrypted);
+            var writeOption = ResolveWriteOption(characteristic);
+            for (var attempt = 0; attempt <= WriteRetryCount; attempt++)
+            {
+                var status = await characteristic.WriteValueAsync(buffer, writeOption)
+                    .AsTask(cancellationToken);
+                if (status == GattCommunicationStatus.Success || IsConnectionClosing())
+                {
+                    return;
+                }
+
+                if (attempt == WriteRetryCount)
+                {
+                    throw new InvalidOperationException($"QiYi 写入失败：{status}。");
+                }
+
+                await Task.Delay(WriteRetryDelay, cancellationToken);
+            }
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
     }
 
     private void CubeCharacteristic_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
@@ -319,15 +344,18 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
             }
 
             var previousTimestamp = _lastTimestamp;
-            var moves = CollectStateChangeMoves(message, previousTimestamp)
-                .ToArray();
-            foreach (var move in moves)
+            foreach (var move in QiYiMoveHistory.Collect(message, previousTimestamp, cubeTimestamp))
             {
                 EmitMove(move.Code, move.Timestamp, timestamp);
             }
 
             _currentFacelets = facelets;
             Emit(new SmartCubeFaceletsEvent(timestamp, facelets, IsAuthoritative: true));
+
+            foreach (var move in QiYiMoveHistory.Collect(message, Math.Max(previousTimestamp, cubeTimestamp), long.MaxValue))
+            {
+                EmitMove(move.Code, move.Timestamp, timestamp);
+            }
 
             _lastTimestamp = Math.Max(_lastTimestamp, cubeTimestamp);
             EmitBattery(message[35], timestamp);
@@ -404,75 +432,6 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
     {
         _helloReceived = true;
         _helloProbe?.TrySetResult(true);
-    }
-
-    private static IEnumerable<(byte Code, long Timestamp)> CollectStateChangeMoves(
-        byte[] message,
-        long lastTimestamp)
-    {
-        var candidates = new List<(byte Code, long Timestamp)>
-        {
-            (message[34], ReadUInt32BE(message, 3))
-        };
-
-        for (var index = 0; index < HistorySlotCount; index++)
-        {
-            var offset = HistorySlotStart + HistorySlotSize * index;
-            if (offset + HistorySlotSize > message.Length)
-            {
-                break;
-            }
-
-            if (IsEmptyHistorySlot(message, offset))
-            {
-                continue;
-            }
-
-            candidates.Add((message[offset + 4], ReadUInt32BE(message, offset)));
-        }
-
-        var seen = new HashSet<(byte Code, long Timestamp)>();
-        foreach (var candidate in candidates
-            .OrderBy(item => item.Timestamp)
-            .Where(item => item.Timestamp > lastTimestamp
-                && ConvertMove(item.Code) >= 0))
-        {
-            if (seen.Add(candidate))
-            {
-                yield return candidate;
-            }
-        }
-    }
-
-    private static bool IsEmptyHistorySlot(IReadOnlyList<byte> message, int offset)
-    {
-        for (var index = 0; index < HistorySlotSize; index++)
-        {
-            if (message[offset + index] != 0xFF)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static int ConvertMove(byte rawMove)
-    {
-        if (rawMove == 0)
-        {
-            return -1;
-        }
-
-        var axisIndex = (rawMove - 1) >> 1;
-        if (axisIndex < 0 || axisIndex >= 6)
-        {
-            return -1;
-        }
-
-        var axis = new[] { 4, 1, 3, 0, 2, 5 }[axisIndex];
-        var power = (rawMove & 1) == 0 ? 0 : 2;
-        return axis * 3 + power;
     }
 
     private static string ParseFacelets(byte[] faceMessage)
@@ -614,16 +573,20 @@ internal sealed class WindowsBleQiYiSmartCubeConnection : ISmartCubeConnection
             bool shouldEmitEvent;
             lock (_lifetimeLock)
             {
-                shouldEmitEvent = !_isDisconnecting && !_isDisposed;
+                shouldEmitEvent = !_isDisconnecting && !_isDisposed && !_disconnectEventEmitted;
                 if (shouldEmitEvent)
                 {
                     _isDisconnecting = true;
+                    _disconnectEventEmitted = true;
+                    _helloProbe?.TrySetResult(false);
+                    _helloProbe = null;
                 }
             }
 
             if (shouldEmitEvent)
             {
                 EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
+                _ = DisposeAsync();
             }
         }
     }

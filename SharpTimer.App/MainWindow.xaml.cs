@@ -91,6 +91,7 @@ namespace SharpTimer.App
             SmartCubePreview.InteractionCompleted += SmartCubePreview_InteractionCompleted;
             _smartCubeSessionController.DeviceDiscovered += SmartCubeSessionController_DeviceDiscovered;
             _smartCubeSessionController.CubeEventReceived += SmartCubeSessionController_CubeEventReceived;
+            _smartCubeSessionController.ConnectionChanged += SmartCubeSessionController_ConnectionChanged;
             AppRoot.AddHandler(UIElement.KeyDownEvent, new KeyEventHandler(RootGrid_KeyDown), true);
             AppRoot.AddHandler(UIElement.KeyUpEvent, new KeyEventHandler(RootGrid_KeyUp), true);
             RootGrid.Loaded += RootGrid_Loaded;
@@ -1035,6 +1036,11 @@ namespace SharpTimer.App
             {
                 await RenderSmartCubeEventAsync(e);
             });
+        }
+
+        private void SmartCubeSessionController_ConnectionChanged(object? sender, EventArgs e)
+        {
+            DispatcherQueue.TryEnqueue(RenderSmartCubeConnection);
         }
 
         private async System.Threading.Tasks.Task RenderSmartCubeEventAsync(SmartCubeEvent e)

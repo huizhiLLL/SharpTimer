@@ -10,6 +10,9 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
     private static readonly byte[] DefaultIv = { 0x11, 0x03, 0x32, 0x28, 0x21, 0x01, 0x76, 0x27, 0x20, 0x95, 0x78, 0x14, 0x32, 0x12, 0x02, 0x43 };
     private static readonly byte[] AiCubeKey = { 0x05, 0x12, 0x02, 0x45, 0x02, 0x01, 0x29, 0x56, 0x12, 0x78, 0x12, 0x76, 0x81, 0x01, 0x08, 0x03 };
     private static readonly byte[] AiCubeIv = { 0x01, 0x44, 0x28, 0x06, 0x86, 0x21, 0x22, 0x28, 0x51, 0x05, 0x08, 0x31, 0x82, 0x02, 0x21, 0x06 };
+    private const int WriteRetryCount = 2;
+    private const int MaxBufferedMovesBeforeResync = 32;
+    private static readonly TimeSpan WriteRetryDelay = TimeSpan.FromMilliseconds(80);
 
     private readonly BluetoothLEDevice _device;
     private readonly SmartCubeDeviceInfo _advertisedDevice;
@@ -29,8 +32,10 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
     private DateTimeOffset? _lastLocalMoveTimestamp;
     private bool _gen4GyroObserved;
     private bool _gen4HardwareInfoEmitted;
+    private bool _forceNextFaceletsAuthoritative;
     private bool _isDisconnecting;
     private bool _isDisposed;
+    private bool _disconnectEventEmitted;
 
     private WindowsBleGanSmartCubeConnection(
         BluetoothLEDevice device,
@@ -271,19 +276,23 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
     {
         GattCharacteristic? readCharacteristic;
         GattDeviceService? service;
+        bool shouldEmitEvent;
         lock (_lifetimeLock)
         {
-            if (_isDisconnecting || _isDisposed)
+            if (_isDisposed)
             {
                 return;
             }
 
             _isDisconnecting = true;
+            _isDisposed = true;
             readCharacteristic = _readCharacteristic;
             service = _service;
             _readCharacteristic = null;
             _writeCharacteristic = null;
             _service = null;
+            shouldEmitEvent = !_disconnectEventEmitted;
+            _disconnectEventEmitted = true;
         }
 
         _device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
@@ -304,12 +313,10 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
 
         service?.Dispose();
         _device.Dispose();
-        lock (_lifetimeLock)
+        if (shouldEmitEvent)
         {
-            _isDisposed = true;
+            EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
         }
-
-        EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
     }
 
     public async ValueTask DisposeAsync()
@@ -329,10 +336,24 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         await _writeLock.WaitAsync(cancellationToken);
         try
         {
-            await writeCharacteristic.WriteValueAsync(
-                    CryptographicBuffer.CreateFromByteArray(encrypted),
-                    ResolveWriteOption(writeCharacteristic))
-                .AsTask(cancellationToken);
+            var buffer = CryptographicBuffer.CreateFromByteArray(encrypted);
+            var writeOption = ResolveWriteOption(writeCharacteristic);
+            for (var attempt = 0; attempt <= WriteRetryCount; attempt++)
+            {
+                var status = await writeCharacteristic.WriteValueAsync(buffer, writeOption)
+                    .AsTask(cancellationToken);
+                if (status == GattCommunicationStatus.Success || IsConnectionClosing())
+                {
+                    return;
+                }
+
+                if (attempt == WriteRetryCount)
+                {
+                    throw new InvalidOperationException($"GAN 写入失败：{status}。");
+                }
+
+                await Task.Delay(WriteRetryDelay, cancellationToken);
+            }
         }
         finally
         {
@@ -599,6 +620,8 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         else if (type == 0xED)
         {
             var serial = reader.Get(16, 16, littleEndian: true);
+            var isAuthoritative = _forceNextFaceletsAuthoritative;
+            _forceNextFaceletsAuthoritative = false;
             if (_lastMoveCount == -1)
             {
                 _lastMoveCount = serial;
@@ -610,7 +633,10 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
                 RequestMissingMovesFromFacelets(serial);
             }
 
-            yield return new SmartCubeFaceletsEvent(timestamp, ParseGanFacelets(reader, 32, 53, 69, 113));
+            yield return new SmartCubeFaceletsEvent(
+                timestamp,
+                ParseGanFacelets(reader, 32, 53, 69, 113),
+                IsAuthoritative: isAuthoritative);
         }
         else if (type is >= 0xFA and <= 0xFE)
         {
@@ -662,7 +688,7 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
         }
         else if (type == 0xEA)
         {
-            _ = DisconnectAsync();
+            RequestFaceletsResync();
         }
     }
 
@@ -740,14 +766,14 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
             var diff = _lastMoveCount == -1 ? 1 : (head.Serial - _lastMoveCount) & 0xFF;
             if (diff > 1)
             {
-                if (_moveBuffer.Count > 16)
-                {
-                    _ = DisconnectAsync();
-                }
-
                 if (requestHistory)
                 {
                     _ = RequestMoveHistoryAsync(head.Serial, diff);
+                }
+
+                if (_moveBuffer.Count > MaxBufferedMovesBeforeResync)
+                {
+                    RequestFaceletsResync();
                 }
 
                 yield break;
@@ -768,10 +794,25 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
                 head.EventTimestamp);
         }
 
-        if (_moveBuffer.Count > 16)
+        if (_moveBuffer.Count > MaxBufferedMovesBeforeResync)
         {
-            _ = DisconnectAsync();
+            RequestFaceletsResync();
         }
+    }
+
+    private void RequestFaceletsResync()
+    {
+        if (_generation != GanGeneration.Gen4 || IsConnectionClosing())
+        {
+            return;
+        }
+
+        _moveBuffer.Clear();
+        _lastMoveCount = -1;
+        _currentMoveCount = -1;
+        _lastLocalMoveTimestamp = null;
+        _forceNextFaceletsAuthoritative = true;
+        _ = SendCommandAsync(SmartCubeCommand.RequestFacelets);
     }
 
     private void InjectMissedMove(GanBufferedMove move)
@@ -952,16 +993,18 @@ internal sealed class WindowsBleGanSmartCubeConnection : ISmartCubeConnection
             bool shouldEmitEvent;
             lock (_lifetimeLock)
             {
-                shouldEmitEvent = !_isDisconnecting && !_isDisposed;
+                shouldEmitEvent = !_isDisconnecting && !_isDisposed && !_disconnectEventEmitted;
                 if (shouldEmitEvent)
                 {
                     _isDisconnecting = true;
+                    _disconnectEventEmitted = true;
                 }
             }
 
             if (shouldEmitEvent)
             {
                 EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
+                _ = DisposeAsync();
             }
         }
     }

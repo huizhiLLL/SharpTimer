@@ -71,6 +71,14 @@ SQLite 当前使用 v1 schema：
 
 `SharpTimer.Bluetooth` 负责和 Windows BLE API 交互。厂商协议差异、加密、通知包解析、历史补偿和连接细节应隔离在该项目中。
 
+BLE 链路约束：
+
+- 三套连接实现都要订阅底层 `ConnectionStatusChanged`，被动断链必须能发出 `SmartCubeDisconnectEvent` 并释放 GATT service、characteristic 和 device 资源。
+- BLE 写入必须串行化，并把 `GattCommunicationStatus` 非 `Success` 作为失败处理；初始化请求、保活、ACK、状态请求和历史请求不能互相抢写。
+- `SmartCubeSessionController` 负责扫描、连接、断开、保活、有限自动重连和设备事件转发；WinUI 层只负责展示连接状态和处理用户操作。
+- 协议补偿优先恢复状态而不是直接断链：GAN Gen4 gap / overflow 走 history 或 facelets 重同步，QiYi 状态包按时间戳拆分当前步和未来步后再交给 App。
+- WinUI `DispatcherTimer` 等 UI 线程对象只能在 UI Dispatcher 上启停，BLE 回调线程不得直接操作 UI 线程资源。
+
 `SharpTimer.Core` 只保留可测试的智能魔方规则，例如打乱推进、READY 判定和复原判定。App 层只负责把 BLE 事件转成界面状态和计时动作。
 
 后续扩展 Giiker、GoCube 等设备，或继续增强 GAN / QiYi 实机兼容性时，应优先新增协议实现和平台无关测试，不把厂商特例散落到 `MainWindow.xaml.cs`。

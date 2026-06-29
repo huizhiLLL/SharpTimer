@@ -71,10 +71,13 @@ public static class WindowsBleSmartCubeConnector
         private static readonly byte[] BaseKey = { 21, 119, 58, 92, 103, 14, 45, 31, 23, 103, 42, 19, 155, 103, 82, 87 };
         private static readonly byte[] BaseIv = { 17, 35, 38, 37, 134, 42, 44, 59, 85, 6, 127, 49, 126, 103, 33, 87 };
         private static readonly byte[] EnableGyroPayload = { 172, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+        private const int WriteRetryCount = 2;
+        private static readonly TimeSpan WriteRetryDelay = TimeSpan.FromMilliseconds(80);
 
         private readonly BluetoothLEDevice _device;
         private readonly IReadOnlyList<byte[]> _macCandidates;
         private readonly object _lifetimeLock = new();
+        private readonly SemaphoreSlim _writeLock = new(1, 1);
         private readonly byte[] _key;
         private readonly byte[] _iv;
         private string _deviceMac;
@@ -86,6 +89,7 @@ public static class WindowsBleSmartCubeConnector
         private int _previousMoveCount = -1;
         private bool _isDisconnecting;
         private bool _isDisposed;
+        private bool _disconnectEventEmitted;
 
         public Moyu32SmartCubeConnection(BluetoothLEDevice device, SmartCubeDeviceInfo advertisedDevice)
         {
@@ -179,14 +183,16 @@ public static class WindowsBleSmartCubeConnector
         {
             GattCharacteristic? readCharacteristic;
             GattDeviceService? service;
+            bool shouldEmitEvent;
             lock (_lifetimeLock)
             {
-                if (_isDisconnecting || _isDisposed)
+                if (_isDisposed)
                 {
                     return;
                 }
 
                 _isDisconnecting = true;
+                _isDisposed = true;
                 readCharacteristic = _readCharacteristic;
                 service = _service;
                 _readCharacteristic = null;
@@ -194,6 +200,8 @@ public static class WindowsBleSmartCubeConnector
                 _service = null;
                 _strongPacketProbe?.TrySetResult(false);
                 _strongPacketProbe = null;
+                shouldEmitEvent = !_disconnectEventEmitted;
+                _disconnectEventEmitted = true;
             }
 
             _device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
@@ -215,12 +223,10 @@ public static class WindowsBleSmartCubeConnector
             service?.Dispose();
             _device.Dispose();
 
-            lock (_lifetimeLock)
+            if (shouldEmitEvent)
             {
-                _isDisposed = true;
+                EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
             }
-
-            EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
         }
 
         public async ValueTask DisposeAsync()
@@ -245,8 +251,30 @@ public static class WindowsBleSmartCubeConnector
 
             var encrypted = Transform(payload, encrypt: true);
             var buffer = CryptographicBuffer.CreateFromByteArray(encrypted);
-            await writeCharacteristic.WriteValueAsync(buffer)
-                .AsTask(cancellationToken);
+            await _writeLock.WaitAsync(cancellationToken);
+            try
+            {
+                for (var attempt = 0; attempt <= WriteRetryCount; attempt++)
+                {
+                    var status = await writeCharacteristic.WriteValueAsync(buffer)
+                        .AsTask(cancellationToken);
+                    if (status == GattCommunicationStatus.Success || IsConnectionClosing())
+                    {
+                        return;
+                    }
+
+                    if (attempt == WriteRetryCount)
+                    {
+                        throw new InvalidOperationException($"MoYu32 写入失败：{status}。");
+                    }
+
+                    await Task.Delay(WriteRetryDelay, cancellationToken);
+                }
+            }
+            finally
+            {
+                _writeLock.Release();
+            }
         }
 
         private async Task ProbeKeyAsync(CancellationToken cancellationToken)
@@ -455,16 +483,20 @@ public static class WindowsBleSmartCubeConnector
                 bool shouldEmitEvent;
                 lock (_lifetimeLock)
                 {
-                    shouldEmitEvent = !_isDisconnecting && !_isDisposed;
+                    shouldEmitEvent = !_isDisconnecting && !_isDisposed && !_disconnectEventEmitted;
                     if (shouldEmitEvent)
                     {
                         _isDisconnecting = true;
+                        _disconnectEventEmitted = true;
+                        _strongPacketProbe?.TrySetResult(false);
+                        _strongPacketProbe = null;
                     }
                 }
 
                 if (shouldEmitEvent)
                 {
                     EventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
+                    _ = DisposeAsync();
                 }
             }
         }
