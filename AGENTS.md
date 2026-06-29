@@ -89,6 +89,14 @@ dotnet build SharpTimer.slnx
 dotnet test SharpTimer.slnx
 ```
 
+WinUI App 常有正在运行的 `SharpTimer.App` 或 Visual Studio 锁住默认输出目录，导致 `dotnet build SharpTimer.slnx` 在复制 DLL 阶段失败。遇到这类锁文件失败时，不要反复重试默认输出目录，改用独立临时输出目录验证构建，例如：
+
+```powershell
+dotnet build SharpTimer.slnx -p:BaseOutputPath=artifacts\verify-build\
+```
+
+验证完成后删除各项目下生成的 `artifacts\verify-build` 临时目录。
+
 打包命令：
 
 ```

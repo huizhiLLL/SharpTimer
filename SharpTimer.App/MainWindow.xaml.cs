@@ -4,6 +4,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -629,17 +630,34 @@ namespace SharpTimer.App
             {
                 Spacing = 16
             };
-            var header = new Grid();
+            var header = new Grid
+            {
+                ColumnSpacing = 12
+            };
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            header.Children.Add(new TextBlock
+            var titlePanel = new StackPanel
             {
-                Text = $"{string.Format(_strings.SolveDetailsTitleFormat, item.Number)}  {item.Solve.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}",
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            titlePanel.Children.Add(new TextBlock
+            {
+                Text = string.Format(_strings.SolveDetailsTitleFormat, item.Number),
                 FontSize = 20,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             });
+            titlePanel.Children.Add(new TextBlock
+            {
+                Text = item.Solve.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
+                FontSize = 13,
+                Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            header.Children.Add(titlePanel);
 
-            ContentDialog? detailsDialog = null;
+            Popup? detailsPopup = null;
             var deleteRequested = false;
             var deleteButton = new Button
             {
@@ -650,7 +668,10 @@ namespace SharpTimer.App
             deleteButton.Click += (_, _) =>
             {
                 deleteRequested = true;
-                detailsDialog?.Hide();
+                if (detailsPopup is not null)
+                {
+                    detailsPopup.IsOpen = false;
+                }
             };
             Grid.SetColumn(deleteButton, 1);
             header.Children.Add(deleteButton);
@@ -692,30 +713,59 @@ namespace SharpTimer.App
             };
             content.Children.Add(CreateDetailEditor(_strings.SolveCommentLabel, commentBox));
 
-            detailsDialog = new ContentDialog
+            var popupContent = new Border
             {
-                XamlRoot = RootGrid.XamlRoot,
-                Content = new ScrollViewer
+                Background = Application.Current.Resources["SolidBackgroundFillColorBaseBrush"] as Brush,
+                BorderBrush = Application.Current.Resources["SurfaceStrokeColorDefaultBrush"] as Brush,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(24),
+                MaxWidth = 720,
+                Child = new ScrollViewer
                 {
                     MaxHeight = 620,
                     Content = content
-                },
-                PrimaryButtonText = _strings.Save,
-                CloseButtonText = _strings.Cancel,
-                DefaultButton = ContentDialogButton.Primary
+                }
             };
 
-            var result = await detailsDialog.ShowAsync();
+            detailsPopup = new Popup
+            {
+                XamlRoot = RootGrid.XamlRoot,
+                Child = popupContent,
+                IsLightDismissEnabled = true,
+                LightDismissOverlayMode = LightDismissOverlayMode.On
+            };
+
+            void RepositionDetailsPopup()
+            {
+                var availableWidth = Math.Max(320, RootGrid.ActualWidth - 48);
+                var availableHeight = Math.Max(320, RootGrid.ActualHeight - 48);
+                var popupWidth = Math.Min(720, availableWidth);
+                var popupHeight = Math.Min(668, availableHeight);
+
+                popupContent.Width = popupWidth;
+                popupContent.MaxHeight = availableHeight;
+                detailsPopup.HorizontalOffset = Math.Max(24, (RootGrid.ActualWidth - popupContent.Width) / 2);
+                detailsPopup.VerticalOffset = Math.Max(24, (RootGrid.ActualHeight - popupHeight) / 2);
+            }
+
+            var popupClosed = new System.Threading.Tasks.TaskCompletionSource();
+            SizeChangedEventHandler sizeChanged = (_, _) => RepositionDetailsPopup();
+            detailsPopup.Closed += (_, _) => popupClosed.TrySetResult();
+            RootGrid.SizeChanged += sizeChanged;
+            RepositionDetailsPopup();
+            detailsPopup.IsOpen = true;
+
+            await popupClosed.Task;
+            RootGrid.SizeChanged -= sizeChanged;
+
             if (deleteRequested)
             {
                 await DeleteSolveWithConfirmationAsync(item.Id);
                 return;
             }
 
-            if (result == ContentDialogResult.Primary)
-            {
-                Render(await _appService.UpdateSolveCommentAsync(item.Id, commentBox.Text));
-            }
+            Render(await _appService.UpdateSolveCommentAsync(item.Id, commentBox.Text));
 
             RootGrid.Focus(FocusState.Programmatic);
         }
