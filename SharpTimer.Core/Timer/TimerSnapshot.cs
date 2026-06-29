@@ -1,5 +1,3 @@
-using SharpTimer.Core.Models;
-
 namespace SharpTimer.Core.Timer;
 
 public sealed record TimerSnapshot(
@@ -7,6 +5,5 @@ public sealed record TimerSnapshot(
     TimeSpan Elapsed,
     TimeSpan InspectionElapsed,
     TimeSpan InspectionRemaining,
-    Penalty PendingPenalty,
     DateTimeOffset? StartedAt,
     DateTimeOffset? StoppedAt);

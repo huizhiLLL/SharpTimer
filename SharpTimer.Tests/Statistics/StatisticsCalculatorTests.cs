@@ -21,7 +21,7 @@ public sealed class StatisticsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAverageOf_DropsSingleDnfAsWorst()
+    public void CalculateAverageOf_DropsBestAndWorst()
     {
         var solves = new[]
         {
@@ -29,29 +29,12 @@ public sealed class StatisticsCalculatorTests
             CreateSolve(11, 1),
             CreateSolve(12, 2),
             CreateSolve(13, 3),
-            CreateSolve(14, 4, Penalty.Dnf)
+            CreateSolve(14, 4)
         };
 
         var average = StatisticsCalculator.CalculateAverageOf(solves, 5);
 
         Assert.Equal(TimeSpan.FromSeconds(12), average);
-    }
-
-    [Fact]
-    public void CalculateAverageOf_ReturnsNull_WhenWindowHasMultipleDnfs()
-    {
-        var solves = new[]
-        {
-            CreateSolve(10, 0),
-            CreateSolve(11, 1, Penalty.Dnf),
-            CreateSolve(12, 2),
-            CreateSolve(13, 3),
-            CreateSolve(14, 4, Penalty.Dnf)
-        };
-
-        var average = StatisticsCalculator.CalculateAverageOf(solves, 5);
-
-        Assert.Null(average);
     }
 
     [Fact]
@@ -71,13 +54,12 @@ public sealed class StatisticsCalculatorTests
             .ToArray();
     }
 
-    private static Solve CreateSolve(double seconds, int index, Penalty penalty = Penalty.None)
+    private static Solve CreateSolve(double seconds, int index)
     {
         return new Solve
         {
             SessionId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
             Duration = TimeSpan.FromSeconds(seconds),
-            Penalty = penalty,
             CreatedAt = DateTimeOffset.Parse("2026-05-01T00:00:00Z").AddSeconds(index)
         };
     }

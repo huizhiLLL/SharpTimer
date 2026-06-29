@@ -34,28 +34,6 @@ internal static class StorageValueConverter
         return TimeSpan.FromMilliseconds(milliseconds);
     }
 
-    public static int ToPenaltyValue(Penalty penalty)
-    {
-        return penalty switch
-        {
-            Penalty.None => 0,
-            Penalty.PlusTwo => 1,
-            Penalty.Dnf => 2,
-            _ => throw new ArgumentOutOfRangeException(nameof(penalty), penalty, "Unknown penalty.")
-        };
-    }
-
-    public static Penalty ToPenalty(int value)
-    {
-        return value switch
-        {
-            0 => Penalty.None,
-            1 => Penalty.PlusTwo,
-            2 => Penalty.Dnf,
-            _ => throw new ArgumentOutOfRangeException(nameof(value), value, "Unknown penalty.")
-        };
-    }
-
     public static int ToSolveSourceValue(SolveSource source)
     {
         return source switch

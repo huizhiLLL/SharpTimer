@@ -26,7 +26,6 @@ public sealed class SqliteSolveRepository
                 id,
                 session_id,
                 duration_ms,
-                penalty,
                 source,
                 scramble,
                 comment,
@@ -42,7 +41,6 @@ public sealed class SqliteSolveRepository
                 $id,
                 $sessionId,
                 $durationMs,
-                $penalty,
                 $source,
                 $scramble,
                 $comment,
@@ -57,7 +55,6 @@ public sealed class SqliteSolveRepository
             ON CONFLICT(id) DO UPDATE SET
                 session_id = excluded.session_id,
                 duration_ms = excluded.duration_ms,
-                penalty = excluded.penalty,
                 source = excluded.source,
                 scramble = excluded.scramble,
                 comment = excluded.comment,
@@ -72,7 +69,6 @@ public sealed class SqliteSolveRepository
         command.Parameters.AddWithValue("$id", StorageValueConverter.ToStorageText(solve.Id));
         command.Parameters.AddWithValue("$sessionId", StorageValueConverter.ToStorageText(solve.SessionId));
         command.Parameters.AddWithValue("$durationMs", StorageValueConverter.ToDurationMilliseconds(solve.Duration));
-        command.Parameters.AddWithValue("$penalty", StorageValueConverter.ToPenaltyValue(solve.Penalty));
         command.Parameters.AddWithValue("$source", StorageValueConverter.ToSolveSourceValue(solve.Source));
         command.Parameters.AddWithValue("$scramble", StorageValueConverter.ToDbValue(solve.Scramble));
         command.Parameters.AddWithValue("$comment", StorageValueConverter.ToDbValue(solve.Comment));
@@ -99,7 +95,6 @@ public sealed class SqliteSolveRepository
                 id,
                 session_id,
                 duration_ms,
-                penalty,
                 scramble,
                 comment,
                 created_at,
@@ -123,27 +118,6 @@ public sealed class SqliteSolveRepository
         }
 
         return solves;
-    }
-
-    public async Task UpdatePenaltyAsync(
-        Guid solveId,
-        Penalty penalty,
-        CancellationToken cancellationToken = default)
-    {
-        await using var connection = _connectionFactory.CreateOpenConnection();
-        await using var command = connection.CreateCommand();
-        command.CommandText =
-            """
-            UPDATE solves
-            SET penalty = $penalty,
-                updated_at = $updatedAt
-            WHERE id = $id;
-            """;
-        command.Parameters.AddWithValue("$id", StorageValueConverter.ToStorageText(solveId));
-        command.Parameters.AddWithValue("$penalty", StorageValueConverter.ToPenaltyValue(penalty));
-        command.Parameters.AddWithValue("$updatedAt", StorageValueConverter.ToStorageText(DateTimeOffset.UtcNow));
-
-        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public async Task UpdateCommentAsync(
@@ -184,16 +158,15 @@ public sealed class SqliteSolveRepository
             Id = StorageValueConverter.ToGuid(reader.GetString(0)),
             SessionId = StorageValueConverter.ToGuid(reader.GetString(1)),
             Duration = StorageValueConverter.ToDuration(reader.GetInt64(2)),
-            Penalty = StorageValueConverter.ToPenalty(reader.GetInt32(3)),
-            Scramble = reader.IsDBNull(4) ? null : reader.GetString(4),
-            Comment = reader.IsDBNull(5) ? null : reader.GetString(5),
-            CreatedAt = StorageValueConverter.ToDateTimeOffset(reader.GetString(6)),
-            Source = StorageValueConverter.ToSolveSource(reader.GetInt32(7)),
-            MoveSequence = reader.IsDBNull(8) ? null : reader.GetString(8),
-            MoveCount = reader.IsDBNull(9) ? null : reader.GetInt32(9),
-            Tps = reader.IsDBNull(10) ? null : reader.GetDouble(10),
-            ReconstructionMethod = reader.IsDBNull(11) ? null : reader.GetString(11),
-            SolveMetaJson = reader.IsDBNull(12) ? null : reader.GetString(12)
+            Scramble = reader.IsDBNull(3) ? null : reader.GetString(3),
+            Comment = reader.IsDBNull(4) ? null : reader.GetString(4),
+            CreatedAt = StorageValueConverter.ToDateTimeOffset(reader.GetString(5)),
+            Source = StorageValueConverter.ToSolveSource(reader.GetInt32(6)),
+            MoveSequence = reader.IsDBNull(7) ? null : reader.GetString(7),
+            MoveCount = reader.IsDBNull(8) ? null : reader.GetInt32(8),
+            Tps = reader.IsDBNull(9) ? null : reader.GetDouble(9),
+            ReconstructionMethod = reader.IsDBNull(10) ? null : reader.GetString(10),
+            SolveMetaJson = reader.IsDBNull(11) ? null : reader.GetString(11)
         };
     }
 

@@ -10,8 +10,7 @@ public static class StatisticsCalculator
 
         var orderedSolves = solves.OrderBy(solve => solve.CreatedAt).ToArray();
         var completedDurations = orderedSolves
-            .Select(solve => solve.EffectiveDuration)
-            .OfType<TimeSpan>()
+            .Select(solve => solve.Duration)
             .ToArray();
 
         return new SolveStatistics(
@@ -27,7 +26,7 @@ public static class StatisticsCalculator
     {
         ArgumentNullException.ThrowIfNull(solves);
 
-        return CalculateMean(solves.Select(solve => solve.EffectiveDuration).OfType<TimeSpan>());
+        return CalculateMean(solves.Select(solve => solve.Duration));
     }
 
     public static TimeSpan? CalculateAverageOf(IEnumerable<Solve> solves, int windowSize)
@@ -49,31 +48,15 @@ public static class StatisticsCalculator
             return null;
         }
 
-        var effectiveDurations = window
-            .Select(solve => solve.EffectiveDuration)
-            .ToArray();
-
-        var dnfCount = effectiveDurations.Count(duration => duration is null);
-        if (dnfCount > 1)
-        {
-            return null;
-        }
-
-        var sortableDurations = effectiveDurations
-            .Select(duration => duration ?? TimeSpan.MaxValue)
+        var durations = window
+            .Select(solve => solve.Duration)
             .OrderBy(duration => duration)
             .ToArray();
 
-        var trimmed = sortableDurations
+        var trimmed = durations
             .Skip(1)
             .Take(windowSize - 2)
-            .Where(duration => duration != TimeSpan.MaxValue)
             .ToArray();
-
-        if (trimmed.Length != windowSize - 2)
-        {
-            return null;
-        }
 
         return CalculateMean(trimmed);
     }

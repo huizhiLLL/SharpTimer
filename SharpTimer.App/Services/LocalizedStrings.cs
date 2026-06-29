@@ -10,7 +10,6 @@ public sealed record LocalizedStrings
     public required string ArchiveSession { get; init; }
     public required string SessionActions { get; init; }
     public required string TimeColumn { get; init; }
-    public required string NoPenalty { get; init; }
     public required string Delete { get; init; }
     public required string BestLabel { get; init; }
     public required string WorstLabel { get; init; }
@@ -21,10 +20,7 @@ public sealed record LocalizedStrings
     public required string SolveDistributionTitle { get; init; }
     public required string SolveChartEmptyText { get; init; }
     public required string SolveDetailsTitleFormat { get; init; }
-    public required string SolveRawTimeLabel { get; init; }
-    public required string SolveEffectiveTimeLabel { get; init; }
-    public required string SolvePenaltyLabel { get; init; }
-    public required string SolveCreatedAtLabel { get; init; }
+    public required string SolveTimeLabel { get; init; }
     public required string SolveScrambleLabel { get; init; }
     public required string SolveReplayLabel { get; init; }
     public required string SolveReplayUnavailable { get; init; }
@@ -101,7 +97,6 @@ public sealed record LocalizedStrings
     public required string BluetoothScrambleReady { get; init; }
     public required string BluetoothScrambleRestoreRequired { get; init; }
     public required string SolvePhasesLabel { get; init; }
-    public required string SolvePhaseColumn { get; init; }
     public required string SolvePhaseTimeColumn { get; init; }
     public required string SolvePhaseMovesColumn { get; init; }
     public required string SolvePhaseTpsColumn { get; init; }
@@ -121,7 +116,6 @@ public sealed record LocalizedStrings
         ArchiveSession = "归档",
         SessionActions = "Session 操作",
         TimeColumn = "时间",
-        NoPenalty = "无罚时",
         Delete = "删除",
         BestLabel = "Best",
         WorstLabel = "Worst",
@@ -132,10 +126,7 @@ public sealed record LocalizedStrings
         SolveDistributionTitle = "分布",
         SolveChartEmptyText = "有效成绩不足",
         SolveDetailsTitleFormat = "Solves {0}",
-        SolveRawTimeLabel = "原始",
-        SolveEffectiveTimeLabel = "罚后",
-        SolvePenaltyLabel = "罚时",
-        SolveCreatedAtLabel = "日期",
+        SolveTimeLabel = "时间",
         SolveScrambleLabel = "打乱",
         SolveReplayLabel = "解法",
         SolveReplayUnavailable = "无",
@@ -212,9 +203,8 @@ public sealed record LocalizedStrings
         BluetoothScrambleReady = "READY",
         BluetoothScrambleRestoreRequired = "请先复原魔方",
         SolvePhasesLabel = "分段",
-        SolvePhaseColumn = "阶段",
-        SolvePhaseTimeColumn = "用时",
-        SolvePhaseMovesColumn = "步数",
+        SolvePhaseTimeColumn = "Time",
+        SolvePhaseMovesColumn = "Moves",
         SolvePhaseTpsColumn = "TPS"
     };
 
@@ -228,7 +218,6 @@ public sealed record LocalizedStrings
         ArchiveSession = "Archive",
         SessionActions = "Session actions",
         TimeColumn = "Time",
-        NoPenalty = "No penalty",
         Delete = "Delete",
         BestLabel = "Best",
         WorstLabel = "Worst",
@@ -239,10 +228,7 @@ public sealed record LocalizedStrings
         SolveDistributionTitle = "Distribution",
         SolveChartEmptyText = "Not enough valid solves",
         SolveDetailsTitleFormat = "Solves {0}",
-        SolveRawTimeLabel = "Raw",
-        SolveEffectiveTimeLabel = "Final",
-        SolvePenaltyLabel = "Penalty",
-        SolveCreatedAtLabel = "Date",
+        SolveTimeLabel = "Time",
         SolveScrambleLabel = "Scramble",
         SolveReplayLabel = "Solution",
         SolveReplayUnavailable = "Nothing",
@@ -319,7 +305,6 @@ public sealed record LocalizedStrings
         BluetoothScrambleReady = "READY",
         BluetoothScrambleRestoreRequired = "Solve the cube first",
         SolvePhasesLabel = "Phases",
-        SolvePhaseColumn = "Phase",
         SolvePhaseTimeColumn = "Time",
         SolvePhaseMovesColumn = "Moves",
         SolvePhaseTpsColumn = "TPS"

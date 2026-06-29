@@ -2,6 +2,8 @@ namespace SharpTimer.Core.SmartCubes;
 
 public sealed class SmartCubeSolveCapture
 {
+    private static readonly TimeSpan SyntheticMoveGap = TimeSpan.FromMilliseconds(1);
+
     private readonly List<SmartCubeRecordedMove> _moves = new();
     private int _solveStartIndex;
 
@@ -31,10 +33,10 @@ public sealed class SmartCubeSolveCapture
         }
 
         var solveMoves = _moves.Skip(_solveStartIndex).ToArray();
-        var first = solveMoves[0];
-        var previous = first;
+        var previous = solveMoves[0];
         var samples = new List<SmartCubeSolveMoveSample>(solveMoves.Length);
         var localElapsed = TimeSpan.Zero;
+        var deviceElapsed = TimeSpan.Zero;
 
         for (var index = 0; index < solveMoves.Length; index++)
         {
@@ -42,10 +44,21 @@ public sealed class SmartCubeSolveCapture
             var delta = index == 0
                 ? TimeSpan.Zero
                 : ResolveDelta(previous, current);
-            localElapsed += delta ?? TimeSpan.Zero;
-            var elapsed = current.CubeTimestamp is not null && first.CubeTimestamp is not null
-                ? ClampNonNegative(current.CubeTimestamp.Value - first.CubeTimestamp.Value)
-                : localElapsed;
+            var localDelta = index == 0
+                ? TimeSpan.Zero
+                : ResolveLocalDelta(previous, current);
+            var deviceDelta = index == 0
+                ? TimeSpan.Zero
+                : ResolveDeviceDelta(previous, current);
+            localElapsed += localDelta;
+            if (deviceDelta > TimeSpan.Zero)
+            {
+                deviceElapsed += deviceDelta;
+            }
+
+            var elapsed = deviceDelta > TimeSpan.Zero
+                ? deviceElapsed
+                : Max(deviceElapsed, localElapsed);
 
             samples.Add(new SmartCubeSolveMoveSample(
                 current.Move,
@@ -67,17 +80,36 @@ public sealed class SmartCubeSolveCapture
 
     private static TimeSpan? ResolveDelta(SmartCubeRecordedMove previous, SmartCubeRecordedMove current)
     {
+        var deviceDelta = ResolveDeviceDelta(previous, current);
+        return deviceDelta > TimeSpan.Zero
+            ? deviceDelta
+            : ResolveLocalDelta(previous, current);
+    }
+
+    private static TimeSpan ResolveDeviceDelta(SmartCubeRecordedMove previous, SmartCubeRecordedMove current)
+    {
         if (previous.CubeTimestamp is not null && current.CubeTimestamp is not null)
         {
             return ClampNonNegative(current.CubeTimestamp.Value - previous.CubeTimestamp.Value);
         }
 
-        return ClampNonNegative(current.Timestamp - previous.Timestamp);
+        return TimeSpan.Zero;
+    }
+
+    private static TimeSpan ResolveLocalDelta(SmartCubeRecordedMove previous, SmartCubeRecordedMove current)
+    {
+        var delta = ClampNonNegative(current.Timestamp - previous.Timestamp);
+        return delta > TimeSpan.Zero ? delta : SyntheticMoveGap;
     }
 
     private static TimeSpan ClampNonNegative(TimeSpan value)
     {
         return value < TimeSpan.Zero ? TimeSpan.Zero : value;
+    }
+
+    private static TimeSpan Max(TimeSpan left, TimeSpan right)
+    {
+        return left >= right ? left : right;
     }
 }
 

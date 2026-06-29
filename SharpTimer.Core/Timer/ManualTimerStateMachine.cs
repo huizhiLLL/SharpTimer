@@ -10,7 +10,6 @@ public sealed class ManualTimerStateMachine
     private DateTimeOffset? _startedAt;
     private DateTimeOffset? _stoppedAt;
     private TimeSpan _elapsedAtStop;
-    private Penalty _pendingPenalty;
 
     public ManualTimerStateMachine(ManualTimerOptions? options = null, TimeProvider? timeProvider = null)
     {
@@ -20,11 +19,6 @@ public sealed class ManualTimerStateMachine
         if (_options.InspectionLimit < TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(options), "Inspection limit cannot be negative.");
-        }
-
-        if (_options.DnfInspectionLimit < _options.InspectionLimit)
-        {
-            throw new ArgumentException("DNF inspection limit must be greater than or equal to inspection limit.", nameof(options));
         }
     }
 
@@ -41,7 +35,6 @@ public sealed class ManualTimerStateMachine
         _startedAt = null;
         _stoppedAt = null;
         _elapsedAtStop = TimeSpan.Zero;
-        _pendingPenalty = Penalty.None;
         Phase = _options.UseInspection ? TimerPhase.Inspecting : TimerPhase.Running;
 
         if (!_options.UseInspection)
@@ -57,7 +50,6 @@ public sealed class ManualTimerStateMachine
         EnsurePhase(TimerPhase.Inspecting);
 
         var now = _timeProvider.GetUtcNow();
-        _pendingPenalty = CalculateInspectionPenalty(now);
         _startedAt = now;
         _stoppedAt = null;
         _elapsedAtStop = TimeSpan.Zero;
@@ -79,7 +71,6 @@ public sealed class ManualTimerStateMachine
         {
             SessionId = sessionId,
             Duration = _elapsedAtStop,
-            Penalty = _pendingPenalty,
             CreatedAt = now,
             Scramble = scramble,
             Comment = comment
@@ -92,7 +83,6 @@ public sealed class ManualTimerStateMachine
         _startedAt = null;
         _stoppedAt = null;
         _elapsedAtStop = TimeSpan.Zero;
-        _pendingPenalty = Penalty.None;
         Phase = TimerPhase.Idle;
 
         return GetSnapshot();
@@ -100,11 +90,6 @@ public sealed class ManualTimerStateMachine
 
     public TimerSnapshot Tick()
     {
-        if (Phase == TimerPhase.Inspecting)
-        {
-            _pendingPenalty = CalculateInspectionPenalty(_timeProvider.GetUtcNow());
-        }
-
         return GetSnapshot();
     }
 
@@ -127,7 +112,6 @@ public sealed class ManualTimerStateMachine
             GetElapsed(now),
             inspectionElapsed,
             inspectionRemaining,
-            _pendingPenalty,
             _startedAt,
             _stoppedAt);
     }
@@ -150,22 +134,6 @@ public sealed class ManualTimerStateMachine
     private TimeSpan GetInspectionElapsed(DateTimeOffset now)
     {
         return _inspectionStartedAt is null ? TimeSpan.Zero : now - _inspectionStartedAt.Value;
-    }
-
-    private Penalty CalculateInspectionPenalty(DateTimeOffset now)
-    {
-        var inspectionElapsed = GetInspectionElapsed(now);
-        if (inspectionElapsed > _options.DnfInspectionLimit)
-        {
-            return Penalty.Dnf;
-        }
-
-        if (inspectionElapsed > _options.InspectionLimit)
-        {
-            return Penalty.PlusTwo;
-        }
-
-        return Penalty.None;
     }
 
     private void EnsurePhase(TimerPhase expected)

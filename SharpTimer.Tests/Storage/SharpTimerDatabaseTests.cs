@@ -57,7 +57,7 @@ public sealed class SharpTimerDatabaseTests
     }
 
     [Fact]
-    public async Task SolveRepository_SavesListsAndUpdatesPenalty()
+    public async Task SolveRepository_SavesListsAndUpdatesComment()
     {
         using var database = TestDatabase.Create();
         await database.EnsureCreatedAsync();
@@ -74,7 +74,6 @@ public sealed class SharpTimerDatabaseTests
             Id = Guid.Parse("66666666-6666-6666-6666-666666666666"),
             SessionId = session.Id,
             Duration = TimeSpan.FromMilliseconds(12345),
-            Penalty = Penalty.None,
             CreatedAt = DateTimeOffset.Parse("2026-05-01T00:00:10Z"),
             Scramble = "R U R'",
             Comment = "clean",
@@ -88,7 +87,6 @@ public sealed class SharpTimerDatabaseTests
 
         await sessionRepository.SaveAsync(session);
         await solveRepository.SaveAsync(solve);
-        await solveRepository.UpdatePenaltyAsync(solve.Id, Penalty.PlusTwo);
         await solveRepository.UpdateCommentAsync(solve.Id, "reviewed");
 
         var solves = await solveRepository.ListBySessionAsync(session.Id);
@@ -96,8 +94,6 @@ public sealed class SharpTimerDatabaseTests
         Assert.Single(solves);
         Assert.Equal(solve.Id, solves[0].Id);
         Assert.Equal(TimeSpan.FromMilliseconds(12345), solves[0].Duration);
-        Assert.Equal(Penalty.PlusTwo, solves[0].Penalty);
-        Assert.Equal(TimeSpan.FromMilliseconds(14345), solves[0].EffectiveDuration);
         Assert.Equal("R U R'", solves[0].Scramble);
         Assert.Equal("reviewed", solves[0].Comment);
         Assert.Equal(SolveSource.SmartCube, solves[0].Source);
@@ -121,6 +117,27 @@ public sealed class SharpTimerDatabaseTests
         Assert.True(await ColumnExistsAsync(connection, "solves", "source"));
         Assert.True(await ColumnExistsAsync(connection, "solves", "move_sequence"));
         Assert.True(await ColumnExistsAsync(connection, "solves", "solve_meta_json"));
+        Assert.False(await ColumnExistsAsync(connection, "solves", "penalty"));
+    }
+
+    [Fact]
+    public async Task EnsureCreatedAsync_MigratesVersion2DatabaseAndDropsPenaltyColumn()
+    {
+        using var database = TestDatabase.Create();
+        await CreateVersion2SchemaWithSolveAsync(database.ConnectionFactory);
+
+        await database.EnsureCreatedAsync();
+
+        await using var connection = database.ConnectionFactory.CreateOpenConnection();
+        Assert.Equal(SharpTimerDatabase.CurrentSchemaVersion, await GetSchemaVersionAsync(connection));
+        Assert.False(await ColumnExistsAsync(connection, "solves", "penalty"));
+
+        var solveRepository = new SqliteSolveRepository(database.ConnectionFactory);
+        var solves = await solveRepository.ListBySessionAsync(Guid.Parse("99999999-9999-9999-9999-999999999999"));
+
+        Assert.Single(solves);
+        Assert.Equal(TimeSpan.FromMilliseconds(12345), solves[0].Duration);
+        Assert.Equal("R U R'", solves[0].MoveSequence);
     }
 
     [Fact]
@@ -228,7 +245,6 @@ public sealed class SharpTimerDatabaseTests
                 id TEXT NOT NULL PRIMARY KEY,
                 session_id TEXT NOT NULL,
                 duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0),
-                penalty INTEGER NOT NULL DEFAULT 0 CHECK (penalty IN (0, 1, 2)),
                 scramble TEXT NULL,
                 comment TEXT NULL,
                 created_at TEXT NOT NULL,
@@ -238,6 +254,101 @@ public sealed class SharpTimerDatabaseTests
 
             INSERT INTO schema_migrations(version, applied_at) VALUES (1, '2026-05-01T00:00:00.0000000+00:00');
             PRAGMA user_version = 1;
+            """;
+
+        await command.ExecuteNonQueryAsync();
+    }
+
+    private static async Task CreateVersion2SchemaWithSolveAsync(SqliteConnectionFactory connectionFactory)
+    {
+        await using var connection = connectionFactory.CreateOpenConnection();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            CREATE TABLE schema_migrations (
+                version INTEGER NOT NULL PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            );
+
+            CREATE TABLE sessions (
+                id TEXT NOT NULL PRIMARY KEY,
+                name TEXT NOT NULL,
+                puzzle TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                is_archived INTEGER NOT NULL DEFAULT 0 CHECK (is_archived IN (0, 1)),
+                sort_order INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE solves (
+                id TEXT NOT NULL PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0),
+                penalty INTEGER NOT NULL DEFAULT 0 CHECK (penalty IN (0, 1, 2)),
+                scramble TEXT NULL,
+                comment TEXT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                source INTEGER NOT NULL DEFAULT 0 CHECK (source IN (0, 1, 2)),
+                move_sequence TEXT NULL,
+                move_count INTEGER NULL CHECK (move_count IS NULL OR move_count >= 0),
+                tps REAL NULL CHECK (tps IS NULL OR tps >= 0),
+                reconstruction_method TEXT NULL,
+                solve_meta_json TEXT NULL,
+                FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX idx_solves_session_created
+                ON solves(session_id, created_at);
+
+            CREATE INDEX idx_solves_created
+                ON solves(created_at);
+
+            INSERT INTO sessions(id, name, puzzle, created_at, updated_at)
+            VALUES (
+                '99999999-9999-9999-9999-999999999999',
+                'Session',
+                '333',
+                '2026-05-01T00:00:00.0000000+00:00',
+                '2026-05-01T00:00:00.0000000+00:00'
+            );
+
+            INSERT INTO solves(
+                id,
+                session_id,
+                duration_ms,
+                penalty,
+                scramble,
+                comment,
+                created_at,
+                updated_at,
+                source,
+                move_sequence,
+                move_count,
+                tps,
+                reconstruction_method,
+                solve_meta_json
+            )
+            VALUES (
+                'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+                '99999999-9999-9999-9999-999999999999',
+                12345,
+                1,
+                'scramble',
+                'comment',
+                '2026-05-01T00:00:10.0000000+00:00',
+                '2026-05-01T00:00:10.0000000+00:00',
+                1,
+                'R U R''',
+                3,
+                2.5,
+                '333-smart-cf4op',
+                '{"version":1}'
+            );
+
+            INSERT INTO schema_migrations(version, applied_at) VALUES (1, '2026-05-01T00:00:00.0000000+00:00');
+            INSERT INTO schema_migrations(version, applied_at) VALUES (2, '2026-05-01T00:00:00.0000000+00:00');
+            PRAGMA user_version = 2;
             """;
 
         await command.ExecuteNonQueryAsync();

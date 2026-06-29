@@ -4,7 +4,7 @@ namespace SharpTimer.Storage;
 
 public sealed class SharpTimerDatabase
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -44,6 +44,12 @@ public sealed class SharpTimerDatabase
         if (appliedVersion < 2)
         {
             await ApplyVersion2Async(connection, transaction, cancellationToken);
+            appliedVersion = 2;
+        }
+
+        if (appliedVersion < 3)
+        {
+            await ApplyVersion3Async(connection, transaction, cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -85,7 +91,6 @@ public sealed class SharpTimerDatabase
                 id TEXT NOT NULL PRIMARY KEY,
                 session_id TEXT NOT NULL,
                 duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0),
-                penalty INTEGER NOT NULL DEFAULT 0 CHECK (penalty IN (0, 1, 2)),
                 scramble TEXT NULL,
                 comment TEXT NULL,
                 created_at TEXT NOT NULL,
@@ -140,6 +145,84 @@ public sealed class SharpTimerDatabase
             command => command.Parameters.AddWithValue("$appliedAt", StorageValueConverter.ToStorageText(DateTimeOffset.UtcNow)));
 
         await ExecuteAsync(connection, transaction, "PRAGMA user_version = 2;", cancellationToken);
+    }
+
+    private static async Task ApplyVersion3Async(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await ExecuteAsync(
+            connection,
+            transaction,
+            """
+            CREATE TABLE solves_new (
+                id TEXT NOT NULL PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0),
+                source INTEGER NOT NULL DEFAULT 0 CHECK (source IN (0, 1, 2)),
+                scramble TEXT NULL,
+                comment TEXT NULL,
+                move_sequence TEXT NULL,
+                move_count INTEGER NULL CHECK (move_count IS NULL OR move_count >= 0),
+                tps REAL NULL CHECK (tps IS NULL OR tps >= 0),
+                reconstruction_method TEXT NULL,
+                solve_meta_json TEXT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            );
+
+            INSERT INTO solves_new (
+                id,
+                session_id,
+                duration_ms,
+                source,
+                scramble,
+                comment,
+                move_sequence,
+                move_count,
+                tps,
+                reconstruction_method,
+                solve_meta_json,
+                created_at,
+                updated_at
+            )
+            SELECT
+                id,
+                session_id,
+                duration_ms,
+                source,
+                scramble,
+                comment,
+                move_sequence,
+                move_count,
+                tps,
+                reconstruction_method,
+                solve_meta_json,
+                created_at,
+                updated_at
+            FROM solves;
+
+            DROP TABLE solves;
+            ALTER TABLE solves_new RENAME TO solves;
+
+            CREATE INDEX idx_solves_session_created
+                ON solves(session_id, created_at);
+
+            CREATE INDEX idx_solves_created
+                ON solves(created_at);
+            """,
+            cancellationToken);
+
+        await ExecuteAsync(
+            connection,
+            transaction,
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (3, $appliedAt);",
+            cancellationToken,
+            command => command.Parameters.AddWithValue("$appliedAt", StorageValueConverter.ToStorageText(DateTimeOffset.UtcNow)));
+
+        await ExecuteAsync(connection, transaction, "PRAGMA user_version = 3;", cancellationToken);
     }
 
     private static async Task ExecuteAsync(

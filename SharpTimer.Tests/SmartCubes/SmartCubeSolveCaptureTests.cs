@@ -39,4 +39,36 @@ public sealed class SmartCubeSolveCaptureTests
         Assert.Equal(new[] { "R", "R" }, snapshot.MoveSequence);
         Assert.Equal(new[] { "R2" }, snapshot.CombinedMoveSequence);
     }
+
+    [Fact]
+    public void Snapshot_FallsBackToLocalTime_WhenCubeTimestampDoesNotAdvance()
+    {
+        var capture = new SmartCubeSolveCapture();
+        var now = DateTimeOffset.Parse("2026-05-01T00:00:00Z");
+
+        capture.MarkReadyToStart();
+        capture.RecordMove("R", now, TimeSpan.Zero);
+        capture.RecordMove("U", now.AddMilliseconds(120), TimeSpan.Zero);
+        capture.RecordMove("R'", now.AddMilliseconds(260), TimeSpan.Zero);
+
+        var snapshot = capture.Snapshot();
+
+        Assert.Equal(TimeSpan.FromMilliseconds(120), snapshot.Moves[1].Delta);
+        Assert.Equal(TimeSpan.FromMilliseconds(260), snapshot.Moves[2].Elapsed);
+    }
+
+    [Fact]
+    public void Snapshot_KeepsElapsedIncreasing_WhenMovesSharePacketTimestamp()
+    {
+        var capture = new SmartCubeSolveCapture();
+        var now = DateTimeOffset.Parse("2026-05-01T00:00:00Z");
+
+        capture.MarkReadyToStart();
+        capture.RecordMove("R", now, TimeSpan.Zero);
+        capture.RecordMove("U", now, TimeSpan.Zero);
+
+        var snapshot = capture.Snapshot();
+
+        Assert.True(snapshot.Moves[1].Elapsed > TimeSpan.Zero);
+    }
 }

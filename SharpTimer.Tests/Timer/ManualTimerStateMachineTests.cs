@@ -18,11 +18,10 @@ public sealed class ManualTimerStateMachineTests
         Assert.Equal(TimerPhase.Inspecting, snapshot.Phase);
         Assert.Equal(TimeSpan.Zero, snapshot.InspectionElapsed);
         Assert.Equal(TimeSpan.FromSeconds(15), snapshot.InspectionRemaining);
-        Assert.Equal(Penalty.None, snapshot.PendingPenalty);
     }
 
     [Fact]
-    public void Tick_MarksPlusTwo_WhenInspectionPassesFifteenSeconds()
+    public void Tick_ClampsInspectionRemaining_WhenInspectionPassesLimit()
     {
         var timeProvider = new TestTimeProvider(DateTimeOffset.Parse("2026-05-01T00:00:00Z"));
         var timer = new ManualTimerStateMachine(timeProvider: timeProvider);
@@ -31,11 +30,11 @@ public sealed class ManualTimerStateMachineTests
         timeProvider.Advance(TimeSpan.FromMilliseconds(15001));
         var snapshot = timer.Tick();
 
-        Assert.Equal(Penalty.PlusTwo, snapshot.PendingPenalty);
+        Assert.Equal(TimeSpan.Zero, snapshot.InspectionRemaining);
     }
 
     [Fact]
-    public void StartSolve_CarriesDnfPenalty_WhenInspectionPassesSeventeenSeconds()
+    public void StartSolve_StartsRunning_WhenInspectionPassesLimit()
     {
         var timeProvider = new TestTimeProvider(DateTimeOffset.Parse("2026-05-01T00:00:00Z"));
         var timer = new ManualTimerStateMachine(timeProvider: timeProvider);
@@ -45,11 +44,10 @@ public sealed class ManualTimerStateMachineTests
         var snapshot = timer.StartSolve();
 
         Assert.Equal(TimerPhase.Running, snapshot.Phase);
-        Assert.Equal(Penalty.Dnf, snapshot.PendingPenalty);
     }
 
     [Fact]
-    public void StopSolve_ReturnsSolveWithElapsedDurationAndPendingPenalty()
+    public void StopSolve_ReturnsSolveWithElapsedDuration()
     {
         var timeProvider = new TestTimeProvider(DateTimeOffset.Parse("2026-05-01T00:00:00Z"));
         var timer = new ManualTimerStateMachine(timeProvider: timeProvider);
@@ -61,8 +59,6 @@ public sealed class ManualTimerStateMachineTests
         var solve = timer.StopSolve(SessionId, "R U R'", "warmup");
 
         Assert.Equal(TimeSpan.FromSeconds(10), solve.Duration);
-        Assert.Equal(Penalty.PlusTwo, solve.Penalty);
-        Assert.Equal(TimeSpan.FromSeconds(12), solve.EffectiveDuration);
         Assert.Equal(SessionId, solve.SessionId);
         Assert.Equal("R U R'", solve.Scramble);
         Assert.Equal("warmup", solve.Comment);
@@ -81,7 +77,6 @@ public sealed class ManualTimerStateMachineTests
         var solve = timer.StopSolve(SessionId);
 
         Assert.Equal(TimeSpan.FromSeconds(7), solve.Duration);
-        Assert.Equal(Penalty.None, solve.Penalty);
     }
 
     private sealed class TestTimeProvider : TimeProvider

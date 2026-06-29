@@ -19,6 +19,9 @@ public sealed class SmartCubeSolveReconstructionTests
         Assert.Equal(3, reconstruction.MoveCount);
         Assert.Equal(new[] { "Cross", "F2L 1", "F2L 2", "F2L 3", "F2L 4", "OLL", "PLL" }, reconstruction.Phases.Select(phase => phase.Name));
         Assert.Contains(reconstruction.Phases, phase => phase.Name == "PLL" && phase.MoveCount == 3);
+        var pll = Assert.Single(reconstruction.Phases.Where(phase => phase.Name == "PLL" && phase.MoveCount == 3));
+        Assert.Equal(200, pll.DurationMs);
+        Assert.Equal("R U R' // PLL", reconstruction.PrettySolve);
     }
 
     [Fact]

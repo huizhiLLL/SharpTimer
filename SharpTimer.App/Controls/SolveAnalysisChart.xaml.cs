@@ -59,9 +59,7 @@ public sealed partial class SolveAnalysisChart : UserControl
     {
         TrendCanvas.Children.Clear();
         var values = _solves
-            .Select((solve, index) => new ChartPoint(index, solve.EffectiveDuration?.TotalMilliseconds))
-            .Where(point => point.Value is not null)
-            .Select(point => new ChartPoint(point.Index, point.Value!.Value))
+            .Select((solve, index) => new ChartPoint(index, solve.Duration.TotalMilliseconds))
             .ToArray();
 
         TrendEmptyText.Visibility = values.Length < 2 ? Visibility.Visible : Visibility.Collapsed;
@@ -108,8 +106,7 @@ public sealed partial class SolveAnalysisChart : UserControl
     {
         DistributionCanvas.Children.Clear();
         var values = _solves
-            .Select(solve => solve.EffectiveDuration?.TotalMilliseconds)
-            .OfType<double>()
+            .Select(solve => solve.Duration.TotalMilliseconds)
             .ToArray();
 
         DistributionEmptyText.Visibility = values.Length == 0 ? Visibility.Visible : Visibility.Collapsed;

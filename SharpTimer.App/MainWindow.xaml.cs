@@ -425,17 +425,6 @@ namespace SharpTimer.App
             RootGrid.Focus(FocusState.Programmatic);
         }
 
-        private async System.Threading.Tasks.Task SetSolvePenaltyAsync(Guid solveId, Penalty penalty)
-        {
-            if (_appService is null)
-            {
-                return;
-            }
-
-            Render(await _appService.SetPenaltyAsync(solveId, penalty));
-            RootGrid.Focus(FocusState.Programmatic);
-        }
-
         private void Render(TimerAppSnapshot snapshot, bool refreshList = true)
         {
             _lastSnapshot = snapshot;
@@ -568,7 +557,7 @@ namespace SharpTimer.App
                 {
                     var averageOf5 = StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 5);
                     var averageOf12 = StatisticsCalculator.CalculateAverageOf(orderedSolves.Take(index + 1), 12);
-                    var isSinglePersonalBest = IsNewPersonalBest(solve.EffectiveDuration, ref bestSingle);
+                    var isSinglePersonalBest = IsNewPersonalBest(solve.Duration, ref bestSingle);
                     var isAverageOf5PersonalBest = IsNewPersonalBest(averageOf5, ref bestAverageOf5);
                     var isAverageOf12PersonalBest = IsNewPersonalBest(averageOf12, ref bestAverageOf12);
 
@@ -618,8 +607,7 @@ namespace SharpTimer.App
         private static TimeSpan? GetWorstTime(IEnumerable<Solve> solves)
         {
             var completed = solves
-                .Select(solve => solve.EffectiveDuration)
-                .OfType<TimeSpan>()
+                .Select(solve => solve.Duration)
                 .ToArray();
             return completed.Length == 0 ? null : completed.Max();
         }
@@ -641,28 +629,49 @@ namespace SharpTimer.App
             {
                 Spacing = 16
             };
-            content.Children.Add(new TextBlock
+            var header = new Grid();
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            header.Children.Add(new TextBlock
             {
-                Text = string.Format(_strings.SolveDetailsTitleFormat, item.Number),
+                Text = $"{string.Format(_strings.SolveDetailsTitleFormat, item.Number)}  {item.Solve.CreatedAt.ToLocalTime():yyyy-MM-dd HH:mm:ss}",
                 FontSize = 20,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             });
-            content.Children.Add(CreateDetailRow(_strings.SolveRawTimeLabel, FormatTime(item.Solve.Duration, _settings.DecimalPlaces)));
-            content.Children.Add(CreateDetailRow(_strings.SolveEffectiveTimeLabel, FormatEffectiveSolveTime(item.Solve, _settings.DecimalPlaces)));
-            content.Children.Add(CreateDetailRow(_strings.SolvePenaltyLabel, FormatPenaltyForDisplay(item.Solve.Penalty)));
-            if (item.Solve.MoveCount is not null)
-            {
-                content.Children.Add(CreateDetailRow(_strings.SolveMoveCountLabel, item.Solve.MoveCount.Value.ToString()));
-            }
 
-            if (item.Solve.Tps is not null)
+            ContentDialog? detailsDialog = null;
+            var deleteRequested = false;
+            var deleteButton = new Button
             {
-                content.Children.Add(CreateDetailRow(_strings.SolveTpsLabel, item.Solve.Tps.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)));
+                Content = new SymbolIcon(Symbol.Delete),
+                Padding = new Thickness(10, 6, 10, 6)
+            };
+            AutomationProperties.SetName(deleteButton, _strings.Delete);
+            deleteButton.Click += (_, _) =>
+            {
+                deleteRequested = true;
+                detailsDialog?.Hide();
+            };
+            Grid.SetColumn(deleteButton, 1);
+            header.Children.Add(deleteButton);
+            content.Children.Add(header);
+
+            content.Children.Add(CreateDetailRow(_strings.SolveTimeLabel, FormatTime(item.Solve.Duration, _settings.DecimalPlaces)));
+            if (item.Solve.MoveCount is not null || item.Solve.Tps is not null)
+            {
+                content.Children.Add(CreateDetailRow(
+                    $"{_strings.SolveMoveCountLabel}/{_strings.SolveTpsLabel}",
+                    $"{FormatNullableNumber(item.Solve.MoveCount)} / {FormatNullableTps(item.Solve.Tps)}"));
             }
 
             content.Children.Add(CreateDetailRow(_strings.SolveScrambleLabel, string.IsNullOrWhiteSpace(item.Solve.Scramble) ? "--" : item.Solve.Scramble));
-            content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, string.IsNullOrWhiteSpace(item.Solve.MoveSequence) ? _strings.SolveReplayUnavailable : item.Solve.MoveSequence));
-            content.Children.Add(CreateDetailRow(_strings.SolveCreatedAtLabel, item.Solve.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")));
+            var solveText = ReadPrettySolve(item.Solve.SolveMetaJson);
+            if (string.IsNullOrWhiteSpace(solveText))
+            {
+                solveText = item.Solve.MoveSequence;
+            }
+
+            content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, string.IsNullOrWhiteSpace(solveText) ? _strings.SolveReplayUnavailable : solveText));
             var phases = ReadSolvePhases(item.Solve.SolveMetaJson);
             if (phases.Count > 0)
             {
@@ -673,49 +682,15 @@ namespace SharpTimer.App
             {
                 Text = item.Solve.Comment ?? string.Empty,
                 PlaceholderText = _strings.SolveCommentPlaceholder,
-                AcceptsReturn = true,
+                AcceptsReturn = false,
                 TextWrapping = TextWrapping.Wrap,
-                MinHeight = 84,
-                MaxHeight = 180
+                MinHeight = 36,
+                MaxHeight = 36,
+                Padding = new Thickness(0, 0, 0, 4),
+                BorderThickness = new Thickness(0, 0, 0, 1),
+                Background = new SolidColorBrush(Colors.Transparent)
             };
             content.Children.Add(CreateDetailEditor(_strings.SolveCommentLabel, commentBox));
-
-            ContentDialog? detailsDialog = null;
-            Penalty? selectedPenalty = null;
-            var deleteRequested = false;
-            var actionButtons = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Spacing = 8
-            };
-
-            actionButtons.Children.Add(CreatePenaltyButton("+2", Penalty.PlusTwo, penalty =>
-            {
-                selectedPenalty = penalty;
-                detailsDialog?.Hide();
-            }));
-            actionButtons.Children.Add(CreatePenaltyButton("DNF", Penalty.Dnf, penalty =>
-            {
-                selectedPenalty = penalty;
-                detailsDialog?.Hide();
-            }));
-            actionButtons.Children.Add(CreatePenaltyButton(_strings.NoPenalty, Penalty.None, penalty =>
-            {
-                selectedPenalty = penalty;
-                detailsDialog?.Hide();
-            }));
-
-            var deleteButton = new Button
-            {
-                Content = _strings.Delete
-            };
-            deleteButton.Click += (_, _) =>
-            {
-                deleteRequested = true;
-                detailsDialog?.Hide();
-            };
-            actionButtons.Children.Add(deleteButton);
-            content.Children.Add(actionButtons);
 
             detailsDialog = new ContentDialog
             {
@@ -731,12 +706,6 @@ namespace SharpTimer.App
             };
 
             var result = await detailsDialog.ShowAsync();
-            if (selectedPenalty is not null)
-            {
-                await SetSolvePenaltyAsync(item.Id, selectedPenalty.Value);
-                return;
-            }
-
             if (deleteRequested)
             {
                 await DeleteSolveWithConfirmationAsync(item.Id);
@@ -861,7 +830,7 @@ namespace SharpTimer.App
             table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
             table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
             table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            AddPhaseCell(table, 0, 0, _strings.SolvePhaseColumn, true);
+            AddPhaseCell(table, 0, 0, string.Empty, true);
             AddPhaseCell(table, 0, 1, _strings.SolvePhaseTimeColumn, true);
             AddPhaseCell(table, 0, 2, _strings.SolvePhaseMovesColumn, true);
             AddPhaseCell(table, 0, 3, _strings.SolvePhaseTpsColumn, true);
@@ -915,16 +884,38 @@ namespace SharpTimer.App
                     return Array.Empty<SolvePhaseDetail>();
                 }
 
+                var rawMoveElapsedMs = ReadRawMoveElapsedMs(document.RootElement);
+                var fallbackPhaseStartMs = 0;
+                var fallbackRawMoveIndex = 0;
                 var phases = new List<SolvePhaseDetail>();
                 foreach (var phaseElement in phasesElement.EnumerateArray())
                 {
                     var name = ReadString(phaseElement, "name");
                     var durationMs = ReadInt(phaseElement, "durationMs");
+                    if (durationMs <= 0)
+                    {
+                        durationMs = Math.Max(0, ReadInt(phaseElement, "endMs") - ReadInt(phaseElement, "startMs"));
+                    }
+
                     var moveCount = ReadInt(phaseElement, "moveCount");
                     var tps = ReadDouble(phaseElement, "tps");
                     if (string.IsNullOrWhiteSpace(name) || moveCount <= 0)
                     {
                         continue;
+                    }
+
+                    if (durationMs <= 0 && rawMoveElapsedMs.Count > 0)
+                    {
+                        var endMoveIndex = Math.Min(rawMoveElapsedMs.Count - 1, fallbackRawMoveIndex + moveCount - 1);
+                        var endMs = rawMoveElapsedMs[endMoveIndex];
+                        durationMs = Math.Max(0, endMs - fallbackPhaseStartMs);
+                        fallbackPhaseStartMs = endMs;
+                    }
+
+                    fallbackRawMoveIndex += moveCount;
+                    if (tps <= 0d && durationMs > 0)
+                    {
+                        tps = moveCount * 1000d / durationMs;
                     }
 
                     phases.Add(new SolvePhaseDetail(name, durationMs, moveCount, tps));
@@ -935,6 +926,41 @@ namespace SharpTimer.App
             catch (JsonException)
             {
                 return Array.Empty<SolvePhaseDetail>();
+            }
+        }
+
+        private static IReadOnlyList<int> ReadRawMoveElapsedMs(JsonElement root)
+        {
+            if (!root.TryGetProperty("rawMoves", out var rawMovesElement)
+                || rawMovesElement.ValueKind != JsonValueKind.Array)
+            {
+                return Array.Empty<int>();
+            }
+
+            var values = new List<int>();
+            foreach (var moveElement in rawMovesElement.EnumerateArray())
+            {
+                values.Add(ReadInt(moveElement, "elapsedMs"));
+            }
+
+            return values;
+        }
+
+        private static string ReadPrettySolve(string? solveMetaJson)
+        {
+            if (string.IsNullOrWhiteSpace(solveMetaJson))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(solveMetaJson);
+                return ReadString(document.RootElement, "prettySolve");
+            }
+            catch (JsonException)
+            {
+                return string.Empty;
             }
         }
 
@@ -959,27 +985,14 @@ namespace SharpTimer.App
                 : 0d;
         }
 
-        private string FormatEffectiveSolveTime(Solve solve, int decimalPlaces)
+        private static string FormatNullableNumber(int? value)
         {
-            return solve.EffectiveDuration is null
-                ? "DNF"
-                : FormatTime(solve.EffectiveDuration.Value, decimalPlaces);
+            return value is null ? "--" : value.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
-        private string FormatPenaltyForDisplay(Penalty penalty)
+        private static string FormatNullableTps(double? value)
         {
-            var formattedPenalty = FormatPenalty(penalty);
-            return string.IsNullOrEmpty(formattedPenalty) ? _strings.NoPenalty : formattedPenalty;
-        }
-
-        private static Button CreatePenaltyButton(string text, Penalty penalty, Action<Penalty> selectPenalty)
-        {
-            var button = new Button { Content = text };
-            button.Click += (_, _) =>
-            {
-                selectPenalty(penalty);
-            };
-            return button;
+            return value is null ? "--" : value.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private string FormatInspection(TimerSnapshot snapshot)
@@ -1539,7 +1552,7 @@ namespace SharpTimer.App
 
             RenderSmartCubeScrambleText(snapshot);
 
-            ApplyTimerVisualState(_lastSnapshot?.Timer ?? new TimerSnapshot(TimerPhase.Idle, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, Penalty.None, null, null));
+            ApplyTimerVisualState(_lastSnapshot?.Timer ?? new TimerSnapshot(TimerPhase.Idle, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, null, null));
             if (_lastSnapshot is not null)
             {
                 ApplyImmersiveTimerLayout(_lastSnapshot.Timer);
@@ -1654,12 +1667,7 @@ namespace SharpTimer.App
 
         private static string FormatSolveTime(Solve solve, int decimalPlaces)
         {
-            return solve.Penalty switch
-            {
-                Penalty.Dnf => "DNF",
-                Penalty.PlusTwo => $"({FormatTime(solve.EffectiveDuration ?? solve.Duration, decimalPlaces)}+)",
-                _ => FormatTime(solve.Duration, decimalPlaces)
-            };
+            return FormatTime(solve.Duration, decimalPlaces);
         }
 
         private static string FormatNullableTime(TimeSpan? time, int decimalPlaces)
@@ -1676,17 +1684,6 @@ namespace SharpTimer.App
             return time.TotalMinutes >= 1
                 ? $"{(int)time.TotalMinutes}:{time.Seconds:00}.{fraction}"
                 : $"{(int)time.TotalSeconds}.{fraction}";
-        }
-
-        private static string FormatPenalty(Penalty penalty)
-        {
-            return penalty switch
-            {
-                Penalty.None => "",
-                Penalty.PlusTwo => "+2",
-                Penalty.Dnf => "DNF",
-                _ => ""
-            };
         }
 
         private void RenderSettings()

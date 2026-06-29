@@ -54,31 +54,25 @@ public sealed record SmartCubeSolveReconstruction(
 
         var phases = new List<SmartCubeSolvePhase>();
         var allMoves = new List<string>();
-        var previousEndMs = 0;
         for (var index = phaseNames.Length - 1; index >= 0; index--)
         {
-            var phaseMoves = BuildCombinedMoves(buckets[index]);
-            var moveText = string.Join(" ", phaseMoves);
-            var moveCount = phaseMoves.Count;
-            allMoves.AddRange(phaseMoves);
+            var phaseMoves = buckets[index];
+            var prettyMoves = BuildCombinedMoves(phaseMoves);
+            var moveText = string.Join(" ", prettyMoves);
+            var moveCount = prettyMoves.Count;
+            allMoves.AddRange(prettyMoves);
 
-            var endMs = buckets[index].Count == 0
-                ? previousEndMs
-                : ToMilliseconds(buckets[index][^1].Elapsed);
             var phase = new SmartCubeSolvePhase(
                 phaseNames[phaseNames.Length - 1 - index],
                 moveText,
                 moveCount,
-                previousEndMs,
-                endMs);
+                phaseMoves.Count == 0 ? 0 : ToMilliseconds(phaseMoves[0].Elapsed),
+                phaseMoves.Count == 0 ? 0 : ToMilliseconds(phaseMoves[^1].Elapsed));
             phases.Add(phase);
-            if (moveCount > 0)
-            {
-                previousEndMs = endMs;
-            }
         }
 
         var moveSequence = string.Join(" ", allMoves);
+        phases = IncludePhaseGaps(phases).ToList();
         var prettySolve = BuildPrettySolve(phases, moveSequence);
         return new SmartCubeSolveReconstruction(
             method,
@@ -266,6 +260,22 @@ public sealed record SmartCubeSolveReconstruction(
             .Select(phase => $"{phase.Moves} // {phase.Name}")
             .ToArray();
         return lines.Length == 0 ? fallback : string.Join(Environment.NewLine, lines);
+    }
+
+    private static IEnumerable<SmartCubeSolvePhase> IncludePhaseGaps(IEnumerable<SmartCubeSolvePhase> phases)
+    {
+        var previousEndMs = 0;
+        foreach (var phase in phases)
+        {
+            if (phase.MoveCount <= 0)
+            {
+                yield return phase;
+                continue;
+            }
+
+            yield return phase with { StartMs = previousEndMs };
+            previousEndMs = phase.EndMs;
+        }
     }
 
     private static IReadOnlyList<SmartCubeSolvePhase> CreateEmptyPhases(IEnumerable<string> phaseNames)

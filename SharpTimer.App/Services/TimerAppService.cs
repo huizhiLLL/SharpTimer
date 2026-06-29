@@ -223,27 +223,6 @@ public sealed class TimerAppService
         return CreateSnapshot();
     }
 
-    public async Task<TimerAppSnapshot> SetPenaltyAsync(
-        Guid solveId,
-        Penalty penalty,
-        CancellationToken cancellationToken = default)
-    {
-        await _gate.WaitAsync(cancellationToken);
-        try
-        {
-            EnsureInitialized();
-
-            await _solveRepository.UpdatePenaltyAsync(solveId, penalty, cancellationToken);
-            _solves = await _solveRepository.ListBySessionAsync(_currentSession!.Id, cancellationToken);
-
-            return CreateSnapshot();
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
-
     public async Task<TimerAppSnapshot> UpdateSolveCommentAsync(
         Guid solveId,
         string? comment,
@@ -533,6 +512,7 @@ public sealed class TimerAppService
         SmartCubeSolveCaptureSnapshot capture,
         SmartCubeSolveReconstruction reconstruction)
     {
+        var phases = NormalizePhaseTimes(reconstruction.Phases, duration).ToArray();
         return JsonSerializer.Serialize(new
         {
             version = 1,
@@ -553,7 +533,7 @@ public sealed class TimerAppService
                     ? (int?)null
                     : (int)Math.Round(move.CubeTimestamp.Value.TotalMilliseconds, MidpointRounding.AwayFromZero)
             }).ToArray(),
-            phases = reconstruction.Phases.Select(phase => new
+            phases = phases.Select(phase => new
             {
                 name = phase.Name,
                 moves = phase.Moves,
@@ -566,5 +546,50 @@ public sealed class TimerAppService
                     : 0d
             }).ToArray()
         });
+    }
+
+    private static IReadOnlyList<SmartCubeSolvePhase> NormalizePhaseTimes(
+        IReadOnlyList<SmartCubeSolvePhase> phases,
+        TimeSpan solveDuration)
+    {
+        var solveDurationMs = (int)Math.Round(solveDuration.TotalMilliseconds, MidpointRounding.AwayFromZero);
+        if (solveDurationMs <= 0 || phases.Count == 0)
+        {
+            return phases;
+        }
+
+        var totalPhaseMs = phases.Max(phase => phase.EndMs);
+        var totalMoves = phases.Sum(phase => phase.MoveCount);
+        if (totalMoves <= 0 || totalPhaseMs >= solveDurationMs / 2)
+        {
+            return phases;
+        }
+
+        var cursorMs = 0;
+        var normalized = new List<SmartCubeSolvePhase>(phases.Count);
+        var remainingMoves = totalMoves;
+        for (var index = 0; index < phases.Count; index++)
+        {
+            var phase = phases[index];
+            if (phase.MoveCount <= 0)
+            {
+                normalized.Add(phase);
+                continue;
+            }
+
+            var durationMs = remainingMoves == phase.MoveCount
+                ? solveDurationMs - cursorMs
+                : (int)Math.Round((solveDurationMs - cursorMs) * phase.MoveCount / (double)remainingMoves, MidpointRounding.AwayFromZero);
+            var endMs = Math.Max(cursorMs, cursorMs + durationMs);
+            normalized.Add(phase with
+            {
+                StartMs = cursorMs,
+                EndMs = endMs
+            });
+            cursorMs = endMs;
+            remainingMoves -= phase.MoveCount;
+        }
+
+        return normalized;
     }
 }
