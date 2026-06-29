@@ -1,6 +1,7 @@
 using SharpTimer.Bluetooth;
 using SharpTimer.Core.SmartCubes;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -10,6 +11,9 @@ namespace SharpTimer.App.Services;
 public sealed class SmartCubeSessionController : IAsyncDisposable
 {
     private const int MaxReconnectAttempts = 3;
+    private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan CommandTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan KeepAliveResponseTimeout = TimeSpan.FromSeconds(8);
     private static readonly TimeSpan ReconnectBaseDelay = TimeSpan.FromSeconds(2);
 
     private readonly DispatcherQueue? _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
@@ -20,10 +24,12 @@ public sealed class SmartCubeSessionController : IAsyncDisposable
     private bool _manualDisconnectRequested;
     private bool _isDisposed;
     private int _connectionVersion;
+    private int _keepAliveInFlight;
+    private long _lastCubeEventTicks;
 
     public SmartCubeSessionController()
     {
-        _keepAliveTimer.Interval = TimeSpan.FromSeconds(60);
+        _keepAliveTimer.Interval = KeepAliveInterval;
         _keepAliveTimer.Tick += KeepAliveTimer_Tick;
     }
 
@@ -60,6 +66,7 @@ public sealed class SmartCubeSessionController : IAsyncDisposable
         _lastConnectedDevice = device;
         _connectionVersion++;
         _connection.EventReceived += Connection_EventReceived;
+        MarkConnectionAlive(DateTimeOffset.UtcNow);
         try
         {
             await RequestInitialStateAsync(_connection);
@@ -106,10 +113,11 @@ public sealed class SmartCubeSessionController : IAsyncDisposable
 
         try
         {
-            await connection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
+            await SendCommandWithTimeoutAsync(connection, SmartCubeCommand.RequestFacelets);
         }
         catch
         {
+            HandleConnectionLost(connection, notifyDisconnect: true);
         }
     }
 
@@ -157,37 +165,46 @@ public sealed class SmartCubeSessionController : IAsyncDisposable
                 _ = ReconnectAsync(_connectionVersion);
             }
         }
+        else
+        {
+            MarkConnectionAlive(e.Timestamp);
+        }
     }
 
     private async void KeepAliveTimer_Tick(object? sender, object e)
     {
+        if (Interlocked.CompareExchange(ref _keepAliveInFlight, 1, 0) != 0)
+        {
+            return;
+        }
+
         var connection = _connection;
         if (connection is null)
         {
+            Volatile.Write(ref _keepAliveInFlight, 0);
             StopKeepAliveTimer();
             return;
         }
 
+        var lastEventTicksBeforeRequest = Interlocked.Read(ref _lastCubeEventTicks);
         try
         {
-            await connection.SendCommandAsync(SmartCubeCommand.RequestBattery);
+            await SendCommandWithTimeoutAsync(connection, SmartCubeCommand.RequestBattery);
+            await Task.Delay(KeepAliveResponseTimeout);
+            if (_connection is not null
+                && ReferenceEquals(connection, _connection)
+                && Interlocked.Read(ref _lastCubeEventTicks) <= lastEventTicksBeforeRequest)
+            {
+                HandleConnectionLost(connection, notifyDisconnect: true);
+            }
         }
         catch
         {
-            // 保活写入失败，很可能底层链路已断，触发断连
-            StopKeepAliveTimer();
-            if (_connection is not null && ReferenceEquals(connection, _connection))
-            {
-                _connection = null;
-                _connectionVersion++;
-                connection.EventReceived -= Connection_EventReceived;
-                _ = connection.DisposeAsync();
-                ConnectionChanged?.Invoke(this, EventArgs.Empty);
-                if (!_manualDisconnectRequested)
-                {
-                    _ = ReconnectAsync(_connectionVersion);
-                }
-            }
+            HandleConnectionLost(connection, notifyDisconnect: true);
+        }
+        finally
+        {
+            Volatile.Write(ref _keepAliveInFlight, 0);
         }
     }
 
@@ -226,6 +243,7 @@ public sealed class SmartCubeSessionController : IAsyncDisposable
                 _connection = connection;
                 _connectionVersion++;
                 connection.EventReceived += Connection_EventReceived;
+                MarkConnectionAlive(DateTimeOffset.UtcNow);
                 await RequestInitialStateAsync(connection);
                 StartKeepAliveTimer();
                 ConnectionChanged?.Invoke(this, EventArgs.Empty);
@@ -254,8 +272,43 @@ public sealed class SmartCubeSessionController : IAsyncDisposable
 
     private static async Task RequestInitialStateAsync(ISmartCubeConnection connection)
     {
-        await connection.SendCommandAsync(SmartCubeCommand.RequestBattery);
-        await connection.SendCommandAsync(SmartCubeCommand.RequestFacelets);
+        await SendCommandWithTimeoutAsync(connection, SmartCubeCommand.RequestBattery);
+        await SendCommandWithTimeoutAsync(connection, SmartCubeCommand.RequestFacelets);
+    }
+
+    private static async Task SendCommandWithTimeoutAsync(ISmartCubeConnection connection, SmartCubeCommand command)
+    {
+        using var timeout = new CancellationTokenSource(CommandTimeout);
+        await connection.SendCommandAsync(command, timeout.Token);
+    }
+
+    private void MarkConnectionAlive(DateTimeOffset timestamp)
+    {
+        Interlocked.Exchange(ref _lastCubeEventTicks, timestamp.UtcTicks);
+    }
+
+    private void HandleConnectionLost(ISmartCubeConnection connection, bool notifyDisconnect)
+    {
+        StopKeepAliveTimer();
+        if (_connection is null || !ReferenceEquals(connection, _connection))
+        {
+            return;
+        }
+
+        _connection = null;
+        _connectionVersion++;
+        connection.EventReceived -= Connection_EventReceived;
+        _ = connection.DisposeAsync();
+        if (notifyDisconnect)
+        {
+            CubeEventReceived?.Invoke(this, new SmartCubeDisconnectEvent(DateTimeOffset.UtcNow));
+        }
+
+        ConnectionChanged?.Invoke(this, EventArgs.Empty);
+        if (!_manualDisconnectRequested)
+        {
+            _ = ReconnectAsync(_connectionVersion);
+        }
     }
 
     private void StartKeepAliveTimer()

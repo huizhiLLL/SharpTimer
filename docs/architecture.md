@@ -76,7 +76,7 @@ BLE 链路约束：
 
 - 三套连接实现都要订阅底层 `ConnectionStatusChanged`，被动断链必须能发出 `SmartCubeDisconnectEvent` 并释放 GATT service、characteristic 和 device 资源。
 - BLE 写入必须串行化，并把 `GattCommunicationStatus` 非 `Success` 作为失败处理；初始化请求、保活、ACK、状态请求和历史请求不能互相抢写。
-- `SmartCubeSessionController` 负责扫描、连接、断开、保活、有限自动重连和设备事件转发；WinUI 层只负责展示连接状态和处理用户操作。
+- `SmartCubeSessionController` 负责扫描、连接、断开、保活、有限自动重连和设备事件转发；保活请求写入失败、写入超时或请求后长期没有任何有效设备事件时，应视为链路已断并触发清理 / 重连；WinUI 层只负责展示连接状态和处理用户操作。
 - App 层本地重置魔方状态后，应把 solved facelets 作为新的本地推演基准；GAN v3/v4 等协议随后发来的非权威 facelets 不能覆盖本地重置状态。
 - 协议补偿优先恢复状态而不是直接断链：GAN Gen4 gap / overflow 走 history 或 facelets 重同步，QiYi 状态包按时间戳拆分当前步和未来步后再交给 App。
 - WinUI `DispatcherTimer` 等 UI 线程对象只能在 UI Dispatcher 上启停，BLE 回调线程不得直接操作 UI 线程资源。
