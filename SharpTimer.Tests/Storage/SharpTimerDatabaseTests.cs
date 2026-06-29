@@ -89,6 +89,7 @@ public sealed class SharpTimerDatabaseTests
         await sessionRepository.SaveAsync(session);
         await solveRepository.SaveAsync(solve);
         await solveRepository.UpdatePenaltyAsync(solve.Id, Penalty.PlusTwo);
+        await solveRepository.UpdateCommentAsync(solve.Id, "reviewed");
 
         var solves = await solveRepository.ListBySessionAsync(session.Id);
 
@@ -98,7 +99,7 @@ public sealed class SharpTimerDatabaseTests
         Assert.Equal(Penalty.PlusTwo, solves[0].Penalty);
         Assert.Equal(TimeSpan.FromMilliseconds(14345), solves[0].EffectiveDuration);
         Assert.Equal("R U R'", solves[0].Scramble);
-        Assert.Equal("clean", solves[0].Comment);
+        Assert.Equal("reviewed", solves[0].Comment);
         Assert.Equal(SolveSource.SmartCube, solves[0].Source);
         Assert.Equal("R U R'", solves[0].MoveSequence);
         Assert.Equal(3, solves[0].MoveCount);

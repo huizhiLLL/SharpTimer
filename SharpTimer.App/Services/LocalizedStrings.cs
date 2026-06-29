@@ -21,12 +21,17 @@ public sealed record LocalizedStrings
     public required string SolveDistributionTitle { get; init; }
     public required string SolveChartEmptyText { get; init; }
     public required string SolveDetailsTitleFormat { get; init; }
+    public required string SolveRawTimeLabel { get; init; }
+    public required string SolveEffectiveTimeLabel { get; init; }
+    public required string SolvePenaltyLabel { get; init; }
     public required string SolveCreatedAtLabel { get; init; }
     public required string SolveScrambleLabel { get; init; }
     public required string SolveReplayLabel { get; init; }
     public required string SolveReplayUnavailable { get; init; }
     public required string SolveMoveCountLabel { get; init; }
     public required string SolveTpsLabel { get; init; }
+    public required string SolveCommentLabel { get; init; }
+    public required string SolveCommentPlaceholder { get; init; }
     public required string EmptySolvesTitle { get; init; }
     public required string EmptySolvesDescription { get; init; }
     public required string DeleteSolveDialogTitle { get; init; }
@@ -119,12 +124,17 @@ public sealed record LocalizedStrings
         SolveDistributionTitle = "分布",
         SolveChartEmptyText = "有效成绩不足",
         SolveDetailsTitleFormat = "Solves {0}",
+        SolveRawTimeLabel = "原始",
+        SolveEffectiveTimeLabel = "罚后",
+        SolvePenaltyLabel = "罚时",
         SolveCreatedAtLabel = "日期",
         SolveScrambleLabel = "打乱",
         SolveReplayLabel = "解法",
         SolveReplayUnavailable = "无",
         SolveMoveCountLabel = "步数",
         SolveTpsLabel = "TPS",
+        SolveCommentLabel = "备注",
+        SolveCommentPlaceholder = "添加复盘备注",
         EmptySolvesTitle = "还没有成绩",
         EmptySolvesDescription = "连接智能魔方并完成打乱后，READY 首转会自动开始计时。",
         DeleteSolveDialogTitle = "删除这条成绩",
@@ -213,12 +223,17 @@ public sealed record LocalizedStrings
         SolveDistributionTitle = "Distribution",
         SolveChartEmptyText = "Not enough valid solves",
         SolveDetailsTitleFormat = "Solves {0}",
+        SolveRawTimeLabel = "Raw",
+        SolveEffectiveTimeLabel = "Final",
+        SolvePenaltyLabel = "Penalty",
         SolveCreatedAtLabel = "Date",
         SolveScrambleLabel = "Scramble",
         SolveReplayLabel = "Solution",
         SolveReplayUnavailable = "Nothing",
         SolveMoveCountLabel = "Moves",
         SolveTpsLabel = "TPS",
+        SolveCommentLabel = "Note",
+        SolveCommentPlaceholder = "Add review notes",
         EmptySolvesTitle = "No solves yet",
         EmptySolvesDescription = "Connect a smart cube, finish the scramble, then the first READY turn starts timing automatically.",
         DeleteSolveDialogTitle = "Delete this solve",

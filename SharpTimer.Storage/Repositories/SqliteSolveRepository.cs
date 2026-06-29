@@ -146,6 +146,27 @@ public sealed class SqliteSolveRepository
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    public async Task UpdateCommentAsync(
+        Guid solveId,
+        string? comment,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = _connectionFactory.CreateOpenConnection();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            UPDATE solves
+            SET comment = $comment,
+                updated_at = $updatedAt
+            WHERE id = $id;
+            """;
+        command.Parameters.AddWithValue("$id", StorageValueConverter.ToStorageText(solveId));
+        command.Parameters.AddWithValue("$comment", StorageValueConverter.ToDbValue(NormalizeComment(comment)));
+        command.Parameters.AddWithValue("$updatedAt", StorageValueConverter.ToStorageText(DateTimeOffset.UtcNow));
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     public async Task DeleteAsync(Guid solveId, CancellationToken cancellationToken = default)
     {
         await using var connection = _connectionFactory.CreateOpenConnection();
@@ -174,5 +195,11 @@ public sealed class SqliteSolveRepository
             ReconstructionMethod = reader.IsDBNull(11) ? null : reader.GetString(11),
             SolveMetaJson = reader.IsDBNull(12) ? null : reader.GetString(12)
         };
+    }
+
+    private static string? NormalizeComment(string? comment)
+    {
+        var normalizedComment = comment?.Trim();
+        return string.IsNullOrWhiteSpace(normalizedComment) ? null : normalizedComment;
     }
 }

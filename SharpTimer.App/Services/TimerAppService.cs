@@ -1,6 +1,7 @@
 using SharpTimer.Core.Models;
 using SharpTimer.Core.Scrambles;
 using SharpTimer.Core.Statistics;
+using SharpTimer.Core.SmartCubes;
 using SharpTimer.Core.Timer;
 using SharpTimer.Storage;
 using SharpTimer.Storage.Repositories;
@@ -146,7 +147,7 @@ public sealed class TimerAppService
     }
 
     public async Task<TimerAppSnapshot> StopSmartCubeSolveAsync(
-        IReadOnlyList<string>? moveSequence = null,
+        SmartCubeSolveCaptureSnapshot? solveCapture = null,
         CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken);
@@ -158,7 +159,7 @@ public sealed class TimerAppService
                 return CreateSnapshot();
             }
 
-            var solve = BuildSmartCubeSolve(_timer.StopSolve(_currentSession!.Id, GetCurrentScramble()), moveSequence);
+            var solve = BuildSmartCubeSolve(_timer.StopSolve(_currentSession!.Id, GetCurrentScramble()), solveCapture);
             await _solveRepository.SaveAsync(solve, cancellationToken);
             _solves = await _solveRepository.ListBySessionAsync(_currentSession.Id, cancellationToken);
             MoveToNextScramble();
@@ -225,6 +226,27 @@ public sealed class TimerAppService
             EnsureInitialized();
 
             await _solveRepository.UpdatePenaltyAsync(solveId, penalty, cancellationToken);
+            _solves = await _solveRepository.ListBySessionAsync(_currentSession!.Id, cancellationToken);
+
+            return CreateSnapshot();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<TimerAppSnapshot> UpdateSolveCommentAsync(
+        Guid solveId,
+        string? comment,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            EnsureInitialized();
+
+            await _solveRepository.UpdateCommentAsync(solveId, comment, cancellationToken);
             _solves = await _solveRepository.ListBySessionAsync(_currentSession!.Id, cancellationToken);
 
             return CreateSnapshot();
@@ -447,9 +469,10 @@ public sealed class TimerAppService
         });
     }
 
-    private static Solve BuildSmartCubeSolve(Solve solve, IReadOnlyList<string>? moveSequence)
+    private static Solve BuildSmartCubeSolve(Solve solve, SmartCubeSolveCaptureSnapshot? solveCapture)
     {
-        var normalizedMoves = NormalizeMoveSequence(moveSequence);
+        var capture = solveCapture ?? SmartCubeSolveCaptureSnapshot.Empty;
+        var normalizedMoves = NormalizeMoveSequence(capture.CombinedMoveSequence);
         var moveText = normalizedMoves.Count == 0 ? null : string.Join(" ", normalizedMoves);
         var moveCount = normalizedMoves.Count == 0 ? (int?)null : normalizedMoves.Count;
         var tps = moveCount is null || solve.Duration <= TimeSpan.Zero
@@ -462,7 +485,7 @@ public sealed class TimerAppService
             MoveSequence = moveText,
             MoveCount = moveCount,
             Tps = tps,
-            SolveMetaJson = BuildSolveMetaJson(solve.Duration, moveText, moveCount, tps)
+            SolveMetaJson = BuildSolveMetaJson(solve.Duration, moveText, moveCount, tps, capture)
         };
     }
 
@@ -487,7 +510,12 @@ public sealed class TimerAppService
         return moves;
     }
 
-    private static string BuildSolveMetaJson(TimeSpan duration, string? moveSequence, int? moveCount, double? tps)
+    private static string BuildSolveMetaJson(
+        TimeSpan duration,
+        string? moveSequence,
+        int? moveCount,
+        double? tps,
+        SmartCubeSolveCaptureSnapshot capture)
     {
         return JsonSerializer.Serialize(new
         {
@@ -497,6 +525,17 @@ public sealed class TimerAppService
             moves = moveSequence ?? string.Empty,
             moveCount = moveCount ?? 0,
             tps,
+            rawMoves = capture.Moves.Select(move => new
+            {
+                move = move.Move,
+                deltaMs = move.Delta is null
+                    ? (int?)null
+                    : (int)Math.Round(move.Delta.Value.TotalMilliseconds, MidpointRounding.AwayFromZero),
+                elapsedMs = (int)Math.Round(move.Elapsed.TotalMilliseconds, MidpointRounding.AwayFromZero),
+                cubeTimestampMs = move.CubeTimestamp is null
+                    ? (int?)null
+                    : (int)Math.Round(move.CubeTimestamp.Value.TotalMilliseconds, MidpointRounding.AwayFromZero)
+            }).ToArray(),
             phases = Array.Empty<object>()
         });
     }
