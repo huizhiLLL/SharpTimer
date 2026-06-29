@@ -5,6 +5,37 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid RowSpacing="18">
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="NarrowLayout">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="SettingsContentGrid.ColumnSpacing" Value="0" />
+                        <Setter Target="SettingsContentGrid.RowSpacing" Value="20" />
+                        <Setter Target="LeftSettingsColumn.Width" Value="*" />
+                        <Setter Target="RightSettingsColumn.Width" Value="0" />
+                        <Setter Target="SmartCubeSettingsColumn.(Grid.Column)" Value="0" />
+                        <Setter Target="SmartCubeSettingsColumn.(Grid.Row)" Value="1" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="WideLayout">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="800" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="SettingsContentGrid.ColumnSpacing" Value="28" />
+                        <Setter Target="SettingsContentGrid.RowSpacing" Value="0" />
+                        <Setter Target="LeftSettingsColumn.Width" Value="300" />
+                        <Setter Target="RightSettingsColumn.Width" Value="300" />
+                        <Setter Target="SmartCubeSettingsColumn.(Grid.Column)" Value="1" />
+                        <Setter Target="SmartCubeSettingsColumn.(Grid.Row)" Value="0" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -19,114 +50,132 @@
         <ScrollViewer
             Grid.Row="1"
             VerticalScrollBarVisibility="Auto">
-            <StackPanel
-                MaxWidth="720"
+            <Grid
+                x:Name="SettingsContentGrid"
+                MaxWidth="1468"
                 HorizontalAlignment="Left"
-                Spacing="4">
-                <ToggleSwitch
-                    x:Name="InspectionSwitch"
-                    Header="15 秒观察"
-                    Toggled="SettingControl_Changed" />
-
-                <ComboBox
-                    x:Name="PrecisionComboBox"
-                    Header="显示精度"
-                    MinWidth="240"
-                    HorizontalAlignment="Stretch"
-                    SelectionChanged="SettingControl_Changed">
-                    <ComboBoxItem x:Name="CentisecondsItem" Content="百分秒" />
-                    <ComboBoxItem x:Name="MillisecondsItem" Content="毫秒" />
-                </ComboBox>
-
-                <ComboBox
-                    x:Name="ThemeComboBox"
-                    Header="主题"
-                    MinWidth="240"
-                    HorizontalAlignment="Stretch"
-                    SelectionChanged="SettingControl_Changed">
-                    <ComboBoxItem x:Name="SystemThemeItem" Content="跟随系统" />
-                    <ComboBoxItem x:Name="LightThemeItem" Content="亮色" />
-                    <ComboBoxItem x:Name="DarkThemeItem" Content="暗色" />
-                </ComboBox>
-
-                <ComboBox
-                    x:Name="BackdropMaterialComboBox"
-                    Header="背景材质"
-                    MinWidth="240"
-                    HorizontalAlignment="Stretch"
-                    SelectionChanged="SettingControl_Changed">
-                    <ComboBoxItem x:Name="MicaMaterialItem" Content="Mica" />
-                    <ComboBoxItem x:Name="MicaAltMaterialItem" Content="Mica Alt" />
-                    <ComboBoxItem x:Name="AcrylicMaterialItem" Content="Acrylic" />
-                </ComboBox>
-
-                <ComboBox
-                    x:Name="LanguageComboBox"
-                    Header="语言"
-                    MinWidth="240"
-                    HorizontalAlignment="Stretch"
-                    SelectionChanged="SettingControl_Changed">
-                    <ComboBoxItem x:Name="ChineseLanguageItem" Content="中文" />
-                    <ComboBoxItem x:Name="EnglishLanguageItem" Content="English" />
-                </ComboBox>
-
-                <TextBlock
-                    x:Name="SmartCubeSectionTitleText"
-                    Text="智能魔方"
-                    Margin="0,20,0,2"
-                    FontSize="18"
-                    FontWeight="SemiBold" />
-
-                <ComboBox
-                    x:Name="ScrambleProgressStyleComboBox"
-                    Header="打乱推进样式"
-                    MinWidth="240"
-                    HorizontalAlignment="Stretch"
-                    SelectionChanged="SettingControl_Changed">
-                    <ComboBoxItem x:Name="ScrambleProgressHideCompletedItem" Content="自动消失" />
-                    <ComboBoxItem x:Name="ScrambleProgressDimCompletedItem" Content="变浅保留" />
-                </ComboBox>
-
-                <ComboBox
-                    x:Name="SolveMethodComboBox"
-                    Header="解法分段"
-                    MinWidth="240"
-                    HorizontalAlignment="Stretch"
-                    SelectionChanged="SettingControl_Changed">
-                    <ComboBoxItem x:Name="SolveMethodCfopItem" Content="CFOP" />
-                    <ComboBoxItem x:Name="SolveMethodRouxItem" Content="Roux" />
-                </ComboBox>
+                ColumnSpacing="28">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="LeftSettingsColumn" Width="*" />
+                    <ColumnDefinition x:Name="RightSettingsColumn" Width="0" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
                 <StackPanel Spacing="4">
-                    <TextBlock x:Name="ScrambleFontSizeHeaderText" Text="打乱字体" />
-                    <Slider
-                        x:Name="ScrambleFontSizeSlider"
-                        Minimum="16"
-                        Maximum="34"
-                        StepFrequency="1"
-                        TickFrequency="2"
-                        SnapsTo="StepValues"
-                        ValueChanged="SettingControl_Changed" />
-                    <TextBlock
-                        x:Name="ScrambleFontSizeValueText"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ToggleSwitch
+                        x:Name="InspectionSwitch"
+                        Header="15 秒观察"
+                        Toggled="SettingControl_Changed" />
+
+                    <ComboBox
+                        x:Name="PrecisionComboBox"
+                        Header="显示精度"
+                        MinWidth="240"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="SettingControl_Changed">
+                        <ComboBoxItem x:Name="CentisecondsItem" Content="百分秒" />
+                        <ComboBoxItem x:Name="MillisecondsItem" Content="毫秒" />
+                    </ComboBox>
+
+                    <ComboBox
+                        x:Name="ThemeComboBox"
+                        Header="主题"
+                        MinWidth="240"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="SettingControl_Changed">
+                        <ComboBoxItem x:Name="SystemThemeItem" Content="跟随系统" />
+                        <ComboBoxItem x:Name="LightThemeItem" Content="亮色" />
+                        <ComboBoxItem x:Name="DarkThemeItem" Content="暗色" />
+                    </ComboBox>
+
+                    <ComboBox
+                        x:Name="BackdropMaterialComboBox"
+                        Header="背景材质"
+                        MinWidth="240"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="SettingControl_Changed">
+                        <ComboBoxItem x:Name="MicaMaterialItem" Content="Mica" />
+                        <ComboBoxItem x:Name="MicaAltMaterialItem" Content="Mica Alt" />
+                        <ComboBoxItem x:Name="AcrylicMaterialItem" Content="Acrylic" />
+                    </ComboBox>
+
+                    <ComboBox
+                        x:Name="LanguageComboBox"
+                        Header="语言"
+                        MinWidth="240"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="SettingControl_Changed">
+                        <ComboBoxItem x:Name="ChineseLanguageItem" Content="中文" />
+                        <ComboBoxItem x:Name="EnglishLanguageItem" Content="English" />
+                    </ComboBox>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Name="ScrambleFontSizeHeaderText" Text="打乱字体" />
+                        <Slider
+                            x:Name="ScrambleFontSizeSlider"
+                            Minimum="16"
+                            Maximum="34"
+                            StepFrequency="1"
+                            TickFrequency="2"
+                            SnapsTo="StepValues"
+                            ValueChanged="SettingControl_Changed" />
+                        <TextBlock
+                            x:Name="ScrambleFontSizeValueText"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
                 </StackPanel>
 
-                <StackPanel Spacing="4">
-                    <TextBlock x:Name="SmartCubePreviewSizeHeaderText" Text="虚拟魔方大小" />
-                    <Slider
-                        x:Name="SmartCubePreviewSizeSlider"
-                        Minimum="140"
-                        Maximum="320"
-                        StepFrequency="10"
-                        TickFrequency="20"
-                        SnapsTo="StepValues"
-                        ValueChanged="SettingControl_Changed" />
+                <StackPanel
+                    x:Name="SmartCubeSettingsColumn"
+                    Grid.Column="1"
+                    Spacing="4">
+
                     <TextBlock
-                        x:Name="SmartCubePreviewSizeValueText"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        x:Name="SmartCubeSectionTitleText"
+                        Text="智能魔方"
+                        Margin="0,0,0,2"
+                        FontSize="18"
+                        FontWeight="SemiBold" />
+
+                    <ComboBox
+                        x:Name="ScrambleProgressStyleComboBox"
+                        Header="打乱推进样式"
+                        MinWidth="240"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="SettingControl_Changed">
+                        <ComboBoxItem x:Name="ScrambleProgressHideCompletedItem" Content="自动消失" />
+                        <ComboBoxItem x:Name="ScrambleProgressDimCompletedItem" Content="变浅保留" />
+                    </ComboBox>
+
+                    <ComboBox
+                        x:Name="SolveMethodComboBox"
+                        Header="解法分段"
+                        MinWidth="240"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="SettingControl_Changed">
+                        <ComboBoxItem x:Name="SolveMethodCfopItem" Content="CFOP" />
+                        <ComboBoxItem x:Name="SolveMethodRouxItem" Content="Roux" />
+                    </ComboBox>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock x:Name="SmartCubePreviewSizeHeaderText" Text="虚拟魔方大小" />
+                        <Slider
+                            x:Name="SmartCubePreviewSizeSlider"
+                            Minimum="140"
+                            Maximum="320"
+                            StepFrequency="10"
+                            TickFrequency="20"
+                            SnapsTo="StepValues"
+                            ValueChanged="SettingControl_Changed" />
+                        <TextBlock
+                            x:Name="SmartCubePreviewSizeValueText"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
                 </StackPanel>
-            </StackPanel>
+            </Grid>
         </ScrollViewer>
     </Grid>
 </UserControl>
