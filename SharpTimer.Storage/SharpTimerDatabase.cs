@@ -4,7 +4,7 @@ namespace SharpTimer.Storage;
 
 public sealed class SharpTimerDatabase
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     private readonly SqliteConnectionFactory _connectionFactory;
 
@@ -38,6 +38,12 @@ public sealed class SharpTimerDatabase
         if (appliedVersion < 1)
         {
             await ApplyVersion1Async(connection, transaction, cancellationToken);
+            appliedVersion = 1;
+        }
+
+        if (appliedVersion < 2)
+        {
+            await ApplyVersion2Async(connection, transaction, cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -106,6 +112,34 @@ public sealed class SharpTimerDatabase
             command => command.Parameters.AddWithValue("$appliedAt", StorageValueConverter.ToStorageText(DateTimeOffset.UtcNow)));
 
         await ExecuteAsync(connection, transaction, "PRAGMA user_version = 1;", cancellationToken);
+    }
+
+    private static async Task ApplyVersion2Async(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        await ExecuteAsync(
+            connection,
+            transaction,
+            """
+            ALTER TABLE solves ADD COLUMN source INTEGER NOT NULL DEFAULT 0 CHECK (source IN (0, 1, 2));
+            ALTER TABLE solves ADD COLUMN move_sequence TEXT NULL;
+            ALTER TABLE solves ADD COLUMN move_count INTEGER NULL CHECK (move_count IS NULL OR move_count >= 0);
+            ALTER TABLE solves ADD COLUMN tps REAL NULL CHECK (tps IS NULL OR tps >= 0);
+            ALTER TABLE solves ADD COLUMN reconstruction_method TEXT NULL;
+            ALTER TABLE solves ADD COLUMN solve_meta_json TEXT NULL;
+            """,
+            cancellationToken);
+
+        await ExecuteAsync(
+            connection,
+            transaction,
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (2, $appliedAt);",
+            cancellationToken,
+            command => command.Parameters.AddWithValue("$appliedAt", StorageValueConverter.ToStorageText(DateTimeOffset.UtcNow)));
+
+        await ExecuteAsync(connection, transaction, "PRAGMA user_version = 2;", cancellationToken);
     }
 
     private static async Task ExecuteAsync(

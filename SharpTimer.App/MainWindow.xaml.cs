@@ -46,6 +46,7 @@ namespace SharpTimer.App
         private bool _smartCubeSolveHasMove;
         private bool _smartCubeReadyToStart;
         private bool _smartCubeHasLocalMoveState;
+        private readonly List<string> _smartCubeSolveMoves = new();
         private string? _smartCubeFacelets;
         private string? _scrambleTextRenderKey;
         private Brush? _completedScrambleBrush;
@@ -646,8 +647,18 @@ namespace SharpTimer.App
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             });
             content.Children.Add(CreateDetailRow(_strings.TimeColumn, FormatSolveDetailTime(item.Solve, _settings.DecimalPlaces)));
+            if (item.Solve.MoveCount is not null)
+            {
+                content.Children.Add(CreateDetailRow(_strings.SolveMoveCountLabel, item.Solve.MoveCount.Value.ToString()));
+            }
+
+            if (item.Solve.Tps is not null)
+            {
+                content.Children.Add(CreateDetailRow(_strings.SolveTpsLabel, item.Solve.Tps.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)));
+            }
+
             content.Children.Add(CreateDetailRow(_strings.SolveScrambleLabel, string.IsNullOrWhiteSpace(item.Solve.Scramble) ? "--" : item.Solve.Scramble));
-            content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, _strings.SolveReplayUnavailable));
+            content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, string.IsNullOrWhiteSpace(item.Solve.MoveSequence) ? _strings.SolveReplayUnavailable : item.Solve.MoveSequence));
             content.Children.Add(CreateDetailRow(_strings.SolveCreatedAtLabel, item.Solve.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")));
 
             ContentDialog? detailsDialog = null;
@@ -1066,6 +1077,7 @@ namespace SharpTimer.App
                     _smartCubeSolveHasMove = false;
                     _smartCubeReadyToStart = false;
                     _smartCubeHasLocalMoveState = false;
+                    _smartCubeSolveMoves.Clear();
                     _smartCubeFacelets = null;
                     _smartCubeScrambleTracker.Reset();
                     _scrambleTextRenderKey = null;
@@ -1084,11 +1096,14 @@ namespace SharpTimer.App
             if (_lastSnapshot?.Timer.Phase == TimerPhase.Running)
             {
                 _smartCubeSolveHasMove = true;
+                RecordSmartCubeSolveMove(move.Move);
                 if (hasLocalFacelets && ThreeByThreeFacelets.IsSolvedIgnoringRotation(_smartCubeFacelets!) && _appService is not null)
                 {
+                    var solveMoves = _smartCubeSolveMoves.ToArray();
                     _smartCubeSolveHasMove = false;
                     _smartCubeReadyToStart = false;
-                    Render(await _appService.StopSmartCubeSolveAsync());
+                    _smartCubeSolveMoves.Clear();
+                    Render(await _appService.StopSmartCubeSolveAsync(solveMoves));
                     SyncSmartCubeScramble(_lastSnapshot);
                 }
                 else if (!hasLocalFacelets)
@@ -1103,6 +1118,8 @@ namespace SharpTimer.App
             {
                 _smartCubeReadyToStart = false;
                 _smartCubeSolveHasMove = true;
+                _smartCubeSolveMoves.Clear();
+                RecordSmartCubeSolveMove(move.Move);
                 if (_appService is not null)
                 {
                     Render(await _appService.HandleSmartCubeMoveAsync());
@@ -1159,6 +1176,17 @@ namespace SharpTimer.App
             }
         }
 
+        private void RecordSmartCubeSolveMove(string move)
+        {
+            try
+            {
+                _smartCubeSolveMoves.Add(SmartCubeMoveNotation.Normalize(move));
+            }
+            catch
+            {
+            }
+        }
+
         private async System.Threading.Tasks.Task HandleSmartCubeFaceletsEventAsync(SmartCubeFaceletsEvent facelets)
         {
             SmartCubePreview.Visibility = Visibility.Visible;
@@ -1179,9 +1207,11 @@ namespace SharpTimer.App
 
             if (solved && _smartCubeSolveHasMove && _lastSnapshot?.Timer.Phase == TimerPhase.Running && _appService is not null)
             {
+                var solveMoves = _smartCubeSolveMoves.ToArray();
                 _smartCubeSolveHasMove = false;
                 _smartCubeReadyToStart = false;
-                Render(await _appService.StopSmartCubeSolveAsync());
+                _smartCubeSolveMoves.Clear();
+                Render(await _appService.StopSmartCubeSolveAsync(solveMoves));
                 SyncSmartCubeScramble(_lastSnapshot);
                 return;
             }
@@ -1244,6 +1274,7 @@ namespace SharpTimer.App
             _smartCubeSolveHasMove = false;
             _smartCubeReadyToStart = false;
             _smartCubeHasLocalMoveState = false;
+            _smartCubeSolveMoves.Clear();
             _smartCubeFacelets = null;
             SmartCubePreview.StopAnimation();
             SmartCubePreview.ResetView();
@@ -1261,6 +1292,7 @@ namespace SharpTimer.App
             _smartCubeFacelets = ThreeByThreeFacelets.Solved;
             _smartCubeSolveHasMove = false;
             _smartCubeReadyToStart = false;
+            _smartCubeSolveMoves.Clear();
             SmartCubePreview.ResetViewAngles();
 
             SyncSmartCubeScramble(_lastSnapshot);

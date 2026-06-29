@@ -25,6 +25,8 @@ public sealed record LocalizedStrings
     public required string SolveScrambleLabel { get; init; }
     public required string SolveReplayLabel { get; init; }
     public required string SolveReplayUnavailable { get; init; }
+    public required string SolveMoveCountLabel { get; init; }
+    public required string SolveTpsLabel { get; init; }
     public required string EmptySolvesTitle { get; init; }
     public required string EmptySolvesDescription { get; init; }
     public required string DeleteSolveDialogTitle { get; init; }
@@ -121,6 +123,8 @@ public sealed record LocalizedStrings
         SolveScrambleLabel = "打乱",
         SolveReplayLabel = "解法",
         SolveReplayUnavailable = "无",
+        SolveMoveCountLabel = "步数",
+        SolveTpsLabel = "TPS",
         EmptySolvesTitle = "还没有成绩",
         EmptySolvesDescription = "按空格或转动智能魔方开始第一次计时。",
         DeleteSolveDialogTitle = "删除这条成绩",
@@ -213,6 +217,8 @@ public sealed record LocalizedStrings
         SolveScrambleLabel = "Scramble",
         SolveReplayLabel = "Solution",
         SolveReplayUnavailable = "Nothing",
+        SolveMoveCountLabel = "Moves",
+        SolveTpsLabel = "TPS",
         EmptySolvesTitle = "No solves yet",
         EmptySolvesDescription = "Press Space or turn a smart cube to start your first solve.",
         DeleteSolveDialogTitle = "Delete this solve",

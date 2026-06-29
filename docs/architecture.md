@@ -39,16 +39,16 @@ SharpTimer
 
 核心模型：
 
-- `Solve`：一次复原成绩，包含原始用时、罚时、session、打乱、备注和时间戳。
+- `Solve`：一次复原成绩，包含原始用时、罚时、session、打乱、备注、来源、可选智能魔方转动序列、步数、TPS、复盘元数据和时间戳。
 - `Penalty`：`None`、`PlusTwo`、`Dnf`。
 - `ManualTimerStateMachine`：手动计时状态机。
 - `SmartCubeScrambleTracker`：平台无关的智能魔方打乱推进器。
 - `StatisticsCalculator`：计算 best、mean、ao5、ao12。
 
-SQLite 当前使用 v1 schema：
+SQLite 当前使用 v2 schema：
 
 - `sessions`：session 基本信息、项目代号、归档状态和排序。
-- `solves`：成绩用时、罚时、打乱、备注和所属 session。
+- `solves`：成绩用时、罚时、来源、打乱、备注、智能魔方解法摘要和所属 session。
 - `schema_migrations`：记录 schema 版本。
 
 ## UI 与 WinUI 约束

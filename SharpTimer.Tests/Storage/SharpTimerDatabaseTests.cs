@@ -77,7 +77,13 @@ public sealed class SharpTimerDatabaseTests
             Penalty = Penalty.None,
             CreatedAt = DateTimeOffset.Parse("2026-05-01T00:00:10Z"),
             Scramble = "R U R'",
-            Comment = "clean"
+            Comment = "clean",
+            Source = SolveSource.SmartCube,
+            MoveSequence = "R U R'",
+            MoveCount = 3,
+            Tps = 2.5,
+            ReconstructionMethod = "unknown",
+            SolveMetaJson = "{\"version\":1}"
         };
 
         await sessionRepository.SaveAsync(session);
@@ -93,6 +99,27 @@ public sealed class SharpTimerDatabaseTests
         Assert.Equal(TimeSpan.FromMilliseconds(14345), solves[0].EffectiveDuration);
         Assert.Equal("R U R'", solves[0].Scramble);
         Assert.Equal("clean", solves[0].Comment);
+        Assert.Equal(SolveSource.SmartCube, solves[0].Source);
+        Assert.Equal("R U R'", solves[0].MoveSequence);
+        Assert.Equal(3, solves[0].MoveCount);
+        Assert.Equal(2.5, solves[0].Tps);
+        Assert.Equal("unknown", solves[0].ReconstructionMethod);
+        Assert.Equal("{\"version\":1}", solves[0].SolveMetaJson);
+    }
+
+    [Fact]
+    public async Task EnsureCreatedAsync_MigratesVersion1DatabaseToVersion2()
+    {
+        using var database = TestDatabase.Create();
+        await CreateVersion1SchemaAsync(database.ConnectionFactory);
+
+        await database.EnsureCreatedAsync();
+
+        await using var connection = database.ConnectionFactory.CreateOpenConnection();
+        Assert.Equal(SharpTimerDatabase.CurrentSchemaVersion, await GetSchemaVersionAsync(connection));
+        Assert.True(await ColumnExistsAsync(connection, "solves", "source"));
+        Assert.True(await ColumnExistsAsync(connection, "solves", "move_sequence"));
+        Assert.True(await ColumnExistsAsync(connection, "solves", "solve_meta_json"));
     }
 
     [Fact]
@@ -140,6 +167,23 @@ public sealed class SharpTimerDatabaseTests
         return Convert.ToInt32(result) == 1;
     }
 
+    private static async Task<bool> ColumnExistsAsync(SqliteConnection connection, string tableName, string columnName)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA table_info({tableName});";
+
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            if (string.Equals(reader.GetString(1), columnName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static async Task<int> GetSchemaVersionAsync(SqliteConnection connection)
     {
         await using var command = connection.CreateCommand();
@@ -155,6 +199,46 @@ public sealed class SharpTimerDatabaseTests
         await using var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM sessions WHERE id = $id;";
         command.Parameters.AddWithValue("$id", sessionId.ToString("D"));
+        await command.ExecuteNonQueryAsync();
+    }
+
+    private static async Task CreateVersion1SchemaAsync(SqliteConnectionFactory connectionFactory)
+    {
+        await using var connection = connectionFactory.CreateOpenConnection();
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            CREATE TABLE schema_migrations (
+                version INTEGER NOT NULL PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            );
+
+            CREATE TABLE sessions (
+                id TEXT NOT NULL PRIMARY KEY,
+                name TEXT NOT NULL,
+                puzzle TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                is_archived INTEGER NOT NULL DEFAULT 0 CHECK (is_archived IN (0, 1)),
+                sort_order INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE solves (
+                id TEXT NOT NULL PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0),
+                penalty INTEGER NOT NULL DEFAULT 0 CHECK (penalty IN (0, 1, 2)),
+                scramble TEXT NULL,
+                comment TEXT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            );
+
+            INSERT INTO schema_migrations(version, applied_at) VALUES (1, '2026-05-01T00:00:00.0000000+00:00');
+            PRAGMA user_version = 1;
+            """;
+
         await command.ExecuteNonQueryAsync();
     }
 

@@ -7,6 +7,7 @@ using SharpTimer.Storage.Repositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -144,7 +145,9 @@ public sealed class TimerAppService
         }
     }
 
-    public async Task<TimerAppSnapshot> StopSmartCubeSolveAsync(CancellationToken cancellationToken = default)
+    public async Task<TimerAppSnapshot> StopSmartCubeSolveAsync(
+        IReadOnlyList<string>? moveSequence = null,
+        CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken);
         try
@@ -155,7 +158,7 @@ public sealed class TimerAppService
                 return CreateSnapshot();
             }
 
-            var solve = _timer.StopSolve(_currentSession!.Id, GetCurrentScramble());
+            var solve = BuildSmartCubeSolve(_timer.StopSolve(_currentSession!.Id, GetCurrentScramble()), moveSequence);
             await _solveRepository.SaveAsync(solve, cancellationToken);
             _solves = await _solveRepository.ListBySessionAsync(_currentSession.Id, cancellationToken);
             MoveToNextScramble();
@@ -441,6 +444,60 @@ public sealed class TimerAppService
         return new ManualTimerStateMachine(new ManualTimerOptions
         {
             UseInspection = settings.UseInspection
+        });
+    }
+
+    private static Solve BuildSmartCubeSolve(Solve solve, IReadOnlyList<string>? moveSequence)
+    {
+        var normalizedMoves = NormalizeMoveSequence(moveSequence);
+        var moveText = normalizedMoves.Count == 0 ? null : string.Join(" ", normalizedMoves);
+        var moveCount = normalizedMoves.Count == 0 ? (int?)null : normalizedMoves.Count;
+        var tps = moveCount is null || solve.Duration <= TimeSpan.Zero
+            ? (double?)null
+            : moveCount.Value / solve.Duration.TotalSeconds;
+
+        return solve with
+        {
+            Source = SolveSource.SmartCube,
+            MoveSequence = moveText,
+            MoveCount = moveCount,
+            Tps = tps,
+            SolveMetaJson = BuildSolveMetaJson(solve.Duration, moveText, moveCount, tps)
+        };
+    }
+
+    private static IReadOnlyList<string> NormalizeMoveSequence(IReadOnlyList<string>? moveSequence)
+    {
+        if (moveSequence is null || moveSequence.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var moves = new List<string>();
+        foreach (var move in moveSequence)
+        {
+            if (string.IsNullOrWhiteSpace(move))
+            {
+                continue;
+            }
+
+            moves.Add(SharpTimer.Core.SmartCubes.SmartCubeMoveNotation.Normalize(move));
+        }
+
+        return moves;
+    }
+
+    private static string BuildSolveMetaJson(TimeSpan duration, string? moveSequence, int? moveCount, double? tps)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            version = 1,
+            method = "unknown",
+            solveTimeMs = (int)Math.Round(duration.TotalMilliseconds, MidpointRounding.AwayFromZero),
+            moves = moveSequence ?? string.Empty,
+            moveCount = moveCount ?? 0,
+            tps,
+            phases = Array.Empty<object>()
         });
     }
 }

@@ -56,8 +56,40 @@ internal static class StorageValueConverter
         };
     }
 
+    public static int ToSolveSourceValue(SolveSource source)
+    {
+        return source switch
+        {
+            SolveSource.Manual => 0,
+            SolveSource.SmartCube => 1,
+            SolveSource.Imported => 2,
+            _ => throw new ArgumentOutOfRangeException(nameof(source), source, "Unknown solve source.")
+        };
+    }
+
+    public static SolveSource ToSolveSource(int value)
+    {
+        return value switch
+        {
+            0 => SolveSource.Manual,
+            1 => SolveSource.SmartCube,
+            2 => SolveSource.Imported,
+            _ => SolveSource.Manual
+        };
+    }
+
     public static object ToDbValue(string? value)
     {
         return value is null ? DBNull.Value : value;
+    }
+
+    public static object ToDbValue(int? value)
+    {
+        return value is null ? DBNull.Value : value.Value;
+    }
+
+    public static object ToDbValue(double? value)
+    {
+        return value is null ? DBNull.Value : value.Value;
     }
 }

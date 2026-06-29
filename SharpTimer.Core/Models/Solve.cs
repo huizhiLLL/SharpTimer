@@ -10,11 +10,23 @@ public sealed record Solve
 
     public Penalty Penalty { get; init; } = Penalty.None;
 
+    public SolveSource Source { get; init; } = SolveSource.Manual;
+
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
     public string? Scramble { get; init; }
 
     public string? Comment { get; init; }
+
+    public string? MoveSequence { get; init; }
+
+    public int? MoveCount { get; init; }
+
+    public double? Tps { get; init; }
+
+    public string? ReconstructionMethod { get; init; }
+
+    public string? SolveMetaJson { get; init; }
 
     public TimeSpan? EffectiveDuration => Penalty switch
     {
