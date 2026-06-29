@@ -16,6 +16,8 @@ public sealed record LocalizedStrings
     public required string WorstLabel { get; init; }
     public required string MeanLabel { get; init; }
     public required string CompletedCountLabel { get; init; }
+    public required string BestAverageOf5Label { get; init; }
+    public required string BestAverageOf12Label { get; init; }
     public required string AnalysisCountLabel { get; init; }
     public required string SolveTrendTitle { get; init; }
     public required string SolveDistributionTitle { get; init; }
@@ -123,6 +125,8 @@ public sealed record LocalizedStrings
         WorstLabel = "Worst",
         MeanLabel = "Average",
         CompletedCountLabel = "Solves",
+        BestAverageOf5Label = "Best Ao5",
+        BestAverageOf12Label = "Best Ao12",
         AnalysisCountLabel = "次数",
         SolveTrendTitle = "趋势",
         SolveDistributionTitle = "分布",
@@ -224,8 +228,10 @@ public sealed record LocalizedStrings
         Close = "Close",
         BestLabel = "Best",
         WorstLabel = "Worst",
-        MeanLabel = "Mean",
+        MeanLabel = "Average",
         CompletedCountLabel = "Completed",
+        BestAverageOf5Label = "Best Ao5",
+        BestAverageOf12Label = "Best Ao12",
         AnalysisCountLabel = "Solves",
         SolveTrendTitle = "Trend",
         SolveDistributionTitle = "Distribution",

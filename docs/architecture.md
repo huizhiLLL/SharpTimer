@@ -42,7 +42,7 @@ SharpTimer
 - `Solve`：一次复原成绩，包含用时、session、打乱、备注、来源、可选智能魔方转动序列、步数、TPS、复盘元数据和时间戳。
 - `ManualTimerStateMachine`：通用计时状态机，当前同时支撑智能魔方首转起表和备用手动输入路径。
 - `SmartCubeScrambleTracker`：平台无关的智能魔方打乱推进器。
-- `StatisticsCalculator`：计算 best、mean、ao5、ao12。
+- `StatisticsCalculator`：计算 best、mean、ao5、ao12、best ao5、best ao12。
 
 SQLite 当前使用 v2 schema：
 

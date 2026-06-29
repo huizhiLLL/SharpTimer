@@ -462,10 +462,10 @@ namespace SharpTimer.App
                 Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
                 SolvesPage.UpdateCount(string.Format(_strings.CountFormat, snapshot.Statistics.Count));
                 SolvesPage.UpdateAnalysis(
-                    FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces),
-                    FormatNullableTime(GetWorstTime(snapshot.Solves), _settings.DecimalPlaces),
                     FormatNullableTime(snapshot.Statistics.Mean, _settings.DecimalPlaces),
-                    snapshot.Statistics.CompletedCount.ToString(),
+                    FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces),
+                    FormatNullableTime(snapshot.Statistics.BestAverageOf5, _settings.DecimalPlaces),
+                    FormatNullableTime(snapshot.Statistics.BestAverageOf12, _settings.DecimalPlaces),
                     snapshot.Solves,
                     _settings.DecimalPlaces);
 
@@ -602,14 +602,6 @@ namespace SharpTimer.App
             }
 
             return false;
-        }
-
-        private static TimeSpan? GetWorstTime(IEnumerable<Solve> solves)
-        {
-            var completed = solves
-                .Select(solve => solve.Duration)
-                .ToArray();
-            return completed.Length == 0 ? null : completed.Max();
         }
 
         private static Brush GetThemeBrush(string resourceKey)

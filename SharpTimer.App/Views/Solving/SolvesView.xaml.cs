@@ -67,17 +67,17 @@ public sealed partial class SolvesView : UserControl
     }
 
     public void UpdateAnalysis(
+        string average,
         string best,
-        string worst,
-        string mean,
-        string completed,
+        string bestAverageOf5,
+        string bestAverageOf12,
         IEnumerable<Solve> solves,
         int decimalPlaces)
     {
+        AnalysisMeanText.Text = average;
         AnalysisBestText.Text = best;
-        AnalysisWorstText.Text = worst;
-        AnalysisMeanText.Text = mean;
-        AnalysisCompletedText.Text = completed;
+        AnalysisBestAverageOf5Text.Text = bestAverageOf5;
+        AnalysisBestAverageOf12Text.Text = bestAverageOf12;
         SolveAnalysisChart.SetSolves(solves, decimalPlaces);
     }
 
@@ -94,10 +94,10 @@ public sealed partial class SolvesView : UserControl
         NewSessionMenuItem.Text = strings.NewSession;
         ArchiveSessionMenuItem.Text = strings.Delete;
         TimeColumnText.Text = strings.TimeColumn;
-        AnalysisBestLabelText.Text = strings.BestLabel;
-        AnalysisWorstLabelText.Text = strings.WorstLabel;
         AnalysisMeanLabelText.Text = strings.MeanLabel;
-        AnalysisCompletedLabelText.Text = strings.CompletedCountLabel;
+        AnalysisBestLabelText.Text = strings.BestLabel;
+        AnalysisBestAverageOf5LabelText.Text = strings.BestAverageOf5Label;
+        AnalysisBestAverageOf12LabelText.Text = strings.BestAverageOf12Label;
         SolveAnalysisChart.SetText(strings.SolveTrendTitle, strings.SolveDistributionTitle, strings.SolveChartEmptyText);
         EmptySolvesTitleText.Text = strings.EmptySolvesTitle;
         EmptySolvesDescriptionText.Text = strings.EmptySolvesDescription;

@@ -289,36 +289,6 @@
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="4">
                         <TextBlock
-                            x:Name="AnalysisBestLabelText"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock
-                            x:Name="AnalysisBestText"
-                            FontSize="24"
-                            FontWeight="SemiBold" />
-                    </StackPanel>
-                </Border>
-                <Border
-                    Grid.Column="1"
-                    Padding="16"
-                    CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                    <StackPanel Spacing="4">
-                        <TextBlock
-                            x:Name="AnalysisWorstLabelText"
-                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock
-                            x:Name="AnalysisWorstText"
-                            FontSize="24"
-                            FontWeight="SemiBold" />
-                    </StackPanel>
-                </Border>
-                <Border
-                    Grid.Row="1"
-                    Padding="16"
-                    CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                    <StackPanel Spacing="4">
-                        <TextBlock
                             x:Name="AnalysisMeanLabelText"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock
@@ -328,6 +298,36 @@
                     </StackPanel>
                 </Border>
                 <Border
+                    Grid.Column="1"
+                    Padding="16"
+                    CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="4">
+                        <TextBlock
+                            x:Name="AnalysisBestLabelText"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock
+                            x:Name="AnalysisBestText"
+                            FontSize="24"
+                            FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Row="1"
+                    Padding="16"
+                    CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="4">
+                        <TextBlock
+                            x:Name="AnalysisBestAverageOf5LabelText"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock
+                            x:Name="AnalysisBestAverageOf5Text"
+                            FontSize="24"
+                            FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border
                     Grid.Row="1"
                     Grid.Column="1"
                     Padding="16"
@@ -335,10 +335,10 @@
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="4">
                         <TextBlock
-                            x:Name="AnalysisCompletedLabelText"
+                            x:Name="AnalysisBestAverageOf12LabelText"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock
-                            x:Name="AnalysisCompletedText"
+                            x:Name="AnalysisBestAverageOf12Text"
                             FontSize="24"
                             FontWeight="SemiBold" />
                     </StackPanel>

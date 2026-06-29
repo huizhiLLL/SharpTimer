@@ -18,6 +18,18 @@ public sealed class StatisticsCalculatorTests
         Assert.Equal(TimeSpan.FromSeconds(15.5), statistics.Mean);
         Assert.Equal(TimeSpan.FromSeconds(19), statistics.AverageOf5);
         Assert.Equal(TimeSpan.FromSeconds(15.5), statistics.AverageOf12);
+        Assert.Equal(TimeSpan.FromSeconds(12), statistics.BestAverageOf5);
+        Assert.Equal(TimeSpan.FromSeconds(15.5), statistics.BestAverageOf12);
+    }
+
+    [Fact]
+    public void CalculateBestAverageOf_ReturnsBestHistoricalWindow()
+    {
+        var solves = CreateSolves(10, 11, 12, 13, 14, 50, 51, 52, 53, 54);
+
+        var average = StatisticsCalculator.CalculateBestAverageOf(solves, 5);
+
+        Assert.Equal(TimeSpan.FromSeconds(12), average);
     }
 
     [Fact]

@@ -8,4 +8,6 @@ public sealed record SolveStatistics(
     TimeSpan? Best,
     TimeSpan? Mean,
     TimeSpan? AverageOf5,
-    TimeSpan? AverageOf12);
+    TimeSpan? AverageOf12,
+    TimeSpan? BestAverageOf5,
+    TimeSpan? BestAverageOf12);

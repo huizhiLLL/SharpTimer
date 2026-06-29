@@ -19,7 +19,9 @@ public static class StatisticsCalculator
             Best: completedDurations.Length == 0 ? null : completedDurations.Min(),
             Mean: CalculateMean(completedDurations),
             AverageOf5: CalculateAverageOf(orderedSolves, 5),
-            AverageOf12: CalculateAverageOf(orderedSolves, 12));
+            AverageOf12: CalculateAverageOf(orderedSolves, 12),
+            BestAverageOf5: CalculateBestAverageOf(orderedSolves, 5),
+            BestAverageOf12: CalculateBestAverageOf(orderedSolves, 12));
     }
 
     public static TimeSpan? CalculateMean(IEnumerable<Solve> solves)
@@ -48,14 +50,43 @@ public static class StatisticsCalculator
             return null;
         }
 
-        var durations = window
+        return CalculateAverageOfWindow(window);
+    }
+
+    public static TimeSpan? CalculateBestAverageOf(IEnumerable<Solve> solves, int windowSize)
+    {
+        ArgumentNullException.ThrowIfNull(solves);
+
+        if (windowSize < 3)
+        {
+            throw new ArgumentOutOfRangeException(nameof(windowSize), windowSize, "Average window size must be at least 3.");
+        }
+
+        var orderedSolves = solves
+            .OrderBy(solve => solve.CreatedAt)
+            .ToArray();
+
+        if (orderedSolves.Length < windowSize)
+        {
+            return null;
+        }
+
+        return Enumerable
+            .Range(0, orderedSolves.Length - windowSize + 1)
+            .Select(start => CalculateAverageOfWindow(orderedSolves.Skip(start).Take(windowSize)))
+            .Min();
+    }
+
+    private static TimeSpan? CalculateAverageOfWindow(IEnumerable<Solve> solves)
+    {
+        var durations = solves
             .Select(solve => solve.Duration)
             .OrderBy(duration => duration)
             .ToArray();
 
         var trimmed = durations
             .Skip(1)
-            .Take(windowSize - 2)
+            .Take(durations.Length - 2)
             .ToArray();
 
         return CalculateMean(trimmed);
