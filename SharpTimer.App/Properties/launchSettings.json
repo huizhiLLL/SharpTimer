@@ -1,8 +1,5 @@
 {
   "profiles": {
-    "SharpTimer.App (Package)": {
-      "commandName": "MsixPackage"
-    },
     "SharpTimer.App (Unpackaged)": {
       "commandName": "Project"
     }
