@@ -1,5 +1,7 @@
 namespace SharpTimer.App.Services;
 
+using SharpTimer.Core.SmartCubes;
+
 public sealed record AppSettings
 {
     public bool UseInspection { get; init; } = true;
@@ -12,6 +14,8 @@ public sealed record AppSettings
 
     public SmartCubeScrambleProgressStyle SmartCubeScrambleProgressStyle { get; init; } =
         SmartCubeScrambleProgressStyle.HideCompleted;
+
+    public SmartCubeSolveMethod SmartCubeSolveMethod { get; init; } = SmartCubeSolveMethod.Cfop;
 
     public AppThemePreference Theme { get; init; } = AppThemePreference.Light;
 

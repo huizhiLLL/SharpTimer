@@ -87,6 +87,16 @@
                     <ComboBoxItem x:Name="ScrambleProgressDimCompletedItem" Content="变浅保留" />
                 </ComboBox>
 
+                <ComboBox
+                    x:Name="SolveMethodComboBox"
+                    Header="解法分段"
+                    MinWidth="240"
+                    HorizontalAlignment="Stretch"
+                    SelectionChanged="SettingControl_Changed">
+                    <ComboBoxItem x:Name="SolveMethodCfopItem" Content="CFOP" />
+                    <ComboBoxItem x:Name="SolveMethodRouxItem" Content="Roux" />
+                </ComboBox>
+
                 <StackPanel Spacing="4">
                     <TextBlock x:Name="ScrambleFontSizeHeaderText" Text="打乱字体" />
                     <Slider

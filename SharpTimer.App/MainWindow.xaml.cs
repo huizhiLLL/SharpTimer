@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text.Json;
 using Windows.Graphics;
 
 namespace SharpTimer.App
@@ -662,6 +663,11 @@ namespace SharpTimer.App
             content.Children.Add(CreateDetailRow(_strings.SolveScrambleLabel, string.IsNullOrWhiteSpace(item.Solve.Scramble) ? "--" : item.Solve.Scramble));
             content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, string.IsNullOrWhiteSpace(item.Solve.MoveSequence) ? _strings.SolveReplayUnavailable : item.Solve.MoveSequence));
             content.Children.Add(CreateDetailRow(_strings.SolveCreatedAtLabel, item.Solve.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")));
+            var phases = ReadSolvePhases(item.Solve.SolveMetaJson);
+            if (phases.Count > 0)
+            {
+                content.Children.Add(CreatePhaseTable(_strings.SolvePhasesLabel, phases));
+            }
 
             var commentBox = new TextBox
             {
@@ -826,6 +832,131 @@ namespace SharpTimer.App
             grid.Children.Add(labelText);
             grid.Children.Add(editor);
             return grid;
+        }
+
+        private FrameworkElement CreatePhaseTable(string label, IReadOnlyList<SolvePhaseDetail> phases)
+        {
+            var grid = new Grid
+            {
+                ColumnSpacing = 12
+            };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(96) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var labelText = new TextBlock
+            {
+                Text = label,
+                Foreground = Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            grid.Children.Add(labelText);
+
+            var table = new Grid
+            {
+                RowSpacing = 6,
+                ColumnSpacing = 10
+            };
+            table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(72) });
+            table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(86) });
+            table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
+            table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
+            table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            AddPhaseCell(table, 0, 0, _strings.SolvePhaseColumn, true);
+            AddPhaseCell(table, 0, 1, _strings.SolvePhaseTimeColumn, true);
+            AddPhaseCell(table, 0, 2, _strings.SolvePhaseMovesColumn, true);
+            AddPhaseCell(table, 0, 3, _strings.SolvePhaseTpsColumn, true);
+
+            for (var index = 0; index < phases.Count; index++)
+            {
+                var phase = phases[index];
+                var row = index + 1;
+                table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                AddPhaseCell(table, row, 0, phase.Name, false);
+                AddPhaseCell(table, row, 1, FormatTime(TimeSpan.FromMilliseconds(phase.DurationMs), _settings.DecimalPlaces), false);
+                AddPhaseCell(table, row, 2, phase.MoveCount.ToString(), false);
+                AddPhaseCell(table, row, 3, phase.Tps.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), false);
+            }
+
+            Grid.SetColumn(table, 1);
+            grid.Children.Add(table);
+            return grid;
+        }
+
+        private static void AddPhaseCell(Grid table, int row, int column, string text, bool isHeader)
+        {
+            var cell = new TextBlock
+            {
+                Text = text,
+                FontWeight = isHeader ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal,
+                Foreground = isHeader
+                    ? Application.Current.Resources["TextFillColorSecondaryBrush"] as Brush
+                    : Application.Current.Resources["TextFillColorPrimaryBrush"] as Brush,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetRow(cell, row);
+            Grid.SetColumn(cell, column);
+            table.Children.Add(cell);
+        }
+
+        private static IReadOnlyList<SolvePhaseDetail> ReadSolvePhases(string? solveMetaJson)
+        {
+            if (string.IsNullOrWhiteSpace(solveMetaJson))
+            {
+                return Array.Empty<SolvePhaseDetail>();
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(solveMetaJson);
+                if (!document.RootElement.TryGetProperty("phases", out var phasesElement)
+                    || phasesElement.ValueKind != JsonValueKind.Array)
+                {
+                    return Array.Empty<SolvePhaseDetail>();
+                }
+
+                var phases = new List<SolvePhaseDetail>();
+                foreach (var phaseElement in phasesElement.EnumerateArray())
+                {
+                    var name = ReadString(phaseElement, "name");
+                    var durationMs = ReadInt(phaseElement, "durationMs");
+                    var moveCount = ReadInt(phaseElement, "moveCount");
+                    var tps = ReadDouble(phaseElement, "tps");
+                    if (string.IsNullOrWhiteSpace(name) || moveCount <= 0)
+                    {
+                        continue;
+                    }
+
+                    phases.Add(new SolvePhaseDetail(name, durationMs, moveCount, tps));
+                }
+
+                return phases;
+            }
+            catch (JsonException)
+            {
+                return Array.Empty<SolvePhaseDetail>();
+            }
+        }
+
+        private static string ReadString(JsonElement element, string propertyName)
+        {
+            return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
+                ? property.GetString() ?? string.Empty
+                : string.Empty;
+        }
+
+        private static int ReadInt(JsonElement element, string propertyName)
+        {
+            return element.TryGetProperty(propertyName, out var property) && property.TryGetInt32(out var value)
+                ? value
+                : 0;
+        }
+
+        private static double ReadDouble(JsonElement element, string propertyName)
+        {
+            return element.TryGetProperty(propertyName, out var property) && property.TryGetDouble(out var value)
+                ? value
+                : 0d;
         }
 
         private string FormatEffectiveSolveTime(Solve solve, int decimalPlaces)
@@ -1503,6 +1634,8 @@ namespace SharpTimer.App
         {
             return _completedScrambleBrush ??= new SolidColorBrush(Colors.Gray) { Opacity = 0.48 };
         }
+
+        private sealed record SolvePhaseDetail(string Name, int DurationMs, int MoveCount, double Tps);
 
         private void SmartCubePreview_OpenRequested(object? sender, EventArgs e)
         {

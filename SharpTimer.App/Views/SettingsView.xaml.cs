@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using SharpTimer.App.Services;
+using SharpTimer.Core.SmartCubes;
 using System;
 
 namespace SharpTimer.App.Views;
@@ -37,6 +38,7 @@ public sealed partial class SettingsView : UserControl
             });
             SetSelectedIndex(LanguageComboBox, settings.Language == AppLanguagePreference.English ? 1 : 0);
             SetSelectedIndex(ScrambleProgressStyleComboBox, settings.SmartCubeScrambleProgressStyle == SmartCubeScrambleProgressStyle.DimCompleted ? 1 : 0);
+            SetSelectedIndex(SolveMethodComboBox, settings.SmartCubeSolveMethod == SmartCubeSolveMethod.Roux ? 1 : 0);
             ScrambleFontSizeSlider.Value = settings.ScrambleFontSize;
             SmartCubePreviewSizeSlider.Value = settings.SmartCubePreviewSize;
             UpdateSliderValueText();
@@ -69,6 +71,9 @@ public sealed partial class SettingsView : UserControl
         ScrambleProgressStyleComboBox.Header = strings.ScrambleProgressStyleHeader;
         ScrambleProgressHideCompletedItem.Content = strings.ScrambleProgressHideCompleted;
         ScrambleProgressDimCompletedItem.Content = strings.ScrambleProgressDimCompleted;
+        SolveMethodComboBox.Header = strings.SolveMethodHeader;
+        SolveMethodCfopItem.Content = strings.SolveMethodCfop;
+        SolveMethodRouxItem.Content = strings.SolveMethodRoux;
         ScrambleFontSizeHeaderText.Text = strings.ScrambleFontSizeHeader;
         SmartCubePreviewSizeHeaderText.Text = strings.SmartCubePreviewSizeHeader;
         UpdateSliderValueText();
@@ -103,6 +108,9 @@ public sealed partial class SettingsView : UserControl
             SmartCubeScrambleProgressStyle = ScrambleProgressStyleComboBox.SelectedIndex == 1
                 ? SmartCubeScrambleProgressStyle.DimCompleted
                 : SmartCubeScrambleProgressStyle.HideCompleted,
+            SmartCubeSolveMethod = SolveMethodComboBox.SelectedIndex == 1
+                ? SmartCubeSolveMethod.Roux
+                : SmartCubeSolveMethod.Cfop,
             ScrambleFontSize = (int)Math.Round(ScrambleFontSizeSlider.Value),
             SmartCubePreviewSize = (int)Math.Round(SmartCubePreviewSizeSlider.Value)
         });

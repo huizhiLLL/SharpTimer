@@ -27,6 +27,7 @@ public sealed class TimerAppService
     private IReadOnlyList<Session> _sessions = Array.Empty<Session>();
     private IReadOnlyList<Solve> _solves = Array.Empty<Solve>();
     private int _currentScrambleIndex = -1;
+    private AppSettings _settings;
 
     public TimerAppService(string databasePath, AppSettings settings)
     {
@@ -35,6 +36,7 @@ public sealed class TimerAppService
         _sessionRepository = new SqliteSessionRepository(connectionFactory);
         _solveRepository = new SqliteSolveRepository(connectionFactory);
         _timer = CreateTimer(settings);
+        _settings = settings;
     }
 
     public async Task<TimerAppSnapshot> InitializeAsync(CancellationToken cancellationToken = default)
@@ -159,7 +161,12 @@ public sealed class TimerAppService
                 return CreateSnapshot();
             }
 
-            var solve = BuildSmartCubeSolve(_timer.StopSolve(_currentSession!.Id, GetCurrentScramble()), solveCapture);
+            var currentScramble = GetCurrentScramble();
+            var solve = BuildSmartCubeSolve(
+                _timer.StopSolve(_currentSession!.Id, currentScramble),
+                solveCapture,
+                currentScramble,
+                _settings.SmartCubeSolveMethod);
             await _solveRepository.SaveAsync(solve, cancellationToken);
             _solves = await _solveRepository.ListBySessionAsync(_currentSession.Id, cancellationToken);
             MoveToNextScramble();
@@ -206,6 +213,7 @@ public sealed class TimerAppService
     public TimerAppSnapshot ApplySettings(AppSettings settings)
     {
         EnsureInitialized();
+        _settings = settings;
 
         if (_timer.Current.Phase != TimerPhase.Running)
         {
@@ -469,10 +477,16 @@ public sealed class TimerAppService
         });
     }
 
-    private static Solve BuildSmartCubeSolve(Solve solve, SmartCubeSolveCaptureSnapshot? solveCapture)
+    private static Solve BuildSmartCubeSolve(
+        Solve solve,
+        SmartCubeSolveCaptureSnapshot? solveCapture,
+        string scramble,
+        SmartCubeSolveMethod solveMethod)
     {
         var capture = solveCapture ?? SmartCubeSolveCaptureSnapshot.Empty;
-        var normalizedMoves = NormalizeMoveSequence(capture.CombinedMoveSequence);
+        var startFacelets = ThreeByThreeFacelets.ApplyScramble(scramble);
+        var reconstruction = SmartCubeSolveReconstruction.FromCapture(startFacelets, capture, solveMethod);
+        var normalizedMoves = NormalizeMoveSequence(SmartCubeMoveNotation.ParseSequence(reconstruction.MoveSequence));
         var moveText = normalizedMoves.Count == 0 ? null : string.Join(" ", normalizedMoves);
         var moveCount = normalizedMoves.Count == 0 ? (int?)null : normalizedMoves.Count;
         var tps = moveCount is null || solve.Duration <= TimeSpan.Zero
@@ -485,7 +499,8 @@ public sealed class TimerAppService
             MoveSequence = moveText,
             MoveCount = moveCount,
             Tps = tps,
-            SolveMetaJson = BuildSolveMetaJson(solve.Duration, moveText, moveCount, tps, capture)
+            ReconstructionMethod = reconstruction.MethodId,
+            SolveMetaJson = BuildSolveMetaJson(solve.Duration, moveText, moveCount, tps, capture, reconstruction)
         };
     }
 
@@ -515,16 +530,18 @@ public sealed class TimerAppService
         string? moveSequence,
         int? moveCount,
         double? tps,
-        SmartCubeSolveCaptureSnapshot capture)
+        SmartCubeSolveCaptureSnapshot capture,
+        SmartCubeSolveReconstruction reconstruction)
     {
         return JsonSerializer.Serialize(new
         {
             version = 1,
-            method = "unknown",
+            method = reconstruction.MethodId,
             solveTimeMs = (int)Math.Round(duration.TotalMilliseconds, MidpointRounding.AwayFromZero),
             moves = moveSequence ?? string.Empty,
             moveCount = moveCount ?? 0,
             tps,
+            prettySolve = reconstruction.PrettySolve,
             rawMoves = capture.Moves.Select(move => new
             {
                 move = move.Move,
@@ -536,7 +553,18 @@ public sealed class TimerAppService
                     ? (int?)null
                     : (int)Math.Round(move.CubeTimestamp.Value.TotalMilliseconds, MidpointRounding.AwayFromZero)
             }).ToArray(),
-            phases = Array.Empty<object>()
+            phases = reconstruction.Phases.Select(phase => new
+            {
+                name = phase.Name,
+                moves = phase.Moves,
+                moveCount = phase.MoveCount,
+                startMs = phase.StartMs,
+                endMs = phase.EndMs,
+                durationMs = phase.DurationMs,
+                tps = phase.DurationMs > 0
+                    ? phase.MoveCount * 1000d / phase.DurationMs
+                    : 0d
+            }).ToArray()
         });
     }
 }

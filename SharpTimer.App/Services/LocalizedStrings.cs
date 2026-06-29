@@ -67,6 +67,9 @@ public sealed record LocalizedStrings
     public required string ScrambleProgressStyleHeader { get; init; }
     public required string ScrambleProgressHideCompleted { get; init; }
     public required string ScrambleProgressDimCompleted { get; init; }
+    public required string SolveMethodHeader { get; init; }
+    public required string SolveMethodCfop { get; init; }
+    public required string SolveMethodRoux { get; init; }
     public required string ScrambleFontSizeHeader { get; init; }
     public required string SmartCubePreviewSizeHeader { get; init; }
     public required string InspectionRemainingFormat { get; init; }
@@ -97,6 +100,11 @@ public sealed record LocalizedStrings
     public required string BluetoothBatteryUnknown { get; init; }
     public required string BluetoothScrambleReady { get; init; }
     public required string BluetoothScrambleRestoreRequired { get; init; }
+    public required string SolvePhasesLabel { get; init; }
+    public required string SolvePhaseColumn { get; init; }
+    public required string SolvePhaseTimeColumn { get; init; }
+    public required string SolvePhaseMovesColumn { get; init; }
+    public required string SolvePhaseTpsColumn { get; init; }
 
     public static LocalizedStrings For(AppLanguagePreference language)
     {
@@ -170,6 +178,9 @@ public sealed record LocalizedStrings
         ScrambleProgressStyleHeader = "打乱推进样式",
         ScrambleProgressHideCompleted = "自动消失",
         ScrambleProgressDimCompleted = "变浅保留",
+        SolveMethodHeader = "解法分段",
+        SolveMethodCfop = "CFOP",
+        SolveMethodRoux = "Roux",
         ScrambleFontSizeHeader = "打乱字体",
         SmartCubePreviewSizeHeader = "虚拟魔方大小",
         InspectionRemainingFormat = "观察剩余 {0:0}s",
@@ -199,7 +210,12 @@ public sealed record LocalizedStrings
         BluetoothBatteryFormat = "电量：{0}%",
         BluetoothBatteryUnknown = "电量：--",
         BluetoothScrambleReady = "READY",
-        BluetoothScrambleRestoreRequired = "请先复原魔方"
+        BluetoothScrambleRestoreRequired = "请先复原魔方",
+        SolvePhasesLabel = "分段",
+        SolvePhaseColumn = "阶段",
+        SolvePhaseTimeColumn = "用时",
+        SolvePhaseMovesColumn = "步数",
+        SolvePhaseTpsColumn = "TPS"
     };
 
     private static readonly LocalizedStrings English = new()
@@ -269,6 +285,9 @@ public sealed record LocalizedStrings
         ScrambleProgressStyleHeader = "Scramble progress style",
         ScrambleProgressHideCompleted = "Hide completed moves",
         ScrambleProgressDimCompleted = "Dim completed moves",
+        SolveMethodHeader = "Solve method",
+        SolveMethodCfop = "CFOP",
+        SolveMethodRoux = "Roux",
         ScrambleFontSizeHeader = "Scramble font size",
         SmartCubePreviewSizeHeader = "Virtual cube size",
         InspectionRemainingFormat = "Inspection left {0:0}s",
@@ -298,6 +317,11 @@ public sealed record LocalizedStrings
         BluetoothBatteryFormat = "Battery: {0}%",
         BluetoothBatteryUnknown = "Battery: --",
         BluetoothScrambleReady = "READY",
-        BluetoothScrambleRestoreRequired = "Solve the cube first"
+        BluetoothScrambleRestoreRequired = "Solve the cube first",
+        SolvePhasesLabel = "Phases",
+        SolvePhaseColumn = "Phase",
+        SolvePhaseTimeColumn = "Time",
+        SolvePhaseMovesColumn = "Moves",
+        SolvePhaseTpsColumn = "TPS"
     };
 }
