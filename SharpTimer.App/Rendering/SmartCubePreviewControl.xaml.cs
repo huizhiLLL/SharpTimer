@@ -22,6 +22,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
     private const double OrientationInterpolationTimeConstantMilliseconds = 42;
     private const double MinOrientationFrameBlend = 0.08;
     private const double MaxOrientationFrameBlend = 0.55;
+    private const double OrientationSettleDegrees = 0.12;
 
     private bool _isPointerDown;
     private bool _didDrag;
@@ -236,7 +237,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
         {
             _orientation = _orientation?.SlerpToward(_targetOrientation, GetOrientationFrameBlend(elapsedMilliseconds))
                 ?? _targetOrientation;
-            if (_orientation.IsCloseTo(_targetOrientation))
+            if (_orientation.IsCloseTo(_targetOrientation, OrientationSettleDegrees))
             {
                 _orientation = _targetOrientation;
                 _targetOrientation = null;

@@ -540,6 +540,7 @@ internal sealed record SmartCubePreviewOrientation(double X, double Y, double Z,
         var targetW = target.W;
         if (dot < 0)
         {
+            dot = -dot;
             targetX = -targetX;
             targetY = -targetY;
             targetZ = -targetZ;
@@ -577,10 +578,11 @@ internal sealed record SmartCubePreviewOrientation(double X, double Y, double Z,
             ?? target;
     }
 
-    public bool IsCloseTo(SmartCubePreviewOrientation target)
+    public bool IsCloseTo(SmartCubePreviewOrientation target, double maxAngleDegrees)
     {
         var dot = Math.Abs(X * target.X + Y * target.Y + Z * target.Z + W * target.W);
-        return dot > 0.9995;
+        var maxHalfAngleRadians = Math.Max(0, maxAngleDegrees) * Math.PI / 360;
+        return dot >= Math.Cos(maxHalfAngleRadians);
     }
 
     private SmartCubePreviewRenderer.Vec3 RotateSource(SmartCubePreviewRenderer.Vec3 point)
