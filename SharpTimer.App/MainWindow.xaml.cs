@@ -48,6 +48,9 @@ namespace SharpTimer.App
         private bool _smartCubeReadyToStart;
         private bool _smartCubeHasLocalMoveState;
         private readonly SmartCubeSolveCapture _smartCubeSolveCapture = new();
+        private readonly object _smartCubeGyroRenderLock = new();
+        private SmartCubeGyroEvent? _pendingSmartCubeGyroEvent;
+        private bool _isSmartCubeGyroRenderQueued;
         private string? _smartCubeFacelets;
         private string? _scrambleTextRenderKey;
         private Brush? _completedScrambleBrush;
@@ -1266,9 +1269,56 @@ namespace SharpTimer.App
 
         private void SmartCubeSessionController_CubeEventReceived(object? sender, SmartCubeEvent e)
         {
+            if (e is SmartCubeGyroEvent gyro)
+            {
+                QueueSmartCubeGyroRender(gyro);
+                return;
+            }
+
             DispatcherQueue.TryEnqueue(async () =>
             {
                 await RenderSmartCubeEventAsync(e);
+            });
+        }
+
+        private void QueueSmartCubeGyroRender(SmartCubeGyroEvent gyro)
+        {
+            var shouldQueue = false;
+            lock (_smartCubeGyroRenderLock)
+            {
+                _pendingSmartCubeGyroEvent = gyro;
+                if (!_isSmartCubeGyroRenderQueued)
+                {
+                    _isSmartCubeGyroRenderQueued = true;
+                    shouldQueue = true;
+                }
+            }
+
+            if (!shouldQueue)
+            {
+                return;
+            }
+
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                SmartCubeGyroEvent? pending;
+                lock (_smartCubeGyroRenderLock)
+                {
+                    pending = _pendingSmartCubeGyroEvent;
+                    _pendingSmartCubeGyroEvent = null;
+                    _isSmartCubeGyroRenderQueued = false;
+                }
+
+                if (pending is null)
+                {
+                    return;
+                }
+
+                SmartCubePreview.SetOrientation(
+                    pending.Quaternion.X,
+                    pending.Quaternion.Y,
+                    pending.Quaternion.Z,
+                    pending.Quaternion.W);
             });
         }
 
@@ -1286,13 +1336,6 @@ namespace SharpTimer.App
                     break;
                 case SmartCubeMoveEvent move:
                     await HandleSmartCubeMoveEventAsync(move);
-                    break;
-                case SmartCubeGyroEvent gyro:
-                    SmartCubePreview.SetOrientation(
-                        gyro.Quaternion.X,
-                        gyro.Quaternion.Y,
-                        gyro.Quaternion.Z,
-                        gyro.Quaternion.W);
                     break;
                 case SmartCubeDisconnectEvent:
                     _smartCubeSolveHasMove = false;

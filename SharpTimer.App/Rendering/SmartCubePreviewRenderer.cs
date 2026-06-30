@@ -32,14 +32,15 @@ internal static class SmartCubePreviewRenderer
         double yawDegrees = DefaultYawDegrees,
         double pitchDegrees = DefaultPitchDegrees,
         SmartCubePreviewOrientation? orientation = null,
-        SmartCubeMoveAnimation? animation = null)
+        SmartCubeMoveAnimation? animation = null,
+        bool useLightweightShapes = false)
     {
         var cache = RenderCaches.GetValue(canvas, _ => new RenderCache());
 
         var state = string.IsNullOrWhiteSpace(facelets) || facelets.Length < 54
             ? null
             : facelets[..54];
-        var useLightweightShapes = SmartCubeMoveAnimation.IsValid(animation);
+        useLightweightShapes |= SmartCubeMoveAnimation.IsValid(animation);
         var batch = BuildRenderBatch(state, yawDegrees, pitchDegrees, orientation, animation);
         if (batch.Tiles.Count == 0 || !batch.Bounds.IsValid)
         {
@@ -659,7 +660,7 @@ internal sealed record SmartCubePreviewOrientation(double X, double Y, double Z,
             ?? new SmartCubePreviewOrientation(0, 0, 0, 1);
     }
 
-    public SmartCubePreviewOrientation BlendToward(SmartCubePreviewOrientation target, double amount)
+    public SmartCubePreviewOrientation SlerpToward(SmartCubePreviewOrientation target, double amount)
     {
         var dot = X * target.X + Y * target.Y + Z * target.Z + W * target.W;
         var targetX = target.X;
@@ -675,11 +676,33 @@ internal sealed record SmartCubePreviewOrientation(double X, double Y, double Z,
         }
 
         var clamped = Math.Max(0, Math.Min(1, amount));
+        if (dot > 0.9995)
+        {
+            return Create(
+                X + (targetX - X) * clamped,
+                Y + (targetY - Y) * clamped,
+                Z + (targetZ - Z) * clamped,
+                W + (targetW - W) * clamped)
+                ?? target;
+        }
+
+        dot = Math.Max(-1, Math.Min(1, dot));
+        var theta0 = Math.Acos(dot);
+        var theta = theta0 * clamped;
+        var sinTheta = Math.Sin(theta);
+        var sinTheta0 = Math.Sin(theta0);
+        if (sinTheta0 <= 0)
+        {
+            return target;
+        }
+
+        var scale0 = Math.Cos(theta) - dot * sinTheta / sinTheta0;
+        var scale1 = sinTheta / sinTheta0;
         return Create(
-            X + (targetX - X) * clamped,
-            Y + (targetY - Y) * clamped,
-            Z + (targetZ - Z) * clamped,
-            W + (targetW - W) * clamped)
+            X * scale0 + targetX * scale1,
+            Y * scale0 + targetY * scale1,
+            Z * scale0 + targetZ * scale1,
+            W * scale0 + targetW * scale1)
             ?? target;
     }
 

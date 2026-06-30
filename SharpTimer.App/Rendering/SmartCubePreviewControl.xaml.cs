@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using SharpTimer.Core.SmartCubes;
 using System;
+using System.Diagnostics;
 
 namespace SharpTimer.App.Rendering;
 
@@ -13,14 +14,20 @@ public sealed partial class SmartCubePreviewControl : UserControl
     private const double MaxPitch = 68;
     private const double DragThreshold = 4;
     private const double DragSensitivity = 0.45;
-    private const double AnimationMilliseconds = 150;
+    private const double AnimationMilliseconds = 110;
     private const double GyroDefaultYawDegrees = 0;
     private const double GyroDefaultPitchDegrees = 18;
-    private const double OrientationFrameBlend = 0.22;
+    private const double InitialOrientationFrameBlend = 0.22;
+    private const double OrientationInterpolationTimeConstantMilliseconds = 42;
+    private const double MinOrientationFrameBlend = 0.08;
+    private const double MaxOrientationFrameBlend = 0.55;
 
     private bool _isPointerDown;
     private bool _didDrag;
     private bool _isFrameRendering;
+    private bool _hasPendingFrameRender;
+    private bool _pendingFrameRenderLightweight;
+    private bool _pendingFrameRenderRounded;
     private string? _facelets;
     private string? _animationFrom;
     private string? _animationTo;
@@ -37,6 +44,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
     private double _startY;
     private double _lastX;
     private double _lastY;
+    private long _lastRenderingTimestamp;
 
     public SmartCubePreviewControl()
     {
@@ -54,13 +62,13 @@ public sealed partial class SmartCubePreviewControl : UserControl
         if (_animationTo is not null && string.Equals(facelets, _animationTo, StringComparison.Ordinal))
         {
             _facelets = facelets;
-            Render();
+            RequestFrameRender(useLightweightShapes: true);
             return;
         }
 
         StopAnimation();
         _facelets = facelets;
-        Render();
+        RequestFrameRender(useLightweightShapes: false, preferRoundedShapes: true);
     }
 
     public void PlayMove(string fromFacelets, string toFacelets, string move)
@@ -79,7 +87,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
         _animationMove = SmartCubeMoveNotation.Normalize(move);
         _animationStartedAt = DateTimeOffset.UtcNow;
         StartAnimation();
-        Render();
+        RequestFrameRender(useLightweightShapes: true);
     }
 
     public void ResetView()
@@ -91,7 +99,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
         _rawOrientation = null;
         _orientationCalibration = null;
         _hasOrientationCalibration = false;
-        Render();
+        RequestFrameRender(useLightweightShapes: false, preferRoundedShapes: true);
     }
 
     public void SetOrientation(double x, double y, double z, double w)
@@ -112,7 +120,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
         {
             _orientation = nextOrientation;
             _targetOrientation = null;
-            Render();
+            RequestFrameRender(useLightweightShapes: nextOrientation is not null);
             return;
         }
 
@@ -124,7 +132,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
     {
         _yaw = SmartCubePreviewRenderer.DefaultYawDegrees;
         _pitch = SmartCubePreviewRenderer.DefaultPitchDegrees;
-        Render();
+        RequestFrameRender(useLightweightShapes: false, preferRoundedShapes: true);
     }
 
     public void ResetOrientationToDefault()
@@ -137,7 +145,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
             ? null
             : _orientationCalibration?.Multiply(_rawOrientation);
         _targetOrientation = null;
-        Render();
+        RequestFrameRender(useLightweightShapes: _orientation is not null);
     }
 
     public void StopAnimation()
@@ -160,34 +168,52 @@ public sealed partial class SmartCubePreviewControl : UserControl
             return;
         }
 
+        _lastRenderingTimestamp = 0;
         CompositionTarget.Rendering += CompositionTarget_Rendering;
         _isFrameRendering = true;
     }
 
     private void StopFrameRenderingIfIdle()
     {
-        if (_isFrameRendering && !HasMoveAnimation() && !HasOrientationTransition())
+        if (_isFrameRendering && !HasMoveAnimation() && !HasOrientationTransition() && !_hasPendingFrameRender)
         {
             CompositionTarget.Rendering -= CompositionTarget_Rendering;
             _isFrameRendering = false;
+            _lastRenderingTimestamp = 0;
         }
     }
 
     private void SmartCubePreviewControl_Unloaded(object sender, RoutedEventArgs e)
     {
         StopAnimation();
+        _hasPendingFrameRender = false;
+        _pendingFrameRenderLightweight = false;
+        _pendingFrameRenderRounded = false;
+        StopFrameRenderingIfIdle();
     }
 
     private void SmartCubePreviewControl_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         PreviewCanvas.Width = ActualWidth;
         PreviewCanvas.Height = ActualHeight;
-        Render();
+        RequestFrameRender(useLightweightShapes: HasMoveAnimation() || HasOrientationTransition());
     }
 
     private void CompositionTarget_Rendering(object? sender, object e)
     {
+        var elapsedMilliseconds = GetFrameElapsedMilliseconds();
         var shouldRender = false;
+        var renderLightweight = false;
+        var pendingRounded = _pendingFrameRenderRounded;
+
+        if (_hasPendingFrameRender)
+        {
+            shouldRender = true;
+            renderLightweight = _pendingFrameRenderLightweight;
+            _hasPendingFrameRender = false;
+            _pendingFrameRenderLightweight = false;
+            _pendingFrameRenderRounded = false;
+        }
 
         if (HasMoveAnimation())
         {
@@ -198,26 +224,39 @@ public sealed partial class SmartCubePreviewControl : UserControl
                 _animationTo = null;
                 _animationMove = null;
             }
+            else
+            {
+                renderLightweight = true;
+            }
 
             shouldRender = true;
         }
 
         if (_targetOrientation is not null)
         {
-            _orientation = _orientation?.BlendToward(_targetOrientation, OrientationFrameBlend)
+            _orientation = _orientation?.SlerpToward(_targetOrientation, GetOrientationFrameBlend(elapsedMilliseconds))
                 ?? _targetOrientation;
             if (_orientation.IsCloseTo(_targetOrientation))
             {
                 _orientation = _targetOrientation;
                 _targetOrientation = null;
             }
+            else
+            {
+                renderLightweight = true;
+            }
 
             shouldRender = true;
         }
 
+        if (pendingRounded && !HasMoveAnimation() && !HasOrientationTransition())
+        {
+            renderLightweight = false;
+        }
+
         if (shouldRender)
         {
-            Render();
+            Render(renderLightweight);
         }
 
         StopFrameRenderingIfIdle();
@@ -258,7 +297,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
         _lastY = position.Y;
         _yaw += deltaX * DragSensitivity;
         _pitch = Math.Max(MinPitch, Math.Min(MaxPitch, _pitch + deltaY * DragSensitivity));
-        Render();
+        RequestFrameRender(useLightweightShapes: true);
         e.Handled = true;
     }
 
@@ -276,6 +315,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
     {
         _isPointerDown = false;
         PreviewCanvas.ReleasePointerCapture(e.Pointer);
+        RequestFrameRender(useLightweightShapes: false, preferRoundedShapes: true);
         InteractionCompleted?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
     }
@@ -294,7 +334,23 @@ public sealed partial class SmartCubePreviewControl : UserControl
         e.Handled = true;
     }
 
-    private void Render()
+    private void RequestFrameRender(bool useLightweightShapes, bool preferRoundedShapes = false)
+    {
+        _hasPendingFrameRender = true;
+        if (preferRoundedShapes)
+        {
+            _pendingFrameRenderRounded = true;
+            _pendingFrameRenderLightweight = false;
+        }
+        else if (useLightweightShapes && !_pendingFrameRenderRounded)
+        {
+            _pendingFrameRenderLightweight = true;
+        }
+
+        StartFrameRendering();
+    }
+
+    private void Render(bool useLightweightShapes = false)
     {
         SmartCubePreviewRenderer.Render(
             PreviewCanvas,
@@ -302,7 +358,8 @@ public sealed partial class SmartCubePreviewControl : UserControl
             _yaw,
             _pitch,
             _orientation,
-            CreateAnimation());
+            CreateAnimation(),
+            useLightweightShapes);
     }
 
     private SmartCubeMoveAnimation? CreateAnimation()
@@ -337,5 +394,30 @@ public sealed partial class SmartCubePreviewControl : UserControl
     private static double EaseAnimationProgress(double progress)
     {
         return progress * progress * (3 - 2 * progress);
+    }
+
+    private double GetFrameElapsedMilliseconds()
+    {
+        var timestamp = Stopwatch.GetTimestamp();
+        if (_lastRenderingTimestamp == 0)
+        {
+            _lastRenderingTimestamp = timestamp;
+            return 0;
+        }
+
+        var elapsedMilliseconds = (timestamp - _lastRenderingTimestamp) * 1000d / Stopwatch.Frequency;
+        _lastRenderingTimestamp = timestamp;
+        return elapsedMilliseconds;
+    }
+
+    private static double GetOrientationFrameBlend(double elapsedMilliseconds)
+    {
+        if (elapsedMilliseconds <= 0)
+        {
+            return InitialOrientationFrameBlend;
+        }
+
+        var blend = 1 - Math.Exp(-elapsedMilliseconds / OrientationInterpolationTimeConstantMilliseconds);
+        return Math.Max(MinOrientationFrameBlend, Math.Min(MaxOrientationFrameBlend, blend));
     }
 }
