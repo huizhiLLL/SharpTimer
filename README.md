@@ -19,25 +19,33 @@
   </p>
 </div>
 
-![SharpTimer 主界面](.github/assets/sharptimer-main.png)
+<table>
+  <tr>
+    <td align="center"><img src=".github/assets/main-timer.png" alt="主计时页面" /></td>
+    <td align="center"><img src=".github/assets/solves.png" alt="成绩列表" /></td>
+  </tr>
+  <tr>
+    <td align="center"><img src=".github/assets/solve-detail.png" alt="详情窗口" /></td>
+    <td align="center"><img src=".github/assets/settings.png" alt="设置" /></td>
+  </tr>
+</table>
 
 ---
 
 ### 特点
 
-- 原生 Windows 桌面体验，界面基于 WinUI 3 / Windows App SDK
-- 面向智能魔方训练流程：连接设备、智能打乱推进、READY 后首转起表、复原完成自动保存
-- 已支持 MoYu32、GAN v2/v3/v4 与 QiYi 系列智能魔方的基础接入
-- 保存智能魔方转动序列、步数、TPS 和复盘元数据，为后续分段分析做准备
-- 保留轻量手动计时作为备用输入和调试路径，但不作为核心产品方向
-- 提供亮/暗主题、Mica / Mica Alt / Acrylic 背景材质和中英切换
+- 原生 Windows 桌面体验，界面基于 WinUI 3
+- 功能轻量，只为智能三阶优化，无冗余功能
+- 完整的智能魔方计时功能（Moves、TPS、解法、分段）
+- 多品牌支持：MoYu、Gan、Qiyi
 
-### 许可证
-
-GPL-3.0
-
-### 致谢
+### 鸣谢
 
 - `WinUI-Gallery`：官方 WinUI Gallery 示例，前端参考
 - `smartcube-web-bluetooth`：智能魔方蓝牙协议参考
-- `cstimer`：智能魔方蓝牙协议和计时行为参考
+- `cstimer`：智能魔方蓝牙协议和相关算法参考
+- `DCTimer-BLE`：智能魔方蓝牙协议和设计参考
+
+### 许可证
+
+GPLv3

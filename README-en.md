@@ -19,23 +19,33 @@
   </p>
 </div>
 
-![SharpTimer main interface](.github/assets/sharptimer-main.png)
+<table>
+  <tr>
+    <td align="center"><img src=".github/assets/main-timer.png" alt="Main timer" /></td>
+    <td align="center"><img src=".github/assets/solves.png" alt="Solves list" /></td>
+  </tr>
+  <tr>
+    <td align="center"><img src=".github/assets/solve-detail.png" alt="Solve detail" /></td>
+    <td align="center"><img src=".github/assets/settings.png" alt="Settings" /></td>
+  </tr>
+</table>
 
 ---
 
 ### Features
 
-- Native Windows desktop experience, with the UI built on WinUI 3 / Windows App SDK
-- Built around smart cube training: connect a cube, follow smart scramble progression, start on the first READY turn, and save solves automatically
-- Supports basic integration for MoYu32, GAN v2/v3/v4, and QiYi smart cubes
-- Saves smart cube move sequences, move count, TPS, and replay metadata as the base for future phase analysis
-- Keeps lightweight manual timing as a fallback and debugging path, not as the core product direction
-- Provides light / dark themes, Mica / Mica Alt / Acrylic backdrop materials, and Chinese / English switching
-
-GPL-3.0
+- Native Windows desktop experience, with the UI built on WinUI 3
+- Lightweight by design, focused on smart 3x3 cube solving with no extra clutter
+- Full smart cube timing features, including moves, TPS, solution views, and splits
+- Multi-brand support: MoYu, GAN, and QiYi
 
 ### Acknowledgements
 
 - `WinUI-Gallery`: official WinUI Gallery examples, frontend reference
 - `smartcube-web-bluetooth`: smart cube Bluetooth protocol reference
-- `cstimer`: smart cube Bluetooth protocol and timing behavior reference
+- `cstimer`: smart cube Bluetooth protocol and related algorithm reference
+- `DCTimer-BLE`: smart cube Bluetooth protocol and design reference
+
+### License
+
+GPLv3
