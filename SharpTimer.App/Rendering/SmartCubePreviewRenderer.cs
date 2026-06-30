@@ -350,8 +350,8 @@ internal static class SmartCubePreviewRenderer
             'D' => 90,
             'R' => -90,
             'L' => 90,
-            'F' => 90,
-            'B' => -90,
+            'F' => -90,
+            'B' => 90,
             _ => 0
         };
 
