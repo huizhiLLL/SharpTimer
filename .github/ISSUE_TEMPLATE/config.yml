@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 项目说明
+    url: https://github.com/huizhiLLL/SharpTimer/releases/latest
+    about: 提交 Issue 前可以先检查当前 App 是否为最新发行版，请基于最新版本提交 Issue

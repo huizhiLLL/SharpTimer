@@ -1,0 +1,25 @@
+name: 功能建议
+description: 提出新功能、智能魔方支持、训练分析或体验优化建议
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 功能建议
+      description: 背景、预期效果，以及你认为合适的实现方式
+    validations:
+      required: true
+
+  - type: input
+    id: related-device
+    attributes:
+      label: 相关智能魔方或设备
+      description: 如果建议和具体设备有关，请填写型号
+      placeholder: 例如：V10ai、GAN 12ui、QYSC
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: 相关的实现参考
+      description: 如果预期功能在其他地方有类似的实现效果或参考，可以指出
