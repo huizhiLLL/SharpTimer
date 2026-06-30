@@ -464,11 +464,16 @@ namespace SharpTimer.App
                 Ao5Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf5, _settings.DecimalPlaces);
                 Ao12Text.Text = FormatNullableTime(snapshot.Statistics.AverageOf12, _settings.DecimalPlaces);
                 SolvesPage.UpdateCount(string.Format(_strings.CountFormat, snapshot.Statistics.Count));
+                var smartCubeSolves = snapshot.Solves
+                    .Where(solve => solve.MoveCount is not null && solve.Tps is not null)
+                    .ToArray();
                 SolvesPage.UpdateAnalysis(
                     FormatNullableTime(snapshot.Statistics.Mean, _settings.DecimalPlaces),
                     FormatNullableTime(snapshot.Statistics.Best, _settings.DecimalPlaces),
                     FormatNullableTime(snapshot.Statistics.BestAverageOf5, _settings.DecimalPlaces),
                     FormatNullableTime(snapshot.Statistics.BestAverageOf12, _settings.DecimalPlaces),
+                    FormatNullableNumber(CalculateAverageMoveCount(smartCubeSolves)),
+                    FormatNullableTps(CalculateAverageTps(smartCubeSolves)),
                     snapshot.Solves,
                     _settings.DecimalPlaces);
 
@@ -611,6 +616,36 @@ namespace SharpTimer.App
         {
             return Application.Current.Resources[resourceKey] as Brush
                 ?? new SolidColorBrush(Microsoft.UI.Colors.Black);
+        }
+
+        private static int? CalculateAverageMoveCount(IEnumerable<Solve> solves)
+        {
+            var values = solves
+                .Where(solve => solve.MoveCount is not null)
+                .Select(solve => solve.MoveCount!.Value)
+                .ToArray();
+
+            if (values.Length == 0)
+            {
+                return null;
+            }
+
+            return (int)Math.Round(values.Average(), MidpointRounding.AwayFromZero);
+        }
+
+        private static double? CalculateAverageTps(IEnumerable<Solve> solves)
+        {
+            var values = solves
+                .Where(solve => solve.Tps is not null)
+                .Select(solve => solve.Tps!.Value)
+                .ToArray();
+
+            if (values.Length == 0)
+            {
+                return null;
+            }
+
+            return Math.Round(values.Average(), 2, MidpointRounding.AwayFromZero);
         }
 
         private async System.Threading.Tasks.Task ShowSolveDetailsAsync(SolveListItem item)

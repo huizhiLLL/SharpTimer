@@ -22,7 +22,6 @@ public sealed partial class SettingsView : UserControl
         _isApplyingSettings = true;
         try
         {
-            InspectionSwitch.IsOn = settings.UseInspection;
             SetSelectedIndex(PrecisionComboBox, settings.DecimalPlaces == 3 ? 1 : 0);
             SetSelectedIndex(ThemeComboBox, settings.Theme switch
             {
@@ -51,32 +50,45 @@ public sealed partial class SettingsView : UserControl
 
     public void ApplyLanguage(LocalizedStrings strings)
     {
-        SettingsTitleText.Text = strings.SettingsTitle;
-        InspectionSwitch.Header = strings.InspectionHeader;
-        PrecisionComboBox.Header = strings.PrecisionHeader;
-        CentisecondsItem.Content = strings.Centiseconds;
-        MillisecondsItem.Content = strings.Milliseconds;
-        ThemeComboBox.Header = strings.ThemeHeader;
-        SystemThemeItem.Content = strings.SystemTheme;
-        LightThemeItem.Content = strings.LightTheme;
-        DarkThemeItem.Content = strings.DarkTheme;
-        BackdropMaterialComboBox.Header = strings.BackdropMaterialHeader;
-        MicaMaterialItem.Content = strings.MicaMaterial;
-        MicaAltMaterialItem.Content = strings.MicaAltMaterial;
-        AcrylicMaterialItem.Content = strings.AcrylicMaterial;
-        LanguageComboBox.Header = strings.LanguageHeader;
-        ChineseLanguageItem.Content = strings.ChineseLanguage;
-        EnglishLanguageItem.Content = strings.EnglishLanguage;
-        SmartCubeSectionTitleText.Text = strings.SmartCubeSectionTitle;
-        ScrambleProgressStyleComboBox.Header = strings.ScrambleProgressStyleHeader;
-        ScrambleProgressHideCompletedItem.Content = strings.ScrambleProgressHideCompleted;
-        ScrambleProgressDimCompletedItem.Content = strings.ScrambleProgressDimCompleted;
-        SolveMethodComboBox.Header = strings.SolveMethodHeader;
-        SolveMethodCfopItem.Content = strings.SolveMethodCfop;
-        SolveMethodRouxItem.Content = strings.SolveMethodRoux;
-        ScrambleFontSizeHeaderText.Text = strings.ScrambleFontSizeHeader;
-        SmartCubePreviewSizeHeaderText.Text = strings.SmartCubePreviewSizeHeader;
-        UpdateSliderValueText();
+        var previousApplyingSettings = _isApplyingSettings;
+        _isApplyingSettings = true;
+        try
+        {
+            SettingsTitleText.Text = strings.SettingsTitle;
+            PrecisionComboBox.Header = strings.PrecisionHeader;
+            CentisecondsItem.Content = strings.Centiseconds;
+            MillisecondsItem.Content = strings.Milliseconds;
+            ThemeComboBox.Header = strings.ThemeHeader;
+            SystemThemeItem.Content = strings.SystemTheme;
+            LightThemeItem.Content = strings.LightTheme;
+            DarkThemeItem.Content = strings.DarkTheme;
+            BackdropMaterialComboBox.Header = strings.BackdropMaterialHeader;
+            MicaMaterialItem.Content = strings.MicaMaterial;
+            MicaAltMaterialItem.Content = strings.MicaAltMaterial;
+            AcrylicMaterialItem.Content = strings.AcrylicMaterial;
+            LanguageComboBox.Header = strings.LanguageHeader;
+            ChineseLanguageItem.Content = strings.ChineseLanguage;
+            EnglishLanguageItem.Content = strings.EnglishLanguage;
+            ScrambleProgressStyleComboBox.Header = strings.ScrambleProgressStyleHeader;
+            ScrambleProgressHideCompletedItem.Content = strings.ScrambleProgressHideCompleted;
+            ScrambleProgressDimCompletedItem.Content = strings.ScrambleProgressDimCompleted;
+            SolveMethodComboBox.Header = strings.SolveMethodHeader;
+            SolveMethodCfopItem.Content = strings.SolveMethodCfop;
+            SolveMethodRouxItem.Content = strings.SolveMethodRoux;
+            ScrambleFontSizeHeaderText.Text = strings.ScrambleFontSizeHeader;
+            SmartCubePreviewSizeHeaderText.Text = strings.SmartCubePreviewSizeHeader;
+            RefreshSelectionDisplay(PrecisionComboBox);
+            RefreshSelectionDisplay(ThemeComboBox);
+            RefreshSelectionDisplay(BackdropMaterialComboBox);
+            RefreshSelectionDisplay(LanguageComboBox);
+            RefreshSelectionDisplay(ScrambleProgressStyleComboBox);
+            RefreshSelectionDisplay(SolveMethodComboBox);
+            UpdateSliderValueText();
+        }
+        finally
+        {
+            _isApplyingSettings = previousApplyingSettings;
+        }
     }
 
     private void SettingControl_Changed(object sender, RoutedEventArgs e)
@@ -88,7 +100,6 @@ public sealed partial class SettingsView : UserControl
 
         SettingsChanged?.Invoke(this, new AppSettings
         {
-            UseInspection = InspectionSwitch.IsOn,
             DecimalPlaces = PrecisionComboBox.SelectedIndex == 1 ? 3 : 2,
             Theme = ThemeComboBox.SelectedIndex switch
             {
@@ -124,6 +135,18 @@ public sealed partial class SettingsView : UserControl
         {
             comboBox.SelectedIndex = selectedIndex;
         }
+    }
+
+    private static void RefreshSelectionDisplay(ComboBox comboBox)
+    {
+        var selectedIndex = comboBox.SelectedIndex;
+        if (selectedIndex < 0)
+        {
+            return;
+        }
+
+        comboBox.SelectedIndex = -1;
+        comboBox.SelectedIndex = selectedIndex;
     }
 
     private void UpdateSliderValueText()

@@ -34,27 +34,5 @@
             </Grid>
         </Border>
 
-        <TextBlock
-            x:Name="DistributionTitleText"
-            Grid.Row="2"
-            Margin="0,4,0,0"
-            FontWeight="SemiBold" />
-
-        <Border
-            Grid.Row="3"
-            Padding="12"
-            CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-            <Grid>
-                <Canvas
-                    x:Name="DistributionCanvas"
-                    SizeChanged="ChartCanvas_SizeChanged" />
-                <TextBlock
-                    x:Name="DistributionEmptyText"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </Grid>
-        </Border>
     </Grid>
 </UserControl>

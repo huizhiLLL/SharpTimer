@@ -277,6 +277,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -339,6 +340,37 @@
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         <TextBlock
                             x:Name="AnalysisBestAverageOf12Text"
+                            FontSize="24"
+                            FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Row="2"
+                    Padding="16"
+                    CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="4">
+                        <TextBlock
+                            x:Name="AnalysisMovesAverageLabelText"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock
+                            x:Name="AnalysisMovesAverageText"
+                            FontSize="24"
+                            FontWeight="SemiBold" />
+                    </StackPanel>
+                </Border>
+                <Border
+                    Grid.Row="2"
+                    Grid.Column="1"
+                    Padding="16"
+                    CornerRadius="{ThemeResource SharpTimerCardCornerRadius}"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="4">
+                        <TextBlock
+                            x:Name="AnalysisTpsAverageLabelText"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock
+                            x:Name="AnalysisTpsAverageText"
                             FontSize="24"
                             FontWeight="SemiBold" />
                     </StackPanel>

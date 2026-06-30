@@ -16,9 +16,7 @@ namespace SharpTimer.App.Controls;
 public sealed partial class SolveAnalysisChart : UserControl
 {
     private static readonly SolidColorBrush GridLineBrush = new(Color.FromArgb(45, 128, 128, 128));
-
     private Solve[] _solves = [];
-    private int _decimalPlaces = 2;
 
     public SolveAnalysisChart()
     {
@@ -27,12 +25,12 @@ public sealed partial class SolveAnalysisChart : UserControl
         ActualThemeChanged += (_, _) => RenderCharts();
     }
 
-    public void SetText(string trendTitle, string distributionTitle, string emptyText)
+    public void SetText(
+        string trendTitle,
+        string emptyText)
     {
         TrendTitleText.Text = trendTitle;
-        DistributionTitleText.Text = distributionTitle;
         TrendEmptyText.Text = emptyText;
-        DistributionEmptyText.Text = emptyText;
     }
 
     public void SetSolves(IEnumerable<Solve> solves, int decimalPlaces)
@@ -40,7 +38,6 @@ public sealed partial class SolveAnalysisChart : UserControl
         _solves = solves
             .OrderBy(solve => solve.CreatedAt)
             .ToArray();
-        _decimalPlaces = decimalPlaces;
         RenderCharts();
     }
 
@@ -52,7 +49,6 @@ public sealed partial class SolveAnalysisChart : UserControl
     private void RenderCharts()
     {
         RenderTrend();
-        RenderDistribution();
     }
 
     private void RenderTrend()
@@ -102,67 +98,6 @@ public sealed partial class SolveAnalysisChart : UserControl
         }
     }
 
-    private void RenderDistribution()
-    {
-        DistributionCanvas.Children.Clear();
-        var values = _solves
-            .Select(solve => solve.Duration.TotalMilliseconds)
-            .ToArray();
-
-        DistributionEmptyText.Visibility = values.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-        if (values.Length == 0)
-        {
-            return;
-        }
-
-        var bounds = GetPlotBounds(DistributionCanvas);
-        if (bounds.Width <= 0 || bounds.Height <= 0)
-        {
-            return;
-        }
-
-        DrawHorizontalGrid(DistributionCanvas, bounds, 2);
-
-        var buckets = BuildBuckets(values, Math.Min(6, Math.Max(3, values.Length)));
-        var maxCount = Math.Max(1, buckets.Max(bucket => bucket.Count));
-        var gap = 8d;
-        var barWidth = Math.Max(4, (bounds.Width - gap * (buckets.Length - 1)) / buckets.Length);
-
-        // 添加 X 轴时间区间标注
-        DrawBucketRangeLabels(DistributionCanvas, bounds, buckets, barWidth, gap);
-
-        for (var index = 0; index < buckets.Length; index++)
-        {
-            var bucket = buckets[index];
-            var height = bounds.Height * bucket.Count / maxCount;
-            var left = bounds.Left + index * (barWidth + gap);
-            var top = bounds.Bottom - height;
-
-            var bar = new Rectangle
-            {
-                Width = barWidth,
-                Height = height,
-                RadiusX = 4,
-                RadiusY = 4,
-                Fill = GetBrush("AccentFillColorDefaultBrush"),
-                Opacity = 0.82
-            };
-            Canvas.SetLeft(bar, left);
-            Canvas.SetTop(bar, top);
-            DistributionCanvas.Children.Add(bar);
-
-            var label = new TextBlock
-            {
-                Text = bucket.Count.ToString(CultureInfo.CurrentCulture),
-                FontSize = 11,
-                Foreground = GetBrush("TextFillColorSecondaryBrush")
-            };
-            Canvas.SetLeft(label, left + Math.Max(0, (barWidth - 12) / 2));
-            Canvas.SetTop(label, Math.Max(bounds.Top, top - 18));
-            DistributionCanvas.Children.Add(label);
-        }
-    }
-
     private static PathGeometry BuildLineGeometry(IReadOnlyList<ChartPoint> values, Rect bounds, double min, double max)
     {
         var figure = new PathFigure
@@ -190,38 +125,6 @@ public sealed partial class SolveAnalysisChart : UserControl
         var xRatio = count <= 1 ? 0 : point.Index / (double)(count - 1);
         var yRatio = (point.Value!.Value - min) / (max - min);
         return new Point(bounds.Left + bounds.Width * xRatio, bounds.Bottom - bounds.Height * yRatio);
-    }
-
-    private static Bucket[] BuildBuckets(IReadOnlyList<double> values, int bucketCount)
-    {
-        var min = values.Min();
-        var max = values.Max();
-        if (Math.Abs(max - min) < 1)
-        {
-            return [new Bucket(min, max, values.Count)];
-        }
-
-        var step = (max - min) / bucketCount;
-        var buckets = Enumerable.Range(0, bucketCount)
-            .Select(index => new Bucket(min + step * index, min + step * (index + 1), 0))
-            .ToArray();
-
-        foreach (var value in values)
-        {
-            var index = Math.Min(bucketCount - 1, (int)((value - min) / step));
-            buckets[index] = buckets[index] with { Count = buckets[index].Count + 1 };
-        }
-
-        return buckets;
-    }
-
-    private static Rect GetPlotBounds(Canvas canvas)
-    {
-        const double horizontalPadding = 8;
-        const double verticalPadding = 8;
-        var width = Math.Max(0, canvas.ActualWidth - horizontalPadding * 2);
-        var height = Math.Max(0, canvas.ActualHeight - verticalPadding * 2);
-        return new Rect(horizontalPadding, verticalPadding, width, height);
     }
 
     private static void DrawTimeAxisLabels(Canvas canvas, Rect bounds, double minMs, double maxMs)
@@ -265,31 +168,6 @@ public sealed partial class SolveAnalysisChart : UserControl
         }
     }
 
-    private static void DrawBucketRangeLabels(Canvas canvas, Rect bounds, Bucket[] buckets, double barWidth, double gap)
-    {
-        var brush = GetBrush("TextFillColorTertiaryBrush");
-        for (var index = 0; index < buckets.Length; index++)
-        {
-            var bucket = buckets[index];
-            var left = bounds.Left + index * (barWidth + gap);
-            var centerX = left + barWidth / 2;
-
-            var fromSec = bucket.From / 1000.0;
-            var toSec = bucket.To / 1000.0;
-            var rangeText = $"{fromSec:F1}-{toSec:F1}";
-
-            var label = new TextBlock
-            {
-                Text = rangeText,
-                FontSize = 9,
-                Foreground = brush
-            };
-            Canvas.SetLeft(label, centerX - 18);
-            Canvas.SetTop(label, bounds.Bottom + 2);
-            canvas.Children.Add(label);
-        }
-    }
-
     private static void DrawHorizontalGrid(Canvas canvas, Rect bounds, int lines)
     {
         for (var index = 0; index <= lines; index++)
@@ -328,7 +206,14 @@ public sealed partial class SolveAnalysisChart : UserControl
             : new SolidColorBrush(Colors.Gray);
     }
 
-    private sealed record ChartPoint(int Index, double? Value);
+    private static Rect GetPlotBounds(Canvas canvas)
+    {
+        const double horizontalPadding = 8;
+        const double verticalPadding = 8;
+        var width = Math.Max(0, canvas.ActualWidth - horizontalPadding * 2);
+        var height = Math.Max(0, canvas.ActualHeight - verticalPadding * 2);
+        return new Rect(horizontalPadding, verticalPadding, width, height);
+    }
 
-    private sealed record Bucket(double From, double To, int Count);
+    private sealed record ChartPoint(int Index, double? Value);
 }

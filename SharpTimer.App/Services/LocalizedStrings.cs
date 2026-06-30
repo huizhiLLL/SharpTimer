@@ -18,9 +18,10 @@ public sealed record LocalizedStrings
     public required string CompletedCountLabel { get; init; }
     public required string BestAverageOf5Label { get; init; }
     public required string BestAverageOf12Label { get; init; }
+    public required string SolveMovesAverageLabel { get; init; }
+    public required string SolveTpsAverageLabel { get; init; }
     public required string AnalysisCountLabel { get; init; }
     public required string SolveTrendTitle { get; init; }
-    public required string SolveDistributionTitle { get; init; }
     public required string SolveChartEmptyText { get; init; }
     public required string SolveDetailsTitleFormat { get; init; }
     public required string SolveTimeLabel { get; init; }
@@ -62,7 +63,6 @@ public sealed record LocalizedStrings
     public required string LanguageHeader { get; init; }
     public required string ChineseLanguage { get; init; }
     public required string EnglishLanguage { get; init; }
-    public required string SmartCubeSectionTitle { get; init; }
     public required string ScrambleProgressStyleHeader { get; init; }
     public required string ScrambleProgressHideCompleted { get; init; }
     public required string ScrambleProgressDimCompleted { get; init; }
@@ -127,9 +127,10 @@ public sealed record LocalizedStrings
         CompletedCountLabel = "Solves",
         BestAverageOf5Label = "Best Ao5",
         BestAverageOf12Label = "Best Ao12",
+        SolveMovesAverageLabel = "Moves (Avg)",
+        SolveTpsAverageLabel = "TPS (Avg)",
         AnalysisCountLabel = "次数",
         SolveTrendTitle = "趋势",
-        SolveDistributionTitle = "分布",
         SolveChartEmptyText = "有效成绩不足",
         SolveDetailsTitleFormat = "Solves {0}",
         SolveTimeLabel = "时间",
@@ -157,9 +158,9 @@ public sealed record LocalizedStrings
         BluetoothDevicesListName = "智能魔方设备",
         SmartCubePreviewName = "智能魔方预览",
         InspectionHeader = "15 秒观察",
-        PrecisionHeader = "显示精度",
-        Centiseconds = "百分秒",
-        Milliseconds = "毫秒",
+        PrecisionHeader = "精度",
+        Centiseconds = "0.01",
+        Milliseconds = "0.001",
         ThemeHeader = "主题",
         SystemTheme = "跟随系统",
         LightTheme = "亮色",
@@ -171,7 +172,6 @@ public sealed record LocalizedStrings
         LanguageHeader = "语言",
         ChineseLanguage = "中文",
         EnglishLanguage = "English",
-        SmartCubeSectionTitle = "智能魔方",
         ScrambleProgressStyleHeader = "打乱推进样式",
         ScrambleProgressHideCompleted = "自动消失",
         ScrambleProgressDimCompleted = "变浅保留",
@@ -232,9 +232,10 @@ public sealed record LocalizedStrings
         CompletedCountLabel = "Completed",
         BestAverageOf5Label = "Best Ao5",
         BestAverageOf12Label = "Best Ao12",
+        SolveMovesAverageLabel = "Moves (Avg)",
+        SolveTpsAverageLabel = "TPS (Avg)",
         AnalysisCountLabel = "Solves",
         SolveTrendTitle = "Trend",
-        SolveDistributionTitle = "Distribution",
         SolveChartEmptyText = "Not enough valid solves",
         SolveDetailsTitleFormat = "Solves {0}",
         SolveTimeLabel = "Time",
@@ -263,8 +264,8 @@ public sealed record LocalizedStrings
         SmartCubePreviewName = "Smart cube preview",
         InspectionHeader = "15-second inspection",
         PrecisionHeader = "Precision",
-        Centiseconds = "Centiseconds",
-        Milliseconds = "Milliseconds",
+        Centiseconds = "0.01",
+        Milliseconds = "0.001",
         ThemeHeader = "Theme",
         SystemTheme = "Use system setting",
         LightTheme = "Light",
@@ -276,7 +277,6 @@ public sealed record LocalizedStrings
         LanguageHeader = "Language",
         ChineseLanguage = "中文",
         EnglishLanguage = "English",
-        SmartCubeSectionTitle = "Smart cube",
         ScrambleProgressStyleHeader = "Scramble progress style",
         ScrambleProgressHideCompleted = "Hide completed moves",
         ScrambleProgressDimCompleted = "Dim completed moves",

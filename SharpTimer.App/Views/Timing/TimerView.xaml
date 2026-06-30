@@ -305,7 +305,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                 <StackPanel Spacing="4">
                     <TextBlock
-                        Text="best"
+                        Text="Best"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <TextBlock
                         x:Name="BestText"

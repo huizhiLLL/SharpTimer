@@ -17,7 +17,7 @@
                         <Setter Target="LeftSettingsColumn.Width" Value="*" />
                         <Setter Target="RightSettingsColumn.Width" Value="0" />
                         <Setter Target="SmartCubeSettingsColumn.(Grid.Column)" Value="0" />
-                        <Setter Target="SmartCubeSettingsColumn.(Grid.Row)" Value="1" />
+                        <Setter Target="SmartCubeSettingsColumn.(Grid.Row)" Value="2" />
                     </VisualState.Setters>
                 </VisualState>
                 <VisualState x:Name="WideLayout">
@@ -30,7 +30,7 @@
                         <Setter Target="LeftSettingsColumn.Width" Value="300" />
                         <Setter Target="RightSettingsColumn.Width" Value="300" />
                         <Setter Target="SmartCubeSettingsColumn.(Grid.Column)" Value="1" />
-                        <Setter Target="SmartCubeSettingsColumn.(Grid.Row)" Value="0" />
+                        <Setter Target="SmartCubeSettingsColumn.(Grid.Row)" Value="1" />
                     </VisualState.Setters>
                 </VisualState>
             </VisualStateGroup>
@@ -62,22 +62,18 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Spacing="4">
-                    <ToggleSwitch
-                        x:Name="InspectionSwitch"
-                        Header="15 秒观察"
-                        Toggled="SettingControl_Changed" />
-
+                <StackPanel Grid.Row="1" Spacing="4">
                     <ComboBox
                         x:Name="PrecisionComboBox"
-                        Header="显示精度"
+                        Header="精度"
                         MinWidth="240"
                         HorizontalAlignment="Stretch"
                         SelectionChanged="SettingControl_Changed">
-                        <ComboBoxItem x:Name="CentisecondsItem" Content="百分秒" />
-                        <ComboBoxItem x:Name="MillisecondsItem" Content="毫秒" />
+                        <ComboBoxItem x:Name="CentisecondsItem" Content="0.01" />
+                        <ComboBoxItem x:Name="MillisecondsItem" Content="0.001" />
                     </ComboBox>
 
                     <ComboBox
@@ -130,15 +126,9 @@
 
                 <StackPanel
                     x:Name="SmartCubeSettingsColumn"
+                    Grid.Row="1"
                     Grid.Column="1"
                     Spacing="4">
-
-                    <TextBlock
-                        x:Name="SmartCubeSectionTitleText"
-                        Text="智能魔方"
-                        Margin="0,0,0,2"
-                        FontSize="18"
-                        FontWeight="SemiBold" />
 
                     <ComboBox
                         x:Name="ScrambleProgressStyleComboBox"

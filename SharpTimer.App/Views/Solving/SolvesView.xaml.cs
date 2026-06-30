@@ -5,7 +5,6 @@ using SharpTimer.App.Services;
 using SharpTimer.App.ViewModels;
 using SharpTimer.Core.Models;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 
 namespace SharpTimer.App.Views.Solving;
@@ -71,6 +70,8 @@ public sealed partial class SolvesView : UserControl
         string best,
         string bestAverageOf5,
         string bestAverageOf12,
+        string movesAverage,
+        string tpsAverage,
         IEnumerable<Solve> solves,
         int decimalPlaces)
     {
@@ -78,6 +79,8 @@ public sealed partial class SolvesView : UserControl
         AnalysisBestText.Text = best;
         AnalysisBestAverageOf5Text.Text = bestAverageOf5;
         AnalysisBestAverageOf12Text.Text = bestAverageOf12;
+        AnalysisMovesAverageText.Text = movesAverage;
+        AnalysisTpsAverageText.Text = tpsAverage;
         SolveAnalysisChart.SetSolves(solves, decimalPlaces);
     }
 
@@ -98,7 +101,11 @@ public sealed partial class SolvesView : UserControl
         AnalysisBestLabelText.Text = strings.BestLabel;
         AnalysisBestAverageOf5LabelText.Text = strings.BestAverageOf5Label;
         AnalysisBestAverageOf12LabelText.Text = strings.BestAverageOf12Label;
-        SolveAnalysisChart.SetText(strings.SolveTrendTitle, strings.SolveDistributionTitle, strings.SolveChartEmptyText);
+        AnalysisMovesAverageLabelText.Text = strings.SolveMovesAverageLabel;
+        AnalysisTpsAverageLabelText.Text = strings.SolveTpsAverageLabel;
+        SolveAnalysisChart.SetText(
+            strings.SolveTrendTitle,
+            strings.SolveChartEmptyText);
         EmptySolvesTitleText.Text = strings.EmptySolvesTitle;
         EmptySolvesDescriptionText.Text = strings.EmptySolvesDescription;
     }
