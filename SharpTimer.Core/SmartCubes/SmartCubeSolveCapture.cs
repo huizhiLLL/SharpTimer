@@ -2,8 +2,6 @@ namespace SharpTimer.Core.SmartCubes;
 
 public sealed class SmartCubeSolveCapture
 {
-    private static readonly TimeSpan SyntheticMoveGap = TimeSpan.FromMilliseconds(1);
-
     private readonly List<SmartCubeRecordedMove> _moves = new();
     private int _solveStartIndex;
 
@@ -98,8 +96,7 @@ public sealed class SmartCubeSolveCapture
 
     private static TimeSpan ResolveLocalDelta(SmartCubeRecordedMove previous, SmartCubeRecordedMove current)
     {
-        var delta = ClampNonNegative(current.Timestamp - previous.Timestamp);
-        return delta > TimeSpan.Zero ? delta : SyntheticMoveGap;
+        return ClampNonNegative(current.Timestamp - previous.Timestamp);
     }
 
     private static TimeSpan ClampNonNegative(TimeSpan value)

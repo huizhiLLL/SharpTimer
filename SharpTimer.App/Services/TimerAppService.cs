@@ -465,12 +465,11 @@ public sealed class TimerAppService
         var capture = solveCapture ?? SmartCubeSolveCaptureSnapshot.Empty;
         var startFacelets = ThreeByThreeFacelets.ApplyScramble(scramble);
         var reconstruction = SmartCubeSolveReconstruction.FromCapture(startFacelets, capture, solveMethod);
-        var normalizedMoves = NormalizeMoveSequence(SmartCubeMoveNotation.ParseSequence(reconstruction.MoveSequence));
-        var moveText = normalizedMoves.Count == 0 ? null : string.Join(" ", normalizedMoves);
-        var moveCount = normalizedMoves.Count == 0 ? (int?)null : normalizedMoves.Count;
-        var tps = moveCount is null || solve.Duration <= TimeSpan.Zero
+        var moveText = string.IsNullOrWhiteSpace(reconstruction.MoveSequence) ? null : reconstruction.MoveSequence;
+        var moveCount = reconstruction.MoveCount;
+        var tps = solve.Duration <= TimeSpan.Zero
             ? (double?)null
-            : moveCount.Value / solve.Duration.TotalSeconds;
+            : moveCount / solve.Duration.TotalSeconds;
 
         return solve with
         {
@@ -483,27 +482,6 @@ public sealed class TimerAppService
         };
     }
 
-    private static IReadOnlyList<string> NormalizeMoveSequence(IReadOnlyList<string>? moveSequence)
-    {
-        if (moveSequence is null || moveSequence.Count == 0)
-        {
-            return Array.Empty<string>();
-        }
-
-        var moves = new List<string>();
-        foreach (var move in moveSequence)
-        {
-            if (string.IsNullOrWhiteSpace(move))
-            {
-                continue;
-            }
-
-            moves.Add(SharpTimer.Core.SmartCubes.SmartCubeMoveNotation.Normalize(move));
-        }
-
-        return moves;
-    }
-
     private static string BuildSolveMetaJson(
         TimeSpan duration,
         string? moveSequence,
@@ -512,7 +490,7 @@ public sealed class TimerAppService
         SmartCubeSolveCaptureSnapshot capture,
         SmartCubeSolveReconstruction reconstruction)
     {
-        var phases = NormalizePhaseTimes(reconstruction.Phases, duration).ToArray();
+        var phases = reconstruction.Phases;
         return JsonSerializer.Serialize(new
         {
             version = 1,
@@ -546,50 +524,5 @@ public sealed class TimerAppService
                     : 0d
             }).ToArray()
         });
-    }
-
-    private static IReadOnlyList<SmartCubeSolvePhase> NormalizePhaseTimes(
-        IReadOnlyList<SmartCubeSolvePhase> phases,
-        TimeSpan solveDuration)
-    {
-        var solveDurationMs = (int)Math.Round(solveDuration.TotalMilliseconds, MidpointRounding.AwayFromZero);
-        if (solveDurationMs <= 0 || phases.Count == 0)
-        {
-            return phases;
-        }
-
-        var totalPhaseMs = phases.Max(phase => phase.EndMs);
-        var totalMoves = phases.Sum(phase => phase.MoveCount);
-        if (totalMoves <= 0 || totalPhaseMs >= solveDurationMs / 2)
-        {
-            return phases;
-        }
-
-        var cursorMs = 0;
-        var normalized = new List<SmartCubeSolvePhase>(phases.Count);
-        var remainingMoves = totalMoves;
-        for (var index = 0; index < phases.Count; index++)
-        {
-            var phase = phases[index];
-            if (phase.MoveCount <= 0)
-            {
-                normalized.Add(phase);
-                continue;
-            }
-
-            var durationMs = remainingMoves == phase.MoveCount
-                ? solveDurationMs - cursorMs
-                : (int)Math.Round((solveDurationMs - cursorMs) * phase.MoveCount / (double)remainingMoves, MidpointRounding.AwayFromZero);
-            var endMs = Math.Max(cursorMs, cursorMs + durationMs);
-            normalized.Add(phase with
-            {
-                StartMs = cursorMs,
-                EndMs = endMs
-            });
-            cursorMs = endMs;
-            remainingMoves -= phase.MoveCount;
-        }
-
-        return normalized;
     }
 }

@@ -65,12 +65,13 @@ SharpTimer 已有：
 - CFOP 分段：`Cross / F2L 1 / F2L 2 / F2L 3 / F2L 4 / OLL / PLL`。
 - Roux 分段：`FB / SB / CMLL / L6E`。
 - 使用 DCTimer-BLE 的 mask/progress 思路，根据 facelets 状态推进阶段。
+- 复盘展示步已对齐 DCTimer-BLE：连续同面转动合并，`100ms` 内同轴对向层组合识别为 `E/M/S`，并按阶段 bucket 后分别重建。
+- CFOP progress 使用 6 个轴向变体，Roux progress 使用 24 个整魔方方向变体。
 - 结果写入 `solve_meta_json.phases`。
 
 相对 DCTimer-BLE 的差距：
 
 - DCTimer-BLE 有更完整的方向处理。SharpTimer 当前只使用所有整魔方方向变体寻找 progress，但没有用户可选的 solve orientation。
-- DCTimer-BLE 对 slice combo 有专门处理窗口。SharpTimer 当前保存的是普通 `URFDLB` 转动合并，尚未把近似同时的反向层转转换为 `M/E/S` 类展示。
 - DCTimer-BLE 的 `prettySolve` 更接近用户复盘文本，包含阶段注释和统计文本。SharpTimer 当前只做基础阶段文本。
 - SharpTimer 的分段测试仍偏基础，缺少真实 CFOP / Roux 解法样例的 goldens。
 - 当前阶段 bucket 算法还需要用真实数据验证边界：特别是 F2L pair 顺序、OLL/PLL 边界、Roux CMLL/L6E 边界。
@@ -78,9 +79,8 @@ SharpTimer 已有：
 建议优先级：
 
 1. 加入 solve orientation 设置，至少支持默认、白底、黄底和自动。
-2. 移植 DCTimer-BLE 的 slice combo 逻辑，保留 raw moves，同时生成更适合展示的 pretty moves。
-3. 引入真实解法样例测试，覆盖 CFOP、Roux、带 AUF、带 slice、带取消步的情况。
-4. 为 `SmartCubeSolveReconstruction` 增加“重建失败/低置信度”的标记，避免误导用户。
+2. 引入真实解法样例测试，覆盖 CFOP、Roux、带 AUF、带 slice、带取消步的情况。
+3. 为 `SmartCubeSolveReconstruction` 增加“重建失败/低置信度”的标记，避免误导用户。
 
 ## 详情页与训练反馈
 
@@ -137,7 +137,7 @@ SharpTimer 已有：
 相对 DCTimer-BLE 的差距：
 
 - 没有 solve orientation 设置。
-- 没有分段重建策略设置，例如是否识别 slice、是否自动按方法识别、是否忽略最后 AUF。
+- 没有分段重建策略设置，例如是否自动按方法识别、是否忽略最后 AUF。
 - 没有设备诊断相关设置或调试开关。
 - 没有按设备协议保存偏好。
 
@@ -169,7 +169,7 @@ SharpTimer 已有：
 ## 推荐补齐顺序
 
 1. 完善 `solve_meta_json`：加入 `startFacelets`、设备信息、schema version 说明。
-2. 移植 DCTimer-BLE 的 solve orientation 和 slice combo 逻辑。
+2. 移植 DCTimer-BLE 的 solve orientation 逻辑。
 3. 扩充真实解法样例测试，先让分段算法可信。
 4. 增强详情页复盘体验：pretty solve、展开阶段 moves、复制。
 5. 增强统计页：TPS、步数、分段均值和趋势。
@@ -179,4 +179,4 @@ SharpTimer 已有：
 
 SharpTimer 当前已经完成智能魔方训练工具的核心数据闭环：连接、打乱、起停、保存转动序列、自动分段、详情展示。
 
-距离 DCTimer-BLE 的主要差距不在“有没有字段”或“能不能分段”，而在成熟度：真实设备兼容性、异常恢复、方向和 slice 处理、分段算法样例覆盖、复盘展示深度，以及统计页对这些数据的利用。
+距离 DCTimer-BLE 的主要差距不在“有没有字段”或“能不能分段”，而在成熟度：真实设备兼容性、异常恢复、用户可选方向、分段算法样例覆盖、复盘展示深度，以及统计页对这些数据的利用。

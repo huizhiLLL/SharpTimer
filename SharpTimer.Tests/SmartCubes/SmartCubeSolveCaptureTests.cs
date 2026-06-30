@@ -58,7 +58,7 @@ public sealed class SmartCubeSolveCaptureTests
     }
 
     [Fact]
-    public void Snapshot_KeepsElapsedIncreasing_WhenMovesSharePacketTimestamp()
+    public void Snapshot_PreservesZeroElapsed_WhenMovesSharePacketTimestamp()
     {
         var capture = new SmartCubeSolveCapture();
         var now = DateTimeOffset.Parse("2026-05-01T00:00:00Z");
@@ -69,6 +69,7 @@ public sealed class SmartCubeSolveCaptureTests
 
         var snapshot = capture.Snapshot();
 
-        Assert.True(snapshot.Moves[1].Elapsed > TimeSpan.Zero);
+        Assert.Equal(TimeSpan.Zero, snapshot.Moves[1].Delta);
+        Assert.Equal(TimeSpan.Zero, snapshot.Moves[1].Elapsed);
     }
 }

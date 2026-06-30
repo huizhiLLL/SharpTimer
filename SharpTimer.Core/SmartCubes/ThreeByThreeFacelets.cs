@@ -92,6 +92,31 @@ public static class ThreeByThreeFacelets
         return variants;
     }
 
+    public static IReadOnlyList<string> GetAxisOrientationVariants(string facelets)
+    {
+        if (!IsValidState(facelets))
+        {
+            return Array.Empty<string>();
+        }
+
+        var seenDownCenters = new HashSet<char>();
+        var variants = new List<string>();
+        foreach (var variant in GetOrientationVariants(facelets))
+        {
+            if (seenDownCenters.Add(variant[31]))
+            {
+                variants.Add(variant);
+            }
+
+            if (variants.Count == 6)
+            {
+                break;
+            }
+        }
+
+        return variants;
+    }
+
     public static string ApplyScramble(string scramble)
     {
         var state = Solved;
