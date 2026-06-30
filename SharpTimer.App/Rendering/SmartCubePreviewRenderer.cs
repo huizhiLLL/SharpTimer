@@ -11,16 +11,17 @@ namespace SharpTimer.App.Rendering;
 internal static class SmartCubePreviewRenderer
 {
     private const double FaceDistance = 1.5;
-    private const double CellHalf = 0.515;
-    private const double StickerHalf = 0.445;
+    private const double CellHalf = 0.505;
+    private const double StickerHalf = 0.455;
     public const double DefaultYawDegrees = -38;
     public const double DefaultPitchDegrees = 27;
     private const double CameraDistance = 11.5;
     private const double MinVisibleNormalZ = 0.05;
     private const double StableProjectionWidth = 5.25;
     private const double StableProjectionHeight = 5.25;
-    private const double BaseCornerRadius = 0.105;
-    private const double StickerCornerRadius = 0.115;
+    private const double BaseCornerRadius = 0.045;
+    private const double StickerCornerRadiusSmall = 0.105;
+    private const double StickerCornerRadiusLarge = 0.345;
     private static readonly Facelet[] Facelets = BuildFacelets();
 
     public static void Render(
@@ -78,7 +79,7 @@ internal static class SmartCubePreviewRenderer
                 tile.StickerColor,
                 Color.FromArgb(0xee, 8, 8, 8),
                 strokeWidth,
-                StickerCornerRadius * scale);
+                tile.StickerCornerRadii.Select(radius => radius * scale).ToArray());
         }
     }
 
@@ -112,7 +113,8 @@ internal static class SmartCubePreviewRenderer
                 stickerPoints,
                 transform.Center.Z,
                 ShadeBase(transform.Normal),
-                ShadeSticker(FaceColor(animatedState, i), transform.Normal)));
+                ShadeSticker(FaceColor(animatedState, i), transform.Normal),
+                facelet.StickerCornerRadii));
         }
 
         return new RenderBatch(tiles.OrderBy(tile => tile.Depth).ToArray(), bounds);
@@ -129,10 +131,33 @@ internal static class SmartCubePreviewRenderer
         double strokeWidth,
         double cornerRadius)
     {
+        DrawRoundedQuad(
+            session,
+            points,
+            scale,
+            offsetX,
+            offsetY,
+            fill,
+            stroke,
+            strokeWidth,
+            Enumerable.Repeat(cornerRadius, points.Count).ToArray());
+    }
+
+    private static void DrawRoundedQuad(
+        CanvasDrawingSession session,
+        IReadOnlyList<Point> points,
+        double scale,
+        double offsetX,
+        double offsetY,
+        Color fill,
+        Color? stroke,
+        double strokeWidth,
+        IReadOnlyList<double> cornerRadii)
+    {
         var scaledPoints = points
             .Select(point => new Point(point.X * scale + offsetX, point.Y * scale + offsetY))
             .ToArray();
-        using var geometry = BuildRoundedGeometry(session, scaledPoints, cornerRadius);
+        using var geometry = BuildRoundedGeometry(session, scaledPoints, cornerRadii);
         session.FillGeometry(geometry, fill);
 
         if (stroke is not null && strokeWidth > 0)
@@ -144,7 +169,7 @@ internal static class SmartCubePreviewRenderer
     private static CanvasGeometry BuildRoundedGeometry(
         CanvasDrawingSession session,
         IReadOnlyList<Point> points,
-        double cornerRadius)
+        IReadOnlyList<double> cornerRadii)
     {
         if (points.Count < 3)
         {
@@ -160,6 +185,9 @@ internal static class SmartCubePreviewRenderer
             var next = points[(i + 1) % points.Count];
             var previousLength = Distance(point, previous);
             var nextLength = Distance(point, next);
+            var cornerRadius = i < cornerRadii.Count
+                ? cornerRadii[i]
+                : 0;
             var radius = Math.Min(cornerRadius, Math.Min(previousLength, nextLength) * 0.38);
 
             starts[i] = MoveToward(point, previous, radius);
@@ -247,7 +275,8 @@ internal static class SmartCubePreviewRenderer
             RotateAroundAxis(facelet.Center, axis, angle),
             RotateAroundAxis(facelet.Normal, axis, angle),
             RotateAroundAxis(facelet.U, axis, angle),
-            RotateAroundAxis(facelet.V, axis, angle));
+            RotateAroundAxis(facelet.V, axis, angle),
+            facelet.StickerCornerRadii);
     }
 
     private static bool IsInAnimatedLayer(Vec3 center, char face)
@@ -407,12 +436,66 @@ internal static class SmartCubePreviewRenderer
                 var uOffset = column - 1;
                 var vOffset = row - 1;
                 var center = faceCenter.Add(u.Scale(uOffset)).Add(v.Scale(vOffset));
-                facelets.Add(new Facelet(center, normal, u, v));
+                facelets.Add(new Facelet(center, normal, u, v, CreateStickerCornerRadii(row, column)));
             }
         }
     }
 
-    private sealed record Facelet(Vec3 Center, Vec3 Normal, Vec3 U, Vec3 V);
+    private static double[] CreateStickerCornerRadii(int row, int column)
+    {
+        var radii = new double[4];
+        if (row == 1 && column == 1)
+        {
+            FillRadii(radii, StickerCornerRadiusLarge);
+        }
+        else if (row == 1)
+        {
+            var innerXSign = column == 0 ? 1 : -1;
+            SetRadiiOnInnerSide(radii, innerXSign, 0, StickerCornerRadiusLarge);
+        }
+        else if (column == 1)
+        {
+            var innerYSign = row == 0 ? 1 : -1;
+            SetRadiiOnInnerSide(radii, 0, innerYSign, StickerCornerRadiusLarge);
+        }
+        else
+        {
+            var innerXSign = column == 0 ? 1 : -1;
+            var innerYSign = row == 0 ? 1 : -1;
+            SetRadiiOnInnerSide(radii, innerXSign, innerYSign, StickerCornerRadiusSmall);
+        }
+
+        return radii;
+    }
+
+    private static void FillRadii(double[] radii, double radius)
+    {
+        for (var i = 0; i < radii.Length; i++)
+        {
+            radii[i] = radius;
+        }
+    }
+
+    private static void SetRadiiOnInnerSide(double[] radii, int innerXSign, int innerYSign, double radius)
+    {
+        for (var i = 0; i < radii.Length; i++)
+        {
+            var cornerXSign = i is 1 or 2 ? 1 : -1;
+            var cornerYSign = i >= 2 ? 1 : -1;
+            if ((innerXSign == 0 || cornerXSign == innerXSign)
+                && (innerYSign == 0 || cornerYSign == innerYSign))
+            {
+                radii[i] = radius;
+            }
+        }
+    }
+
+    private sealed record Facelet(
+        Vec3 Center,
+        Vec3 Normal,
+        Vec3 U,
+        Vec3 V,
+        IReadOnlyList<double> StickerCornerRadii);
 
     private sealed record Transform(Vec3 Center, Vec3 Normal, Vec3 U, Vec3 V);
 
@@ -421,7 +504,8 @@ internal static class SmartCubePreviewRenderer
         IReadOnlyList<Point> StickerPoints,
         double Depth,
         Color BaseColor,
-        Color StickerColor);
+        Color StickerColor,
+        IReadOnlyList<double> StickerCornerRadii);
 
     private sealed record RenderBatch(IReadOnlyList<RenderTile> Tiles, Bounds Bounds);
 
