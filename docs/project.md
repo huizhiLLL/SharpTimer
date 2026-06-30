@@ -39,5 +39,5 @@ SharpTimer 是一个专为智能魔方训练打造的原生 Windows 桌面计时
 - 暂不重建 WinUI 项目结构或切换核心技术栈。
 - 暂不把厂商 BLE 兼容性特例放到 UI 层。
 - 暂不继续扩展通用手动计时器能力；手动路径仅保留为备用和调试入口。
-- 暂不进入 `SwapChainPanel + Direct3D` 真实 3D 渲染路线；当前 Canvas 预览效果已满足近期需要。
+- 暂不进入 `SwapChainPanel + Direct3D` 真实 3D 渲染路线；当前智能魔方预览先使用 Win2D GPU 绘制路线验证性能和视觉稳定性。
 - 暂不把尚未充分验证的智能魔方兼容性写成 README 对外稳定承诺。

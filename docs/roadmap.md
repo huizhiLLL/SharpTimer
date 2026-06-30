@@ -28,7 +28,7 @@
 - 为不同厂商协议建立更清晰的注册、识别和诊断机制。
 - 继续完善 BLE 链路诊断信息，让断链、重连失败、写入失败和协议重同步能在调试时快速定位。
 - 保持 BLE 兼容性逻辑在 `SharpTimer.Bluetooth` 内部，避免污染 App 层和备用手动路径。
-- 当前 3D 预览继续沿用 WinUI Canvas 实现；只有在交互或性能重新无法满足需要时，再评估 Win2D、`SwapChainPanel + Direct3D` 等更重路线。
+- 当前 3D 预览已切到 Win2D GPU 绘制路线进行验证；只有在 Win2D 仍无法满足交互或视觉稳定性时，再评估 `SwapChainPanel + Direct3D` 等更重路线。
 
 ### 架构整理
 

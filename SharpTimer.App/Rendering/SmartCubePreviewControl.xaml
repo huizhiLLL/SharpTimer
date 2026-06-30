@@ -3,13 +3,15 @@
     x:Class="SharpTimer.App.Rendering.SmartCubePreviewControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
     IsTabStop="False"
     IsHitTestVisible="True"
     AutomationProperties.Name="智能魔方预览">
 
-    <Canvas
+    <canvas:CanvasControl
         x:Name="PreviewCanvas"
-        Background="Transparent"
+        ClearColor="Transparent"
+        Draw="PreviewCanvas_Draw"
         PointerPressed="PreviewCanvas_PointerPressed"
         PointerMoved="PreviewCanvas_PointerMoved"
         PointerReleased="PreviewCanvas_PointerReleased"

@@ -1,10 +1,8 @@
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
+using Microsoft.Graphics.Canvas;
+using Microsoft.Graphics.Canvas.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Windows.Foundation;
 using Windows.UI;
 
@@ -24,98 +22,64 @@ internal static class SmartCubePreviewRenderer
     private const double BaseCornerRadius = 0.105;
     private const double StickerCornerRadius = 0.115;
     private static readonly Facelet[] Facelets = BuildFacelets();
-    private static readonly ConditionalWeakTable<Canvas, RenderCache> RenderCaches = new();
 
     public static void Render(
-        Canvas canvas,
-        string? facelets,
-        double yawDegrees = DefaultYawDegrees,
-        double pitchDegrees = DefaultPitchDegrees,
-        SmartCubePreviewOrientation? orientation = null,
-        SmartCubeMoveAnimation? animation = null,
-        bool useLightweightShapes = false)
+        CanvasDrawingSession session,
+        double width,
+        double height,
+        SmartCubePreviewRenderRequest request)
     {
-        var cache = RenderCaches.GetValue(canvas, _ => new RenderCache());
+        session.Clear(Color.FromArgb(0, 0, 0, 0));
 
-        var state = string.IsNullOrWhiteSpace(facelets) || facelets.Length < 54
+        var state = string.IsNullOrWhiteSpace(request.Facelets) || request.Facelets.Length < 54
             ? null
-            : facelets[..54];
-        useLightweightShapes |= SmartCubeMoveAnimation.IsValid(animation);
-        var batch = BuildRenderBatch(state, yawDegrees, pitchDegrees, orientation, animation);
+            : request.Facelets[..54];
+        var animation = SmartCubeMoveAnimation.IsValid(request.Animation)
+            ? request.Animation
+            : null;
+        var batch = BuildRenderBatch(
+            state,
+            request.YawDegrees,
+            request.PitchDegrees,
+            request.Orientation,
+            animation);
         if (batch.Tiles.Count == 0 || !batch.Bounds.IsValid)
         {
-            cache.HideFrom(0);
             return;
         }
 
-        var width = GetCanvasLength(canvas.ActualWidth, canvas.Width, 180);
-        var height = GetCanvasLength(canvas.ActualHeight, canvas.Height, 180);
+        var renderWidth = GetCanvasLength(width, 180);
+        var renderHeight = GetCanvasLength(height, 180);
         var scale = Math.Min(
-            width * 0.92 / StableProjectionWidth,
-            height * 0.88 / StableProjectionHeight);
-        var offsetX = width / 2;
-        var offsetY = height / 2;
+            renderWidth * 0.92 / StableProjectionWidth,
+            renderHeight * 0.88 / StableProjectionHeight);
+        var offsetX = renderWidth / 2;
+        var offsetY = renderHeight / 2;
         var strokeWidth = Math.Max(1.2, scale * 0.045);
 
-        for (var index = 0; index < batch.Tiles.Count; index++)
+        foreach (var tile in batch.Tiles)
         {
-            var tile = batch.Tiles[index];
-            var shapes = cache.GetOrCreate(canvas, index);
-            if (useLightweightShapes)
-            {
-                shapes.Base.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                shapes.Sticker.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                UpdatePolygon(
-                    shapes.BasePolygon,
-                    tile.BasePoints,
-                    scale,
-                    offsetX,
-                    offsetY,
-                    tile.BaseColor,
-                    null,
-                    0,
-                    cache);
-                UpdatePolygon(
-                    shapes.StickerPolygon,
-                    tile.StickerPoints,
-                    scale,
-                    offsetX,
-                    offsetY,
-                    tile.StickerColor,
-                    Color.FromArgb(0xee, 8, 8, 8),
-                    strokeWidth,
-                    cache);
-            }
-            else
-            {
-                shapes.BasePolygon.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                shapes.StickerPolygon.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                UpdatePath(
-                    shapes.Base,
-                    tile.BasePoints,
-                    scale,
-                    offsetX,
-                    offsetY,
-                    tile.BaseColor,
-                    null,
-                    0,
-                    BaseCornerRadius * scale,
-                    cache);
-                UpdatePath(
-                    shapes.Sticker,
-                    tile.StickerPoints,
-                    scale,
-                    offsetX,
-                    offsetY,
-                    tile.StickerColor,
-                    Color.FromArgb(0xee, 8, 8, 8),
-                    strokeWidth,
-                    StickerCornerRadius * scale,
-                    cache);
-            }
+            DrawRoundedQuad(
+                session,
+                tile.BasePoints,
+                scale,
+                offsetX,
+                offsetY,
+                tile.BaseColor,
+                null,
+                0,
+                BaseCornerRadius * scale);
+            DrawRoundedQuad(
+                session,
+                tile.StickerPoints,
+                scale,
+                offsetX,
+                offsetY,
+                tile.StickerColor,
+                Color.FromArgb(0xee, 8, 8, 8),
+                strokeWidth,
+                StickerCornerRadius * scale);
         }
-
-        cache.HideFrom(batch.Tiles.Count);
     }
 
     private static RenderBatch BuildRenderBatch(
@@ -154,8 +118,8 @@ internal static class SmartCubePreviewRenderer
         return new RenderBatch(tiles.OrderBy(tile => tile.Depth).ToArray(), bounds);
     }
 
-    private static void UpdatePath(
-        Path path,
+    private static void DrawRoundedQuad(
+        CanvasDrawingSession session,
         IReadOnlyList<Point> points,
         double scale,
         double offsetX,
@@ -163,64 +127,28 @@ internal static class SmartCubePreviewRenderer
         Color fill,
         Color? stroke,
         double strokeWidth,
-        double cornerRadius,
-        RenderCache cache)
+        double cornerRadius)
     {
         var scaledPoints = points
             .Select(point => new Point(point.X * scale + offsetX, point.Y * scale + offsetY))
             .ToArray();
-
-        path.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-        path.Fill = cache.GetBrush(fill);
-        path.StrokeThickness = strokeWidth;
-        path.Data = BuildRoundedGeometry(scaledPoints, cornerRadius);
+        using var geometry = BuildRoundedGeometry(session, scaledPoints, cornerRadius);
+        session.FillGeometry(geometry, fill);
 
         if (stroke is not null && strokeWidth > 0)
         {
-            path.Stroke = cache.GetBrush(stroke.Value);
-        }
-        else
-        {
-            path.Stroke = null;
+            session.DrawGeometry(geometry, stroke.Value, (float)strokeWidth);
         }
     }
 
-    private static void UpdatePolygon(
-        Polygon polygon,
+    private static CanvasGeometry BuildRoundedGeometry(
+        CanvasDrawingSession session,
         IReadOnlyList<Point> points,
-        double scale,
-        double offsetX,
-        double offsetY,
-        Color fill,
-        Color? stroke,
-        double strokeWidth,
-        RenderCache cache)
+        double cornerRadius)
     {
-        polygon.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
-        polygon.Fill = cache.GetBrush(fill);
-        polygon.StrokeThickness = strokeWidth;
-        polygon.Points.Clear();
-        foreach (var point in points)
-        {
-            polygon.Points.Add(new Point(point.X * scale + offsetX, point.Y * scale + offsetY));
-        }
-
-        if (stroke is not null && strokeWidth > 0)
-        {
-            polygon.Stroke = cache.GetBrush(stroke.Value);
-        }
-        else
-        {
-            polygon.Stroke = null;
-        }
-    }
-
-    private static Geometry BuildRoundedGeometry(IReadOnlyList<Point> points, double cornerRadius)
-    {
-        var geometry = new PathGeometry();
         if (points.Count < 3)
         {
-            return geometry;
+            return CanvasGeometry.CreatePolygon(session, Array.Empty<System.Numerics.Vector2>());
         }
 
         var starts = new Point[points.Count];
@@ -238,30 +166,23 @@ internal static class SmartCubePreviewRenderer
             ends[i] = MoveToward(point, next, radius);
         }
 
-        var figure = new PathFigure
-        {
-            StartPoint = ends[0],
-            IsClosed = true
-        };
-
+        using var builder = new CanvasPathBuilder(session);
+        builder.BeginFigure(ToVector(ends[0]));
         for (var i = 1; i < points.Count; i++)
         {
-            figure.Segments.Add(new LineSegment { Point = starts[i] });
-            figure.Segments.Add(new QuadraticBezierSegment
-            {
-                Point1 = points[i],
-                Point2 = ends[i]
-            });
+            builder.AddLine(ToVector(starts[i]));
+            builder.AddQuadraticBezier(ToVector(points[i]), ToVector(ends[i]));
         }
 
-        figure.Segments.Add(new LineSegment { Point = starts[0] });
-        figure.Segments.Add(new QuadraticBezierSegment
-        {
-            Point1 = points[0],
-            Point2 = ends[0]
-        });
-        geometry.Figures.Add(figure);
-        return geometry;
+        builder.AddLine(ToVector(starts[0]));
+        builder.AddQuadraticBezier(ToVector(points[0]), ToVector(ends[0]));
+        builder.EndFigure(CanvasFigureLoop.Closed);
+        return CanvasGeometry.CreatePath(builder);
+    }
+
+    private static System.Numerics.Vector2 ToVector(Point point)
+    {
+        return new System.Numerics.Vector2((float)point.X, (float)point.Y);
     }
 
     private static double Distance(Point first, Point second)
@@ -458,15 +379,10 @@ internal static class SmartCubePreviewRenderer
         return Math.Max(min, Math.Min(max, value));
     }
 
-    private static double GetCanvasLength(double actual, double requested, double fallback)
+    private static double GetCanvasLength(double actual, double fallback)
     {
-        if (!double.IsNaN(actual) && actual > 0)
-        {
-            return actual;
-        }
-
-        return !double.IsNaN(requested) && requested > 0
-            ? requested
+        return actual > 0
+            ? actual
             : fallback;
     }
 
@@ -509,56 +425,6 @@ internal static class SmartCubePreviewRenderer
 
     private sealed record RenderBatch(IReadOnlyList<RenderTile> Tiles, Bounds Bounds);
 
-    private sealed class RenderCache
-    {
-        private readonly List<RenderShapePair> _shapePairs = new();
-        private readonly Dictionary<uint, SolidColorBrush> _brushes = new();
-
-        public RenderShapePair GetOrCreate(Canvas canvas, int index)
-        {
-            while (_shapePairs.Count <= index)
-            {
-                var pair = new RenderShapePair(new Path(), new Path(), new Polygon(), new Polygon());
-                _shapePairs.Add(pair);
-                canvas.Children.Add(pair.Base);
-                canvas.Children.Add(pair.Sticker);
-                canvas.Children.Add(pair.BasePolygon);
-                canvas.Children.Add(pair.StickerPolygon);
-            }
-
-            return _shapePairs[index];
-        }
-
-        public SolidColorBrush GetBrush(Color color)
-        {
-            var key = ((uint)color.A << 24)
-                | ((uint)color.R << 16)
-                | ((uint)color.G << 8)
-                | color.B;
-            if (_brushes.TryGetValue(key, out var brush))
-            {
-                return brush;
-            }
-
-            brush = new SolidColorBrush(color);
-            _brushes[key] = brush;
-            return brush;
-        }
-
-        public void HideFrom(int index)
-        {
-            for (var i = index; i < _shapePairs.Count; i++)
-            {
-                _shapePairs[i].Base.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                _shapePairs[i].Sticker.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                _shapePairs[i].BasePolygon.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-                _shapePairs[i].StickerPolygon.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
-            }
-        }
-    }
-
-    private sealed record RenderShapePair(Path Base, Path Sticker, Polygon BasePolygon, Polygon StickerPolygon);
-
     private sealed class Bounds
     {
         public double Left { get; private set; } = double.PositiveInfinity;
@@ -567,9 +433,6 @@ internal static class SmartCubePreviewRenderer
         public double Bottom { get; private set; } = double.NegativeInfinity;
         public bool IsValid => !double.IsInfinity(Left) && !double.IsInfinity(Top)
             && !double.IsInfinity(Right) && !double.IsInfinity(Bottom);
-        public double Width => Right - Left;
-        public double Height => Bottom - Top;
-        public double CenterX => (Left + Right) / 2;
 
         public void Update(IEnumerable<Point> points)
         {
@@ -604,6 +467,14 @@ internal static class SmartCubePreviewRenderer
         }
     }
 }
+
+internal sealed record SmartCubePreviewRenderRequest(
+    string? Facelets,
+    double YawDegrees,
+    double PitchDegrees,
+    SmartCubePreviewOrientation? Orientation,
+    SmartCubeMoveAnimation? Animation,
+    bool UseLightweightShapes);
 
 internal sealed record SmartCubeMoveAnimation(string FromFacelets, string Move, double Progress)
 {

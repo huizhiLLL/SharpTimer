@@ -1,3 +1,4 @@
+using Microsoft.Graphics.Canvas.UI.Xaml;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -45,6 +46,7 @@ public sealed partial class SmartCubePreviewControl : UserControl
     private double _lastX;
     private double _lastY;
     private long _lastRenderingTimestamp;
+    private SmartCubePreviewRenderRequest _renderRequest = new(null, SmartCubePreviewRenderer.DefaultYawDegrees, SmartCubePreviewRenderer.DefaultPitchDegrees, null, null, false);
 
     public SmartCubePreviewControl()
     {
@@ -194,8 +196,6 @@ public sealed partial class SmartCubePreviewControl : UserControl
 
     private void SmartCubePreviewControl_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        PreviewCanvas.Width = ActualWidth;
-        PreviewCanvas.Height = ActualHeight;
         RequestFrameRender(useLightweightShapes: HasMoveAnimation() || HasOrientationTransition());
     }
 
@@ -352,14 +352,23 @@ public sealed partial class SmartCubePreviewControl : UserControl
 
     private void Render(bool useLightweightShapes = false)
     {
-        SmartCubePreviewRenderer.Render(
-            PreviewCanvas,
+        _renderRequest = new SmartCubePreviewRenderRequest(
             _animationTo ?? _facelets,
             _yaw,
             _pitch,
             _orientation,
             CreateAnimation(),
             useLightweightShapes);
+        PreviewCanvas.Invalidate();
+    }
+
+    private void PreviewCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
+    {
+        SmartCubePreviewRenderer.Render(
+            args.DrawingSession,
+            sender.ActualWidth,
+            sender.ActualHeight,
+            _renderRequest);
     }
 
     private SmartCubeMoveAnimation? CreateAnimation()
