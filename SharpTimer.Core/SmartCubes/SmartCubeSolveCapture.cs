@@ -54,9 +54,7 @@ public sealed class SmartCubeSolveCapture
                 deviceElapsed += deviceDelta;
             }
 
-            var elapsed = deviceDelta > TimeSpan.Zero
-                ? deviceElapsed
-                : Max(deviceElapsed, localElapsed);
+            var elapsed = Max(deviceElapsed, localElapsed);
 
             samples.Add(new SmartCubeSolveMoveSample(
                 current.Move,

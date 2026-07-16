@@ -735,7 +735,7 @@ namespace SharpTimer.App
             }
 
             content.Children.Add(CreateDetailRow(_strings.SolveReplayLabel, string.IsNullOrWhiteSpace(solveText) ? _strings.SolveReplayUnavailable : solveText));
-            var phases = ReadSolvePhases(item.Solve.SolveMetaJson);
+            var phases = SmartCubeSolvePhaseStatistics.FromSolveMetaJson(item.Solve.SolveMetaJson);
             if (phases.Count > 0)
             {
                 content.Children.Add(CreatePhaseTable(_strings.SolvePhasesLabel, phases));
@@ -871,7 +871,7 @@ namespace SharpTimer.App
             return grid;
         }
 
-        private FrameworkElement CreatePhaseTable(string label, IReadOnlyList<SolvePhaseDetail> phases)
+        private FrameworkElement CreatePhaseTable(string label, IReadOnlyList<SmartCubeSolvePhaseStatistic> phases)
         {
             var grid = new Grid
             {
@@ -903,15 +903,25 @@ namespace SharpTimer.App
             AddPhaseCell(table, 0, 2, _strings.SolvePhaseMovesColumn, true);
             AddPhaseCell(table, 0, 3, _strings.SolvePhaseTpsColumn, true);
 
-            for (var index = 0; index < phases.Count; index++)
+            var row = 1;
+            foreach (var phase in phases)
             {
-                var phase = phases[index];
-                var row = index + 1;
                 table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                 AddPhaseCell(table, row, 0, phase.Name, false);
                 AddPhaseCell(table, row, 1, FormatTime(TimeSpan.FromMilliseconds(phase.DurationMs), _settings.DecimalPlaces), false);
                 AddPhaseCell(table, row, 2, phase.MoveCount.ToString(), false);
                 AddPhaseCell(table, row, 3, phase.Tps.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), false);
+                row++;
+
+                foreach (var child in phase.Children)
+                {
+                    table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    AddPhaseCell(table, row, 0, $"  {child.Name}", false);
+                    AddPhaseCell(table, row, 1, FormatTime(TimeSpan.FromMilliseconds(child.DurationMs), _settings.DecimalPlaces), false);
+                    AddPhaseCell(table, row, 2, child.MoveCount.ToString(), false);
+                    AddPhaseCell(table, row, 3, child.Tps.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture), false);
+                    row++;
+                }
             }
 
             Grid.SetColumn(table, 1);
@@ -934,84 +944,6 @@ namespace SharpTimer.App
             Grid.SetRow(cell, row);
             Grid.SetColumn(cell, column);
             table.Children.Add(cell);
-        }
-
-        private static IReadOnlyList<SolvePhaseDetail> ReadSolvePhases(string? solveMetaJson)
-        {
-            if (string.IsNullOrWhiteSpace(solveMetaJson))
-            {
-                return Array.Empty<SolvePhaseDetail>();
-            }
-
-            try
-            {
-                using var document = JsonDocument.Parse(solveMetaJson);
-                if (!document.RootElement.TryGetProperty("phases", out var phasesElement)
-                    || phasesElement.ValueKind != JsonValueKind.Array)
-                {
-                    return Array.Empty<SolvePhaseDetail>();
-                }
-
-                var rawMoveElapsedMs = ReadRawMoveElapsedMs(document.RootElement);
-                var fallbackPhaseStartMs = 0;
-                var fallbackRawMoveIndex = 0;
-                var phases = new List<SolvePhaseDetail>();
-                foreach (var phaseElement in phasesElement.EnumerateArray())
-                {
-                    var name = ReadString(phaseElement, "name");
-                    var durationMs = ReadInt(phaseElement, "durationMs");
-                    if (durationMs <= 0)
-                    {
-                        durationMs = Math.Max(0, ReadInt(phaseElement, "endMs") - ReadInt(phaseElement, "startMs"));
-                    }
-
-                    var moveCount = ReadInt(phaseElement, "moveCount");
-                    var tps = ReadDouble(phaseElement, "tps");
-                    if (string.IsNullOrWhiteSpace(name) || moveCount <= 0)
-                    {
-                        continue;
-                    }
-
-                    if (durationMs <= 0 && rawMoveElapsedMs.Count > 0)
-                    {
-                        var endMoveIndex = Math.Min(rawMoveElapsedMs.Count - 1, fallbackRawMoveIndex + moveCount - 1);
-                        var endMs = rawMoveElapsedMs[endMoveIndex];
-                        durationMs = Math.Max(0, endMs - fallbackPhaseStartMs);
-                        fallbackPhaseStartMs = endMs;
-                    }
-
-                    fallbackRawMoveIndex += moveCount;
-                    if (tps <= 0d && durationMs > 0)
-                    {
-                        tps = moveCount * 1000d / durationMs;
-                    }
-
-                    phases.Add(new SolvePhaseDetail(name, durationMs, moveCount, tps));
-                }
-
-                return phases;
-            }
-            catch (JsonException)
-            {
-                return Array.Empty<SolvePhaseDetail>();
-            }
-        }
-
-        private static IReadOnlyList<int> ReadRawMoveElapsedMs(JsonElement root)
-        {
-            if (!root.TryGetProperty("rawMoves", out var rawMovesElement)
-                || rawMovesElement.ValueKind != JsonValueKind.Array)
-            {
-                return Array.Empty<int>();
-            }
-
-            var values = new List<int>();
-            foreach (var moveElement in rawMovesElement.EnumerateArray())
-            {
-                values.Add(ReadInt(moveElement, "elapsedMs"));
-            }
-
-            return values;
         }
 
         private static string ReadPrettySolve(string? solveMetaJson)
@@ -1037,20 +969,6 @@ namespace SharpTimer.App
             return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
                 ? property.GetString() ?? string.Empty
                 : string.Empty;
-        }
-
-        private static int ReadInt(JsonElement element, string propertyName)
-        {
-            return element.TryGetProperty(propertyName, out var property) && property.TryGetInt32(out var value)
-                ? value
-                : 0;
-        }
-
-        private static double ReadDouble(JsonElement element, string propertyName)
-        {
-            return element.TryGetProperty(propertyName, out var property) && property.TryGetDouble(out var value)
-                ? value
-                : 0d;
         }
 
         private static string FormatNullableNumber(int? value)
@@ -1755,8 +1673,6 @@ namespace SharpTimer.App
         {
             return _completedScrambleBrush ??= new SolidColorBrush(Colors.Gray) { Opacity = 0.48 };
         }
-
-        private sealed record SolvePhaseDetail(string Name, int DurationMs, int MoveCount, double Tps);
 
         private void SmartCubePreview_OpenRequested(object? sender, EventArgs e)
         {
